@@ -136,7 +136,6 @@
       "!dist/",
       "!scripts/"
     ],
-    "afterPack": "./build/after-pack.js",
     "win": {
       "target": [
         {
