@@ -1,6 +1,6 @@
 {
   "name": "WikiShield",
-  "version": "1.0.0",
+  "version": "1.0.0-dev1",
   "description": "WikiShield Application",
   "main": "index.js",
   "repository": {
