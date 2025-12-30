@@ -1006,16 +1006,6 @@ autoUpdater.logger.transports.file.level = 'info';
 autoUpdater.autoDownload = true; // Automatically download updates
 autoUpdater.autoInstallOnAppQuit = true;
 
-// Set the update feed URL based on the platform
-// electron-updater will automatically determine the correct feed URL from package.json publish config
-// For GitHub releases, it uses: https://github.com/{owner}/{repo}/releases
-autoUpdater.setFeedURL({
-    provider: 'github',
-    owner: 'LuniZunie',
-    repo: 'WikiShield-App',
-    private: false,
-});
-
 // Auto-updater events
 autoUpdater.on('checking-for-update', () => {
     log.info('Checking for update...');
@@ -1061,7 +1051,14 @@ autoUpdater.on('update-downloaded', (info) => {
 app.whenReady().then(async () => {
     log.info(`App ready - DEV mode: ${__DEV__}, Packaged: ${app.isPackaged}`);
 
-    if (!__DEV__ && app.isPackaged) {
+    // Check if app-update.yml exists (only exists in production builds from electron-builder)
+    const fs = require('fs');
+    const appUpdateFile = path.join(process.resourcesPath, 'app-update.yml');
+    const hasUpdateFile = fs.existsSync(appUpdateFile);
+
+    log.info(`Auto-updater file check: ${appUpdateFile} exists: ${hasUpdateFile}`);
+
+    if (!__DEV__ && app.isPackaged && hasUpdateFile) {
         log.info('Auto-updater enabled, will check for updates in 3 seconds...');
 
         // Check for updates after app is ready
@@ -1089,7 +1086,7 @@ app.whenReady().then(async () => {
             });
         }, 4 * 60 * 60 * 1000);
     } else {
-        log.info(`Auto-updater disabled - DEV: ${__DEV__}, Packaged: ${app.isPackaged}`);
+        log.info(`Auto-updater disabled - DEV: ${__DEV__}, Packaged: ${app.isPackaged}, Has update file: ${hasUpdateFile}`);
     }
 
     globalShortcut.register('escape', () => {

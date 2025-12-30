@@ -1,0 +1,5 @@
+owner: LuniZunie
+repo: WikiShield-App
+provider: github
+releaseType: release
+updaterCacheDirName: wikishield-updater
