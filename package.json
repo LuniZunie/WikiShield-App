@@ -1,6 +1,6 @@
 {
   "name": "WikiShield",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "WikiShield Application",
   "main": "index.js",
   "repository": {
@@ -59,11 +59,11 @@
           "CompanyName": "WikiShield Team",
           "FileDescription": "WikiShield Application",
           "ProductName": "WikiShield",
-          "FileVersion": "1.0.1",
-          "ProductVersion": "1.0.1"
+          "FileVersion": "1.0.2",
+          "ProductVersion": "1.0.2"
         },
-        "appVersion": "1.0.1",
-        "buildVersion": "1.0.1"
+        "appVersion": "1.0.2",
+        "buildVersion": "1.0.2"
       },
       "makers": [
         {
@@ -112,6 +112,7 @@
   "build": {
     "appId": "com.ws.app",
     "productName": "WikiShield",
+    "generateUpdatesFilesForAllChannels": true,
     "directories": {
       "output": "dist",
       "buildResources": "assets"
@@ -132,8 +133,10 @@
       "!out/",
       "!build/",
       "!build.js",
-      "!dist/"
+      "!dist/",
+      "!scripts/"
     ],
+    "afterPack": "./build/after-pack.js",
     "win": {
       "target": [
         {
