@@ -19,7 +19,11 @@
     "make:all": "electron-forge make --platform=win32,darwin,linux",
     "test": "electron --trace-warnings .",
     "build": "node build.js",
-    "publish": "electron-builder --publish always"
+    "publish": "echo Use GitHub Actions to publish. Run: git tag v1.0.0 && git push --tags",
+    "publish:win": "electron-builder --win --publish always",
+    "publish:mac": "electron-builder --mac --publish always",
+    "publish:linux": "electron-builder --linux --publish always",
+    "build:local": "electron-builder --publish never"
   },
   "keywords": [],
   "author": "WikiShield Team",
@@ -138,6 +142,69 @@
       ],
       "icon": "assets/icon.ico",
       "verifyUpdateCodeSignature": false
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.productivity",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
+    },
+    "dmg": {
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "rpm",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.png",
+      "category": "Utility",
+      "maintainer": "WikiShield Team"
     },
     "nsis": {
       "oneClick": false,

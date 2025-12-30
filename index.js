@@ -13,6 +13,7 @@ if (require('electron-squirrel-startup')) {
     app.quit();
 }
 
+// Handle Squirrel events on Windows
 if (process.platform === 'win32') {
     const handleSquirrelEvent = () => {
         if (process.argv.length === 1) {
@@ -980,11 +981,15 @@ function SetActiveAccount(username) {
     }
 }
 
-// Configure auto-updater
+// Configure auto-updater (works on Windows, Mac, and Linux)
 autoUpdater.logger = log;
 autoUpdater.logger.transports.file.level = 'info';
-autoUpdater.autoDownload = false; // Don't auto-download, ask user first
+autoUpdater.autoDownload = true; // Automatically download updates
 autoUpdater.autoInstallOnAppQuit = true;
+
+// Set the update feed URL based on the platform
+// electron-updater will automatically determine the correct feed URL from package.json publish config
+// For GitHub releases, it uses: https://github.com/{owner}/{repo}/releases
 
 // Auto-updater events
 autoUpdater.on('checking-for-update', () => {
@@ -994,18 +999,8 @@ autoUpdater.on('checking-for-update', () => {
 
 autoUpdater.on('update-available', (info) => {
     log.info('Update available:', JSON.stringify(info));
-    dialog.showMessageBox({
-        type: 'info',
-        title: 'Update Available',
-        message: `A new version (${info.version}) is available. Would you like to download it now?`,
-        buttons: ['Download', 'Later'],
-        defaultId: 0,
-        cancelId: 1
-    }).then(result => {
-        if (result.response === 0) {
-            autoUpdater.downloadUpdate();
-        }
-    });
+    log.info(`Automatically downloading version ${info.version}...`);
+    // Update will be downloaded automatically due to autoDownload = true
 });
 
 autoUpdater.on('update-not-available', (info) => {
@@ -1029,17 +1024,12 @@ autoUpdater.on('download-progress', (progressObj) => {
 
 autoUpdater.on('update-downloaded', (info) => {
     log.info('Update downloaded:', info);
-    dialog.showMessageBox({
-        type: 'info',
+    log.info('Update will be installed when the application quits.');
+    // Update will be installed automatically on next app quit due to autoInstallOnAppQuit = true
+    // Show a non-intrusive notification to let the user know
+    SendNotification({
         title: 'Update Ready',
-        message: 'Update has been downloaded. The application will restart to install the update.',
-        buttons: ['Restart Now', 'Later'],
-        defaultId: 0,
-        cancelId: 1
-    }).then(result => {
-        if (result.response === 0) {
-            setImmediate(() => autoUpdater.quitAndInstall());
-        }
+        body: `WikiShield v${info.version} has been downloaded and will be installed when you close the app.`
     });
 });
 
