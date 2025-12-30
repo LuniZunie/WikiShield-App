@@ -503,6 +503,13 @@ async function BuildMainWindow() {
         icon: nativeImage.createFromPath(path.join(__dirname, 'assets', 'icon.png')),
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
+            contextIsolation: true,
+            nodeIntegration: false,
+            enableRemoteModule: false,
+            sandbox: true,
+            v8CacheOptions: 'code',
+            disableBlinkFeatures: 'Auxclick',
+            backgroundThrottling: false
         },
     });
 
@@ -556,6 +563,12 @@ function BuildLoginWindow() {
         icon: nativeImage.createFromPath(path.join(__dirname, 'assets', 'icon.png')),
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
+            contextIsolation: true,
+            nodeIntegration: false,
+            enableRemoteModule: false,
+            sandbox: true,
+            v8CacheOptions: 'code',
+            backgroundThrottling: false
         }
     });
 
@@ -609,6 +622,12 @@ function BuildAccountsWindow() {
         icon: nativeImage.createFromPath(path.join(__dirname, 'assets', 'icon.png')),
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
+            contextIsolation: true,
+            nodeIntegration: false,
+            enableRemoteModule: false,
+            sandbox: true,
+            v8CacheOptions: 'code',
+            backgroundThrottling: false
         }
     });
 

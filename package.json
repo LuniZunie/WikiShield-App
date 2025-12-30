@@ -1,6 +1,6 @@
 {
   "name": "WikiShield",
-  "version": "1.0.0-dev3",
+  "version": "1.0.0-dev4",
   "description": "WikiShield Application",
   "main": "index.js",
   "repository": {
@@ -19,6 +19,7 @@
     "make:all": "electron-forge make --platform=win32,darwin,linux",
     "test": "electron --trace-warnings .",
     "build": "node build.js",
+    "version": "node scripts/sync-version.js",
     "publish": "node scripts/publish-release.js",
     "publish:win": "electron-builder --win --publish always",
     "publish:mac": "electron-builder --mac --publish always",
@@ -57,8 +58,12 @@
         "win32metadata": {
           "CompanyName": "WikiShield Team",
           "FileDescription": "WikiShield Application",
-          "ProductName": "WikiShield"
-        }
+          "ProductName": "WikiShield",
+          "FileVersion": "1.0.0-dev3",
+          "ProductVersion": "1.0.0-dev3"
+        },
+        "appVersion": "1.0.0-dev3",
+        "buildVersion": "1.0.0-dev3"
       },
       "makers": [
         {
@@ -140,7 +145,9 @@
         }
       ],
       "icon": "assets/icon.ico",
-      "verifyUpdateCodeSignature": false
+      "verifyUpdateCodeSignature": false,
+      "fileVersion": "1.0.0-dev3",
+      "productVersion": "1.0.0-dev3"
     },
     "mac": {
       "target": [
@@ -217,6 +224,9 @@
       "owner": "LuniZunie",
       "repo": "WikiShield-App",
       "releaseType": "release"
+    },
+    "releaseInfo": {
+      "releaseNotesFile": ".github/RELEASE_NOTES.md"
     }
   }
 }
