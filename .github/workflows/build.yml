@@ -53,5 +53,3 @@ jobs:
         with:
           name: dist-${{ matrix.os }}
           path: dist/**/*
-          name: dist-${{ matrix.os }}
-          path: dist/**/*
