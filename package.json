@@ -19,7 +19,7 @@
     "make:all": "electron-forge make --platform=win32,darwin,linux",
     "test": "electron --trace-warnings .",
     "build": "node build.js",
-    "publish": "echo Use GitHub Actions to publish. Run: git tag v1.0.0 && git push --tags",
+    "publish": "node scripts/publish-release.js",
     "publish:win": "electron-builder --win --publish always",
     "publish:mac": "electron-builder --mac --publish always",
     "publish:linux": "electron-builder --linux --publish always",
