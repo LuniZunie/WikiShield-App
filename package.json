@@ -1,6 +1,6 @@
 {
   "name": "WikiShield",
-  "version": "1.0.0-dev7",
+  "version": "1.0.0-dev8",
   "description": "WikiShield Application",
   "main": "index.js",
   "repository": {
@@ -59,11 +59,11 @@
           "CompanyName": "WikiShield Team",
           "FileDescription": "WikiShield Application",
           "ProductName": "WikiShield",
-          "FileVersion": "1.0.0-dev7",
-          "ProductVersion": "1.0.0-dev7"
+          "FileVersion": "1.0.0-dev8",
+          "ProductVersion": "1.0.0-dev8"
         },
-        "appVersion": "1.0.0-dev7",
-        "buildVersion": "1.0.0-dev7"
+        "appVersion": "1.0.0-dev8",
+        "buildVersion": "1.0.0-dev8"
       },
       "makers": [
         {

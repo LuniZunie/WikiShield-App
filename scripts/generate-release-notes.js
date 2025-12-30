@@ -32,7 +32,7 @@ try {
 template = template.replace('<!-- Add your release notes here -->', changelog);
 
 // Save to a temporary file
-const outputPath = path.join(__dirname, '..', '.github', 'RELEASE_NOTES.md');
+const outputPath = path.join(__dirname, '..', 'README.md');
 fs.writeFileSync(outputPath, template, 'utf8');
 
 console.log(`✓ Generated release notes for ${tag}`);
