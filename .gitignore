@@ -1,0 +1,49 @@
+# Dependencies
+/node_modules
+
+# Build outputs
+/out
+/dist
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Certificates (NEVER commit these!)
+*.pfx
+*.p12
+*.cer
+*.crt
+*.key
+*.pem
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Test files
+coverage/
+.nyc_output/
+
+# Electron specific
+*.asar
+
+# Temporary files
+tmp/
+temp/

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.0/css/all.min.css">
+
+        <link rel="stylesheet" href="../common/style.css">
+        <link rel="stylesheet" href="style.css">
+
+        <script defer src="script.js"></script>
+
+        <title>WikiShield - Login</title>
+    </head>
+    <body>
+        <div class="login-wrapper">
+            <div class="login-card">
+                <div class="card-header">
+                    <div class="logo">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h1>Welcome to WikiShield</h1>
+                    <p class="subtitle">Sign in with your Wikipedia bot credentials</p>
+                </div>
+
+                <form id="login-form" class="login-form">
+                    <div id="error-message" class="alert alert-error hidden">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <span class="error-text"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="username" class="form-label">
+                            <i class="fas fa-user"></i>
+                            <span>Bot Username</span>
+                        </label>
+                        <div class="input-wrapper">
+                            <input
+                                type="text"
+                                id="username"
+                                name="username"
+                                class="form-input"
+                                required
+                                list="saved-usernames"
+                                placeholder="Enter your bot username"
+                                autocomplete="username">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password" class="form-label">
+                            <i class="fas fa-lock"></i>
+                            <span>Bot Password</span>
+                        </label>
+                        <div class="input-wrapper">
+                            <input
+                                type="password"
+                                id="password"
+                                name="password"
+                                class="form-input"
+                                required
+                                list="saved-passwords"
+                                placeholder="Enter your bot password"
+                                autocomplete="current-password">
+                            <button type="button" class="toggle-password" id="toggle-password" aria-label="Toggle password visibility">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="login-button" class="btn-submit">
+                        <span class="btn-text">Sign In</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+
+                    <div class="help-text">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Need bot credentials? <a href="https://en.wikipedia.org/wiki/Wikipedia:WikiShield#Creating_a_bot_account" target="_blank" rel="noopener">Learn how to create them</a></span>
+                    </div>
+                </form>
+
+                <datalist id="saved-usernames"></datalist>
+                <datalist id="saved-passwords"></datalist>
+            </div>
+        </div>
+    </body>
+</html>

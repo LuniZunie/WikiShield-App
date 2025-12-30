@@ -1,0 +1,152 @@
+{
+  "name": "WikiShield",
+  "version": "1.0.0",
+  "description": "WikiShield Application",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LuniZunie/WikiShield-App.git"
+  },
+  "publish": {
+    "provider": "github",
+    "owner": "LuniZunie",
+    "repo": "WikiShield-App"
+  },
+  "scripts": {
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make",
+    "make:all": "electron-forge make --platform=win32,darwin,linux",
+    "test": "electron --trace-warnings .",
+    "build": "node build.js",
+    "publish": "electron-builder --publish always"
+  },
+  "keywords": [],
+  "author": "WikiShield Team",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "@electron-forge/cli": "^7.5.0",
+    "@electron-forge/maker-deb": "^7.5.0",
+    "@electron-forge/maker-dmg": "^7.5.0",
+    "@electron-forge/maker-rpm": "^7.5.0",
+    "@electron-forge/maker-squirrel": "^7.5.0",
+    "@electron-forge/maker-zip": "^7.5.0",
+    "electron": "^39.2.7",
+    "electron-builder": "^26.0.12",
+    "electron-icon-builder": "^2.0.1",
+    "electron-prebuilt-compile": "8.2.0",
+    "electron-winstaller": "^5.4.0"
+  },
+  "dependencies": {
+    "electron-log": "^5.4.3",
+    "electron-squirrel-startup": "^1.0.1",
+    "electron-store": "^11.0.2",
+    "electron-updater": "^6.6.2"
+  },
+  "config": {
+    "forge": {
+      "packagerConfig": {
+        "name": "WikiShield",
+        "executableName": "wikishield",
+        "icon": "./assets/icon",
+        "appBundleId": "com.ws.app",
+        "win32metadata": {
+          "CompanyName": "WikiShield Team",
+          "FileDescription": "WikiShield Application",
+          "ProductName": "WikiShield"
+        }
+      },
+      "makers": [
+        {
+          "name": "@electron-forge/maker-squirrel",
+          "config": {
+            "name": "WikiShield"
+          },
+          "platforms": [
+            "win32"
+          ]
+        },
+        {
+          "name": "@electron-forge/maker-zip",
+          "platforms": [
+            "darwin",
+            "linux",
+            "win32"
+          ]
+        },
+        {
+          "name": "@electron-forge/maker-deb",
+          "config": {},
+          "platforms": [
+            "linux"
+          ]
+        },
+        {
+          "name": "@electron-forge/maker-rpm",
+          "config": {},
+          "platforms": [
+            "linux"
+          ]
+        },
+        {
+          "name": "@electron-forge/maker-dmg",
+          "config": {
+            "format": "ULFO"
+          },
+          "platforms": [
+            "darwin"
+          ]
+        }
+      ]
+    }
+  },
+  "build": {
+    "appId": "com.ws.app",
+    "productName": "WikiShield",
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
+    "files": [
+      "**/*",
+      "!**/*.ts",
+      "!*.code-workspace",
+      "!LICENSE.md",
+      "!package.json",
+      "!package-lock.json",
+      "!src/",
+      "!e2e/",
+      "!hooks/",
+      "!angular.json",
+      "!_config.yml",
+      "!karma.conf.js",
+      "!tsconfig.json",
+      "!tslint.json",
+      "!out/"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "assets/icon.ico",
+      "verifyUpdateCodeSignature": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "WikiShield"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "LuniZunie",
+      "repo": "WikiShield-App",
+      "releaseType": "release"
+    }
+  }
+}

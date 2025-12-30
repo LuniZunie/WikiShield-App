@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>WikiShield</title>
+
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.0/css/all.min.css">
+
+        <link rel="stylesheet" href="../common/style.css">
+        <link rel="stylesheet" href="style.css">
+
+        <script type="module" src="script.js"></script>
+    </head>
+    <body>
+        <div id="initial" class="hidden">
+			<canvas id="dots-canvas"></canvas>
+			<div id="welcome-container" class="shimmer shimmer-border">
+				<div class="shield-container">
+					<div class="glow-ring"></div>
+					<div class="glow-ring"></div>
+					<div class="glow-ring"></div>
+					<div class="sparkle"></div>
+					<div class="sparkle"></div>
+					<div class="sparkle"></div>
+					<div class="sparkle"></div>
+					<div class="shield-icon">
+						<img src="../../assets/icon.png" alt="WikiShield Logo">
+					</div>
+				</div>
+				<h1>Welcome to WikiShield</h1>
+				<div class="about-links">
+					<a rel="noopener" href="https://en.wikipedia.org/wiki/Wikipedia:WikiShield" target="_blank" class="about-link">About</a>
+					<a rel="noopener" href="https://en.wikipedia.org/wiki/Wikipedia talk:WikiShield" target="_blank" class="about-link">Discuss</a>
+					<span class="about-link">v<span class="VERSION"></span></span>
+				</div>
+				<div id="rollback-needed" class="hidden">
+					<p><span class="fa fa-exclamation-triangle"></span> You must have rollback or admin rights to use this script.</p>
+					<p>You can apply for rollback rights <a rel="noopener" href="https://en.wikipedia.org/wiki/Wikipedia:PERM/R" target="_blank">here</a>.</p>
+				</div>
+				<button id="start-button">
+					Start WikiShield <i class="fas fa-arrow-right"></i>
+				</button>
+			</div>
+		</div>
+        <div id="app" class="hidden">
+            <div id="container">
+                <div id="queue">
+                    <div id="queue-top">
+                        <div id="queue-top-right">
+                            <span class="fa fa-bell" id="alerts-icon" data-tooltip="Alerts" data-zen-show="alerts">
+                                <span id="alerts-count" class="icon-count hidden red" data-zen-show="badges"></span>
+                            </span>
+                            <span class="fa fa-inbox" id="messages-icon" data-tooltip="Messages" data-zen-show="messages">
+                                <span id="messages-count" class="icon-count hidden blue" data-zen-show="badges"></span>
+                            </span>
+                        </div>
+                    </div>
+                    <div id="queue-tabs">
+                        <div id="queue-tab-recent" class="queue-tab selected" data-tooltip="Recent edits">
+                            <span class="fas fa-stopwatch">
+                                <span class="icon-count hidden red" data-zen-show="badges"></span>
+                            </span>
+                        </div>
+                        <div id="queue-tab-pending" class="queue-tab" data-tooltip="Pending edits">
+                            <span class="fas fa-flag">
+                                <span class="icon-count hidden orange" data-zen-show="badges"></span>
+                            </span>
+                        </div>
+                        <div id="queue-tab-users" class="queue-tab" data-tooltip="User creation logs">
+                            <span class="fas fa-user">
+                                <span class="icon-count hidden grey" data-zen-show="badges"></span>
+                            </span>
+                        </div>
+                        <div id="queue-tab-watchlist" class="queue-tab" data-tooltip="Watchlist edits">
+                            <span class="fas fa-book-bookmark">
+                                <span class="icon-count hidden blue" data-zen-show="badges"></span>
+                            </span>
+                        </div>
+                    </div>
+                    <div id="queue-items" class="queue-list">
+                        <div class="queue-empty">
+                            No edits in queue.
+                        </div>
+                    </div>
+                    <div class="width-adjust" id="queue-width-adjust"></div>
+                </div>
+                <div id="alerts-panel" class="notification-panel">
+                    <div id="alerts-header" class="notification-header">
+                        <span>Alerts</span>
+                        <span id="mark-all-alerts-read" class="mark-all-read">Mark all as read</span>
+                    </div>
+                    <div id="alerts-list" class="notification-list"></div>
+                </div>
+                <div id="messages-panel" class="notification-panel">
+                    <div id="messages-header" class="notification-header">
+                        <span>Messages</span>
+                        <span id="mark-all-messages-read" class="mark-all-read">Mark all as read</span>
+                    </div>
+                    <div id="messages-list" class="notification-list"></div>
+                </div>
+                <div id="right-container">
+                    <div id="middle-top"></div>
+                    <div id="right-top">
+                        <div class="tabs">
+                            <div id="latest-edits-tab" class="tab hidden selected" data-tooltip="Latest edit">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div id="consecutive-edits-tab" class="tab hidden" data-tooltip="Consecutive edits">
+                                <i class="fas fa-users"></i>
+                            </div>
+                        </div>
+
+                        <div class="icons"></div>
+                    </div>
+                    <div id="right-content">
+                        <div id="main-container">
+                            <div id="ai-analysis-container" class="hidden shimmer shimmer-border">
+                                <div class="header">
+                                    <i class="fas fa-robot"></i>
+                                    <span class="title">AI Analysis</span>
+                                    <span class="assessment"></span>
+                                    <span class="confidence"></span>
+                                </div>
+                                <div class="explanation"></div>
+                                <div class="issues"></div>
+                            </div>
+                            <div id="diff-container"></div>
+                            <div id="pending-changes-container" class="hidden">
+                                <div class="accept">Accept</div>
+                                <div class="reject">Reject</div>
+                            </div>
+                            <div id="progress-bar-container"></div>
+                            <div id="bottom-tools" data-queue-type="edit,logevent">
+                                <div class="bottom-tool-item" data-menu="revert" data-queue-type="edit,logevent">
+                                    <div class="bottom-tool-trigger">
+                                        <i class="fas fa-undo"></i>
+                                        <span>Revert</span>
+                                        <i class="fas fa-chevron-up bottom-tool-chevron"></i>
+                                    </div>
+                                </div>
+
+                                <div class="bottom-tool-item" data-menu="warn" data-queue-type="edit,logevent">
+                                    <div class="bottom-tool-trigger">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                        <span>Warn</span>
+                                        <i class="fas fa-chevron-up bottom-tool-chevron"></i>
+                                    </div>
+                                </div>
+
+                                <div class="bottom-tool-item" data-menu="user" data-queue-type="edit,logevent">
+                                    <div class="bottom-tool-trigger">
+                                        <i class="fas fa-user"></i>
+                                        <span>User</span>
+                                        <i class="fas fa-chevron-up bottom-tool-chevron"></i>
+                                    </div>
+                                </div>
+
+                                <div class="bottom-tool-item" data-menu="page" data-queue-type="edit">
+                                    <div class="bottom-tool-trigger">
+                                        <i class="fas fa-file-lines"></i>
+                                        <span>Page</span>
+                                        <i class="fas fa-chevron-up bottom-tool-chevron"></i>
+                                    </div>
+                                </div>
+
+                                <div class="bottom-tool-item" data-menu="edit" data-queue-type="edit">
+                                    <div class="bottom-tool-trigger">
+                                        <i class="fas fa-pen-to-square"></i>
+                                        <span>Edit</span>
+                                        <i class="fas fa-chevron-up bottom-tool-chevron"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="right-details">
+                            <div id="user-contribs" class="right-detail" data-queue-type="edit,logevent">
+                                <div id="user-contribs-top" class="right-detail-top">
+                                    <div class="right-detail-left">
+                                        <div id="user-contribs-title" class="right-detail-title">User Contributions</div>
+                                        <div id="user-contribs-count" class="hidden">_ edits</div>
+                                    </div>
+                                    <div id="user-block-count" class="hidden"></div>
+                                    <div id="user-warn-level" data-tooltip="Warning level" class="hidden">0</div>
+                                </div>
+                                <div id="user-contribs-content" class="queue-list"></div>
+                            </div>
+                            <div id="right-height-adjust" class="height-adjust" data-queue-type="edit"></div>
+                            <div id="page-history" class="right-detail" data-queue-type="edit">
+                                <div id="page-history-top" class="right-detail-top">
+                                    <div class="right-detail-left">
+                                        <div id="page-history-title" class="right-detail-title">Page History</div>
+                                        <div id="page-metadata"></div>
+                                    </div>
+                                    <div id="protection-indicator"></div>
+                                </div>
+                                <div id="page-history-content" class="queue-list"></div>
+                            </div>
+                            <div class="width-adjust" id="details-width-adjust"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bottom-tool-menu" id="revert-menu"></div>
+            <div class="bottom-tool-menu" id="warn-menu"></div>
+            <div class="bottom-tool-menu" id="user-menu">
+                <div id="user-open-user-page" class="menu-option">
+                    <i class="fas fa-user-circle"></i>
+                    <span>Open user page</span>
+                    <i class="fas fa-arrow-up-right-from-square menu-option-icon"></i>
+                </div>
+                <div id="user-open-user-talk" class="menu-option">
+                    <i class="fas fa-comments"></i>
+                    <span>Open user talk</span>
+                    <i class="fas fa-arrow-up-right-from-square menu-option-icon"></i>
+                </div>
+                <div id="user-view-contribs" class="menu-option">
+                    <i class="fas fa-list"></i>
+                    <span>View contributions</span>
+                    <i class="fas fa-arrow-up-right-from-square menu-option-icon"></i>
+                </div>
+                <div id="user-view-filter-log" class="menu-option">
+                    <i class="fas fa-filter"></i>
+                    <span>View filter log</span>
+                    <i class="fas fa-arrow-up-right-from-square menu-option-icon"></i>
+                </div>
+                <div class="menu-divider"></div>
+                <div id="user-whitelist" class="menu-option">
+                    <i class="fas fa-check"></i>
+                    <span>Whitelist user</span>
+                </div>
+                <div id="user-unwhitelist" class="menu-option hidden">
+                    <i class="fas fa-xmark"></i>
+                    <span>Unwhitelist user</span>
+                </div>
+                <div id="user-highlight" class="menu-option">
+                    <i class="fas fa-star"></i>
+                    <span>Highlight user</span>
+                </div>
+                <div id="user-unhighlight" class="menu-option hidden">
+                    <i class="fas fa-star"></i>
+                    <span>Unhighlight user</span>
+                </div>
+                <div class="menu-divider"></div>
+                <div id="user-welcome" class="menu-option submenu-trigger">
+                    <i class="fas fa-paper-plane"></i>
+                    <span>Welcome</span>
+                    <i class="fas fa-chevron-right menu-option-chevron"></i>
+                    <div class="submenu"></div>
+                </div>
+                <div id="user-report-aiv" class="menu-option submenu-trigger">
+                    <i class="fas fa-flag"></i>
+                    <span>Report (AIV)</span>
+                    <i class="fas fa-chevron-right menu-option-chevron"></i>
+                    <div class="submenu"></div>
+                </div>
+                <div id="user-report-uaa" class="menu-option submenu-trigger">
+                    <i class="fas fa-user-slash"></i>
+                    <span>Report (UAA)</span>
+                    <i class="fas fa-chevron-right menu-option-chevron"></i>
+                    <div class="submenu"></div>
+                </div>
+            </div>
+            <div class="bottom-tool-menu" id="page-menu">
+                <div id="page-open-page" class="menu-option">
+                    <i class="fas fa-file"></i>
+                    <span>Open page</span>
+                    <i class="fas fa-arrow-up-right-from-square menu-option-icon"></i>
+                </div>
+                <div id="page-open-talk" class="menu-option">
+                    <i class="fas fa-comments"></i>
+                    <span>Open talk page</span>
+                    <i class="fas fa-arrow-up-right-from-square menu-option-icon"></i>
+                </div>
+                <div id="page-view-history" class="menu-option">
+                    <i class="fas fa-clock-rotate-left"></i>
+                    <span>View page history</span>
+                    <i class="fas fa-arrow-up-right-from-square menu-option-icon"></i>
+                </div>
+                <div class="menu-divider"></div>
+                <div id="page-watch" class="menu-option">
+                    <i class="fas fa-eye"></i>
+                    <span>Watch page</span>
+                </div>
+                <div id="page-unwatch" class="menu-option">
+                    <i class="fas fa-eye-slash"></i>
+                    <span>Unwatch page</span>
+                </div>
+                <div id="page-whitelist" class="menu-option">
+                    <i class="fas fa-check"></i>
+                    <span>Whitelist page</span>
+                </div>
+                <div id="page-unwhitelist" class="menu-option hidden">
+                    <i class="fas fa-xmark"></i>
+                    <span>Unwhitelist page</span>
+                </div>
+                <div id="page-highlight" class="menu-option">
+                    <i class="fas fa-star"></i>
+                    <span>Highlight page</span>
+                </div>
+                <div id="page-unhighlight" class="menu-option hidden">
+                    <i class="fas fa-star"></i>
+                    <span>Unhighlight page</span>
+                </div>
+                <div class="menu-divider"></div>
+                <div id="page-request-protection" class="menu-option submenu-trigger">
+                    <i class="fas fa-shield-halved"></i>
+                    <span>Request protection</span>
+                    <i class="fas fa-chevron-right menu-option-chevron"></i>
+                    <div class="submenu"></div>
+                </div>
+            </div>
+            <div class="bottom-tool-menu" id="edit-menu">
+                <div id="edit-view-revision" class="menu-option">
+                    <i class="fas fa-eye"></i>
+                    <span>View revision</span>
+                    <i class="fas fa-arrow-up-right-from-square menu-option-icon"></i>
+                </div>
+                <div id="edit-view-diff" class="menu-option">
+                    <i class="fas fa-code-compare"></i>
+                    <span>View diff</span>
+                    <i class="fas fa-arrow-up-right-from-square menu-option-icon"></i>
+                </div>
+                <div class="menu-divider"></div>
+                <div id="edit-thank-user" class="menu-option">
+                    <i class="fas fa-heart"></i>
+                    <span>Thank user</span>
+                </div>
+                <div id="edit-rollback" class="menu-option submenu-trigger">
+                    <i class="fas fa-rotate-left"></i>
+                    <span>Rollback</span>
+                    <i class="fas fa-chevron-right menu-option-chevron"></i>
+                    <div class="submenu"></div>
+                </div>
+                <div id="edit-rollback-goodfaith" class="menu-option submenu-trigger">
+                    <i class="fas fa-handshake"></i>
+                    <span>Rollback (good faith)</span>
+                    <i class="fas fa-chevron-right menu-option-chevron"></i>
+                    <div class="submenu"></div>
+                </div>
+                <div id="edit-undo" class="menu-option submenu-trigger">
+                    <i class="fas fa-arrow-rotate-left"></i>
+                    <span>Undo</span>
+                    <i class="fas fa-chevron-right menu-option-chevron"></i>
+                    <div class="submenu"></div>
+                </div>
+            </div>
+
+            <div id="settings-container">
+                <div class="settings">
+                    <div class="settings-left">
+                        <div class="settings-category">
+                            <div class="settings-category-header">
+                                <span>CORE</span>
+                            </div>
+                            <div class="settings-left-menu-item" id="settings-general-button">
+                                <span><i class="fas fa-gear"></i>General</span>
+                            </div>
+                            <div class="settings-left-menu-item" id="settings-performance-button">
+                                <span><i class="fas fa-tachometer-alt"></i>Performance</span>
+                            </div>
+                            <div class="settings-left-menu-item" id="settings-audio-button">
+                                <span><i class="fas fa-volume-high"></i>Audio</span>
+                            </div>
+                            <div class="settings-left-menu-item" id="settings-controls-button">
+                                <span><i class="fas fa-keyboard"></i>Controls</span>
+                            </div>
+                        </div>
+
+                        <div class="settings-category">
+                            <div class="settings-category-header">
+                                <span>APPEARANCE</span>
+                            </div>
+                            <div class="settings-left-menu-item" id="settings-queue-button">
+                                <span><i class="fas fa-list"></i>Queue</span>
+                            </div>
+                            <div class="settings-left-menu-item" id="settings-zen-button">
+                                <span><i class="fas fa-spa"></i>Zen Mode</span>
+                            </div>
+                        </div>
+
+                        <div class="settings-category">
+                            <div class="settings-category-header">
+                                <span>TOOLS</span>
+                            </div>
+                            <div class="settings-left-menu-item" id="settings-AI-button">
+                                <span><i class="fas fa-robot"></i>AI Analysis</span>
+                            </div>
+                            <div class="settings-left-menu-item" id="settings-auto-reporting-button">
+                                <span><i class="fas fa-flag"></i>Auto Reporting</span>
+                            </div>
+                            <div class="settings-left-menu-item" id="settings-gadgets-button">
+                                <span><i class="fas fa-toolbox"></i>Gadgets</span>
+                            </div>
+                        </div>
+
+                        <div class="settings-category">
+                            <div class="settings-category-header">
+                                <span>WHITELIST</span>
+                            </div>
+                            <div class="settings-left-menu-compact">
+                                <div class="settings-left-menu-item" id="settings-whitelist-users-button">
+                                    <i class="fas fa-user" title="Users"></i>
+                                </div>
+                                <div class="settings-left-menu-item" id="settings-whitelist-pages-button">
+                                    <i class="fas fa-file" title="Pages"></i>
+                                </div>
+                                <div class="settings-left-menu-item" id="settings-whitelist-tags-button">
+                                    <i class="fas fa-tag" title="Tags"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-category">
+                            <div class="settings-category-header">
+                                <span>HIGHLIGHT</span>
+                            </div>
+                            <div class="settings-left-menu-compact">
+                                <div class="settings-left-menu-item" id="settings-highlight-users-button">
+                                    <i class="fas fa-user" title="Users"></i>
+                                </div>
+                                <div class="settings-left-menu-item" id="settings-highlight-pages-button">
+                                    <i class="fas fa-file" title="Pages"></i>
+                                </div>
+                                <div class="settings-left-menu-item" id="settings-highlight-tags-button">
+                                    <i class="fas fa-tag" title="Tags"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-category">
+                            <div class="settings-category-header">
+                                <span>INFO</span>
+                            </div>
+                            <div class="settings-left-menu-item" id="settings-statistics-button">
+                                <span><i class="fas fa-chart-area"></i>Statistics</span>
+                            </div>
+                            <div class="settings-left-menu-item" id="settings-about-button">
+                                <span><i class="fas fa-info"></i>About</span>
+                            </div>
+                        </div>
+
+                        <div class="settings-category">
+                            <div class="settings-category-header">
+                                <span>MISC</span>
+                            </div>
+                            <div class="settings-left-menu-item" id="settings-save-button">
+                                <span><i class="fas fa-floppy-disk"></i>Save</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-right">
+                        <div class="general hidden">
+                            <div class="settings-compact-grid">
+                                <div class="settings-section compact">
+                                    <div class="settings-section-title">Maximum edit count</div>
+                                    <div class="settings-section-desc">Edits from users with more than this number of total edits will not be shown unless that user is highlighted.</div>
+                                    <numeric-input id="settings-maximum-edit-count" step="5" min="0" value="50"></numeric-input>
+                                </div>
+                                <div class="settings-section compact">
+                                    <div class="settings-section-title">Maximum queue size</div>
+                                    <div class="settings-section-desc">Maximum number of edits to keep in the queue for review. Higher values may impact performance.</div>
+                                    <numeric-input id="settings-maximum-queue-size" step="10" min="0" value="100"></numeric-input>
+                                </div>
+                                <div class="settings-section compact">
+                                    <div class="settings-section-title">Minimum ORES score</div>
+                                    <div class="settings-section-desc">Minimum ORES score required for an edit to appear in the recent changes queue.</div>
+                                    <numeric-input id="settings-minimum-ores-score" step="0.05" min="0" max="1" value="0"></numeric-input>
+                                </div>
+                            </div>
+                            <div class="settings-section">
+                                <div class="settings-section-title">Watchlist expiry</div>
+                                <div class="settings-section-desc">Amount of time to leave warned user's talk pages on your watchlist.</div>
+                                <duration-input id="settings-watchlist-expiry"></duration-input>
+                            </div>
+                            <div class="settings-section">
+                                <div class="settings-section-title">Namespaces to monitor</div>
+                                <div class="settings-section-desc">Select which namespaces WikiShield should monitor for recent changes and pending changes.</div>
+                                <div id="settings-namespaces-container" class="checkbox-container">
+                                    <!-- Namespace checkboxes will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                        <div class="performance hidden">
+                            <div class="settings-section">
+                                <div class="settings-section-title">Startup animation</div>
+                                <div class="settings-section-desc">Enable or disable the startup animation when launching WikiShield.</div>
+                                <div id="settings-startup-performance" class="settings-radio-group">
+                                    <div class="settings-radio-option" data-value="always_off">Always off</div>
+                                    <div class="settings-radio-option selected" data-value="adaptive">Adaptive (recommended)</div>
+                                    <div class="settings-radio-option" data-value="always_on">Always on</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="audio hidden">
+                            <div class="settings-toggles-section">
+                                <div class="settings-section-header">
+                                    <span class="settings-section-header-icon">ORES</span>
+                                    <span>ORES Alerts</span>
+                                </div>
+                                <div class="settings-section compact inline" id="sound-alert-toggle">
+                                    <div class="settings-section-content">
+                                        <div class="settings-section-title">Sound alerts for high ORES scores</div>
+                                        <div class="settings-section-desc">Play a sound when an edit above the threshold is added to the queue</div>
+                                    </div>
+                                    <toggle-input id="settings-ORES-alert-toggle" value="false"></toggle-input>
+                                </div>
+                                <div class="settings-section compact inline" id="sound-alert-ores-score">
+                                    <div class="settings-section-content">
+                                        <div class="settings-section-title">ORES score threshold</div>
+                                        <div class="settings-section-desc">Play a sound alert when an edit with an ORES score above this value is added</div>
+                                    </div>
+                                    <numeric-input id="settings-ORES-alert-threshold" step="0.05" min="0" max="1" value="0.9"></numeric-input>
+                                </div>
+                            </div>
+                            <div class="settings-section">
+                                <div class="settings-section-title">Volume</div>
+                                <volume-control
+                                    id="settings-master-volume"
+                                    title="Master Volume"
+                                    description="Controls the overall volume of all sounds"
+                                    value="1"
+                                ></volume-control>
+                                <div id="settings-sounds-container" class="settings-section">
+                                    <!-- Individual sound settings will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                        <div class="controls hidden">
+                            <div class="settings-section">
+                                <div class="settings-section-title">Keyboard shortcuts</div>
+                                <div class="settings-section-desc">Customize keyboard shortcuts for various actions in WikiShield.</div>
+                                <button type="button" id="settings-new-control-script" class="add-action-button new-control-script"><span class="fa fa-plus"></span> Add new action</button>
+                            </div>
+                        </div>
+
+                        <div class="queue hidden">
+                            <div class="settings-section">
+                                <div class="settings-section-title">Queues</div>
+                                <div class="settings-section-desc">Enable or disable different edit queues, and customize their order.</div>
+                                <draggable-order-list id="settings-queues">
+                                    <!-- Queue items will be populated here -->
+                                </draggable-order-list>
+                            </div>
+                            <div class="settings-section">
+                                <div class="settings-section-title">Color palette</div>
+                                <div class="settings-section-desc">Select the color palette used for highlighting users and pages.</div>
+                                <div id="settings-palette-selector" class="palette-selector">
+
+                                </div>
+                            </div>
+                        </div>
+                        <div class="zen hidden">
+                            <div class="settings-section">
+                                <div class="settings-section-title">Zen Mode</div>
+                                <div class="settings-section-desc">Your distraction-free editing experience.</div>
+                                <div class="settings-section compact inline">
+                                    <div class="settings-section-content">
+                                        <div class="settings-section-title">Enable Zen Mode</div>
+                                        <div class="settings-section-desc">Reduce on-screen distractions while reviewing edits.</div>
+                                    </div>
+                                    <toggle-input id="settings-zen-mode" value="true"></toggle-input>
+                                </div>
+                            </div>
+                            <div class="settings-toggles-section">
+                                <div class="settings-section-title">Customize Zen Mode</div>
+                                <div class="settings-compact-grid">
+                                    <div class="settings-section compact">
+                                        <div class="settings-section-title">Sound</div>
+                                        <div class="settings-section-desc">Play sound in Zen Mode.</div>
+                                        <toggle-input id="settings-zen-mode-sound" value="true"></toggle-input>
+                                    </div>
+                                    <div class="settings-section compact">
+                                        <div class="settings-section-title">Music</div>
+                                        <div class="settings-section-desc">Play background music in Zen Mode.</div>
+                                        <toggle-input id="settings-zen-mode-music" value="true"></toggle-input>
+                                    </div>
+                                    <div class="settings-section compact">
+                                        <div class="settings-section-title">Alerts</div>
+                                        <div class="settings-section-desc">Show alerts in Zen Mode.</div>
+                                        <toggle-input id="settings-zen-mode-alerts" value="true"></toggle-input>
+                                    </div>
+                                    <div class="settings-section compact">
+                                        <div class="settings-section-title">Messages</div>
+                                        <div class="settings-section-desc">Show messages in Zen Mode.</div>
+                                        <toggle-input id="settings-zen-mode-messages" value="true"></toggle-input>
+                                    </div>
+                                    <div class="settings-section compact">
+                                        <div class="settings-section-title">Toasts</div>
+                                        <div class="settings-section-desc">Show toasts in Zen Mode.</div>
+                                        <toggle-input id="settings-zen-mode-toasts" value="true"></toggle-input>
+                                    </div>
+                                    <div class="settings-section compact">
+                                        <div class="settings-section-title">Badges</div>
+                                        <div class="settings-section-desc">Show badges in Zen Mode.</div>
+                                        <toggle-input id="settings-zen-mode-badges" value="true"></toggle-input>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="AI hidden">
+                            <div class="settings-section">
+                                <div class="settings-section-title">AI Analysis</div>
+                                <div class="settings-section-desc">Configure AI-powered analysis features.</div>
+                                <div class="settings-section compact inline">
+                                    <div class="settings-section-content">
+                                        <div class="settings-section-title">Enable Ollama AI Analysis &lpar;<a href="https://ollama.com">ollama.com</a>&rpar;</div>
+                                        <div class="settings-section-desc">Use local AI models with complete privacy.</div>
+                                    </div>
+                                    <toggle-input id="settings-AI-toggle" value="false"></toggle-input>
+                                </div>
+                            </div>
+                            <div class="settings-toggles-section">
+                                <div class="settings-section-header">
+                                    <span class="settings-section-header-icon">Tools</span>
+                                </div>
+                                <div class="settings-section compact inline">
+                                    <div class="settings-section-content">
+                                        <div class="settings-section-title">Edit Analysis</div>
+                                        <div class="settings-section-desc">Suggests actions to take on edits.</div>
+                                    </div>
+                                    <toggle-input id="settings-AI-edit-analysis-toggle" value="true"></toggle-input>
+                                </div>
+                                <div class="settings-section compact inline">
+                                    <div class="settings-section-content">
+                                        <div class="settings-section-title">Username Analysis</div>
+                                        <div class="settings-section-desc">Flags potentially problematic usernames and prompts you to report them to UAA</div>
+                                    </div>
+                                    <toggle-input id="settings-AI-username-analysis-toggle" value="true"></toggle-input>
+                                </div>
+                            </div>
+
+                            <div class="settings-section" id="ollama-server-url">
+                                <div class="settings-section-title">Server URL</div>
+                                <div class="settings-section-desc">The URL of your local Ollama server</div>
+                                <div class="text-input-container">
+                                    <input title="Ollama URL" type="text" id="ollama-url-input" autoComplete="off">
+                                    <button type="button" id="settings-ollama-test-connection">Test Connection</button>
+                                </div>
+                                <div class="settings-section compact connection-status-container">
+                                    <p id="settings-ollama-connection-status"></p>
+                                </div>
+                            </div>
+
+                            <div class="settings-section" id="ollama-model-select">
+                                <div class="settings-section-title">
+                                    Model Selection
+                                    <button type="button" id="settings-ollama-refresh-models">
+                                        <span class="fa fa-sync"></span> Refresh Models
+                                    </button>
+                                </div>
+                                <div class="settings-section-desc">Select which Ollama model to use for edit analysis</div>
+                                <div class="settings-section compact models-container">
+                                    <p id="settings-ollama-models-status">Click "Refresh Models" to load available models</p>
+                                    <div id="settings-ollama-models"></div>
+                                </div>
+                            </div>
+
+                            <div class="settings-section" id="ollama-cors-setup">
+                                <div class="settings-section-title">CORS Setup Required</div>
+                                <div class="settings-section-desc">
+                                    <strong>Environment Variable:</strong> <code>OLLAMA_ORIGINS</code><br>
+                                    <strong>Value:</strong> <code>https://*.wikipedia.org</code>
+
+                                    <br><br>
+
+                                    <details>
+                                        <summary><strong>Windows (Permanent)</strong></summary>
+                                        <ol class="pad-list">
+                                            <li>Open <em>System Properties → Environment Variables</em></li>
+                                            <li>Create a new variable named <code>OLLAMA_ORIGINS</code></li>
+                                            <li>Set the value to <code>https://*.wikipedia.org</code></li>
+                                            <li>Restart Ollama</li>
+                                        </ol>
+                                    </details>
+
+                                    <details>
+                                        <summary><strong>Windows (Temporary)</strong></summary>
+                                        <pre>
+                                                $env:OLLAMA_ORIGINS="https://*.wikipedia.org"
+                                        ollama serve
+                                        </pre>
+                                    </details>
+
+                                    <details>
+                                        <summary><strong>macOS / Linux</strong></summary>
+                                        Add the following to <code>~/.bashrc</code> or <code>~/.zshrc</code>:
+                                        <pre>export OLLAMA_ORIGINS="https://*.wikipedia.org"</pre>
+                                        Then run:
+                                        <pre>source ~/.bashrc && ollama serve</pre>
+                                    </details>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="auto-reporting hidden">
+                            <div class="settings-section">
+                                <div class="settings-section-title">Enable Auto Reporting</div>
+                                <div class="settings-section-desc">Automatically report edits that receive certain warnings.</div>
+                                <div class="settings-section compact inline">
+                                    <div class="settings-section-content">
+                                        <div class="settings-section-title">Auto Reporting</div>
+                                        <div class="settings-section-desc">When enabled, edits that trigger selected warnings will be automatically reported.</div>
+                                    </div>
+                                    <toggle-input id="settings-auto-reporting-toggle" value="false"></toggle-input>
+                                </div>
+                            </div>
+                            <div class="settings-section">
+                                <div class="settings-section-title">Auto Reporting Warnings</div>
+                                <div class="settings-section-desc">Select which warnings should trigger automatic reporting.</div>
+                                <div id="settings-auto-reporting-warnings-container" class="checkbox-container">
+                                    <!-- Warning checkboxes will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                        <div class="gadgets hidden">
+                            <div class="settings-toggles-section">
+                                <div class="settings-section-title">Gadgets</div>
+                                <div class="settings-section-desc">Toggle various Wikishield features.</div>
+                                <div class="settings-section compact inline" id="auto-welcome-toggle">
+                                    <div class="settings-section-content">
+                                        <div class="settings-section-title">Automatic welcoming of new users</div>
+                                        <div class="settings-section-desc">Automatically welcome new users with empty talk pages when moving past their constructive edits</div>
+                                    </div>
+                                    <toggle-input id="settings-auto-welcome-toggle" value="true"></toggle-input>
+                                </div>
+                                <div class="settings-section compact inline" id="wikipedia-popups-toggle">
+                                    <div class="settings-section-content">
+                                        <div class="settings-section-title">Popups</div>
+                                        <div class="settings-section-desc">When enabled, links will be opened in a new window. Otherwise, they will be opened in your default browser. (Not supported by Opera or Safari browsers)</div>
+                                    </div>
+                                    <toggle-input id="settings-wikipedia-popups-toggle" value="true"></toggle-input>
+                                </div>
+                            </div>
+                            <div class="settings-toggles-section">
+                                <div class="settings-section-title">Username Highlighting</div>
+                                <div class="settings-section compact inline" id="username-highlighting-toggle">
+                                    <div class="settings-section-content">
+                                        <div class="settings-section-title">Enable username highlighting</div>
+                                        <div class="settings-section-desc">Highlights usernames in edit summaries, edit diffs, and user creation logs.</div>
+                                    </div>
+                                    <toggle-input id="settings-username-highlighting-toggle" value="true"></toggle-input>
+                                </div>
+                                <div class="settings-section compact inline" id="username-highlighting-mode-toggle">
+                                    <div class="settings-section-content">
+                                        <div class="settings-section-title">Toggle fuzzy matching mode</div>
+                                        <div class="settings-section-desc">
+                                            When enabled, highlights similar usernames. Not recommended for users with short usernames.<br/>
+                                            <strong>NOTE:</strong> This may cause performance issues for those with long usernames, or users on weaker devices.
+                                        </div>
+                                    </div>
+                                    <toggle-input id="settings-username-highlighting-fuzzy-toggle" value="false"></toggle-input>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="whitelist users hidden">
+                            <div class="settings-section">
+                                <div class="settings-section-title">Expiry for whitelisted users</div>
+                                <div class="settings-section-desc">Amount of time before a whitelisted user is automatically removed from the whitelist.</div>
+                                <duration-input id="settings-whitelist-users-expiry" label="Default expiry for whitelisted users"></duration-input>
+                            </div>
+                            <div class="settings-section">
+                                <div class="settings-section-title">Whitelisted Users</div>
+                                <div class="settings-section-desc">Manage your list of whitelisted users.</div>
+                                <div class="text-input-container">
+                                    <input type="text" id="settings-whitelist-users-input" placeholder="Add user to whitelist..." autocomplete="off"/>
+                                    <button type="button" id="settings-whitelist-users-add-button">Add user</button>
+                                </div>
+                            </div>
+                            <div id="settings-whitelist-users-list" class="settings-section list-container">
+                                <!-- Whitelisted users will be populated here -->
+                            </div>
+                        </div>
+                        <div class="whitelist pages hidden">
+                            <div class="settings-section">
+                                <div class="settings-section-title">Expiry for whitelisted pages</div>
+                                <div class="settings-section-desc">Amount of time before a whitelisted page is automatically removed from the whitelist.</div>
+                                <duration-input id="settings-whitelist-pages-expiry" label="Default expiry for whitelisted pages"></duration-input>
+                            </div>
+                            <div class="settings-section">
+                                <div class="settings-section-title">Whitelisted Pages</div>
+                                <div class="settings-section-desc">Manage your list of whitelisted pages.</div>
+                                <div class="text-input-container">
+                                    <input type="text" id="settings-whitelist-pages-input" placeholder="Add page to whitelist..." autocomplete="off"/>
+                                    <button type="button" id="settings-whitelist-pages-add-button">Add page</button>
+                                </div>
+                            </div>
+                            <div id="settings-whitelist-pages-list" class="settings-section list-container">
+                                <!-- Whitelisted pages will be populated here -->
+                            </div>
+                        </div>
+                        <div class="whitelist tags hidden">
+                            <div class="settings-section">
+                                <div class="settings-section-title">Expiry for whitelisted tags</div>
+                                <div class="settings-section-desc">Amount of time before a whitelisted tag is automatically removed from the whitelist.</div>
+                                <duration-input id="settings-whitelist-tags-expiry" label="Default expiry for whitelisted tags"></duration-input>
+                            </div>
+                            <div class="settings-section">
+                                <div class="settings-section-title">Whitelisted Tags</div>
+                                <div class="settings-section-desc">Manage your list of whitelisted tags.</div>
+                                <div class="text-input-container">
+                                    <input type="text" id="settings-whitelist-tags-input" placeholder="Add tag to whitelist..." autocomplete="off"/>
+                                    <button type="button" id="settings-whitelist-tags-add-button">Add tag</button>
+                                </div>
+                            </div>
+                            <div id="settings-whitelist-tags-list" class="settings-section list-container">
+                                <!-- Whitelisted tags will be populated here -->
+                            </div>
+                        </div>
+
+                        <div class="highlight users hidden">
+                            <div class="settings-section">
+                                <div class="settings-section-title">Expiry for highlighted users</div>
+                                <div class="settings-section-desc">Amount of time before a highlighted user is automatically removed from the highlight list.</div>
+                                <duration-input id="settings-highlight-users-expiry" label="Default expiry for highlighted users"></duration-input>
+                            </div>
+                            <div class="settings-section">
+                                <div class="settings-section-title">Highlighted Users</div>
+                                <div class="settings-section-desc">Manage your list of highlighted users.</div>
+                                <div class="text-input-container">
+                                    <input type="text" id="settings-highlight-users-input" placeholder="Add user to highlight..." autocomplete="off"/>
+                                    <button type="button" id="settings-highlight-users-add-button">Add user</button>
+                                </div>
+                            </div>
+                            <div id="settings-highlight-users-list" class="settings-section list-container">
+                                <!-- Highlighted users will be populated here -->
+                            </div>
+                        </div>
+                        <div class="highlight pages hidden">
+                            <div class="settings-section">
+                                <div class="settings-section-title">Expiry for highlighted pages</div>
+                                <div class="settings-section-desc">Amount of time before a highlighted page is automatically removed from the highlight list.</div>
+                                <duration-input id="settings-highlight-pages-expiry" label="Default expiry for highlighted pages"></duration-input>
+                            </div>
+                            <div class="settings-section">
+                                <div class="settings-section-title">Highlighted Pages</div>
+                                <div class="settings-section-desc">Manage your list of highlighted pages.</div>
+                                <div class="text-input-container">
+                                    <input type="text" id="settings-highlight-pages-input" placeholder="Add page to highlight..." autocomplete="off"/>
+                                    <button type="button" id="settings-highlight-pages-add-button">Add page</button>
+                                </div>
+                            </div>
+                            <div id="settings-highlight-pages-list" class="settings-section list-container">
+                                <!-- Highlighted pages will be populated here -->
+                            </div>
+                        </div>
+                        <div class="highlight tags hidden">
+                            <div class="settings-section">
+                                <div class="settings-section-title">Expiry for highlighted tags</div>
+                                <div class="settings-section-desc">Amount of time before a highlighted tag is automatically removed from the highlight list.</div>
+                                <duration-input id="settings-highlight-tags-expiry" label="Default expiry for highlighted tags"></duration-input>
+                            </div>
+                            <div class="settings-section">
+                                <div class="settings-section-title">Highlighted Tags</div>
+                                <div class="settings-section-desc">Manage your list of highlighted tags.</div>
+                                <div class="text-input-container">
+                                    <input type="text" id="settings-highlight-tags-input" placeholder="Add tag to highlight..." autocomplete="off"/>
+                                    <button type="button" id="settings-highlight-tags-add-button">Add tag</button>
+                                </div>
+                            </div>
+                            <div id="settings-highlight-tags-list" class="settings-section list-container">
+                                <!-- Highlighted tags will be populated here -->
+                            </div>
+                        </div>
+
+                        <div class="statistics hidden">
+                            <div class="settings-section">
+                                <div class="settings-section-title">
+                                    Statistics Overview
+                                    <button type="button" id="reset-statistics-button">Reset Statistics</button>
+                                </div>
+                                <div class="stats-grid">
+                                    <div class="stat-card">
+                                        <div class="inside shimmer shimmer-border">
+                                            <div class="front">
+                                                <div id="stats-total-reviewed" class="stat-value"></div>
+                                                <div class="stat-label">Edits Reviewed</div>
+                                            </div>
+                                            <div class="back">
+                                                <div class="stat-sublabel">
+                                                    You have thanked <span id="stats-thanks-percentage"></span>% of the edits you reviewed
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="inside shimmer shimmer-border">
+                                            <div class="front">
+                                                <div id="stats-recent-changes-reviewed" class="stat-value"></div>
+                                                <div class="stat-label">Recent Changes Reviewed</div>
+                                            </div>
+                                            <div class="back">
+                                                <div class="stat-sublabel">
+                                                    Recent changes make up <span id="stats-recent-changes-percentage"></span>% of your reviewed edits
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="inside shimmer shimmer-border">
+                                            <div class="front">
+                                                <div id="stats-pending-changes-reviewed" class="stat-value"></div>
+                                                <div class="stat-label">Pending Changes Reviewed</div>
+                                            </div>
+                                            <div class="back">
+                                                <div class="stat-sublabel">
+                                                    You have accepted <span id="stats-pending-changes-accepted"></span> &lpar;
+                                                        <span id="stats-pending-changes-accepted-percentage"></span>%
+                                                    &rpar; pending changes
+                                                </div>
+                                                <div class="stat-sublabel">
+                                                    You have rejected <span id="stats-pending-changes-rejected"></span> &lpar;
+                                                        <span id="stats-pending-changes-rejected-percentage"></span>%
+                                                    &rpar; pending changes from entering the public eye
+                                                </div>
+                                                <div class="stat-sublabel">
+                                                    Out of all the edits you&rsquo;ve reviewed, <span id="stats-pending-changes-percentage"></span>% of them were pending review
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="inside shimmer shimmer-border">
+                                            <div class="front">
+                                                <div id="stats-user-creations-reviewed" class="stat-value"></div>
+                                                <div class="stat-label">User Creations Reviewed</div>
+                                            </div>
+                                            <div class="back">
+                                                <div class="stat-sublabel">
+                                                    <span id="stats-user-creations-percentage"></span>% of your reviews came from user creations
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="inside shimmer shimmer-border">
+                                            <div class="front">
+                                                <div id="stats-watchlist-changes-reviewed" class="stat-value"></div>
+                                                <div class="stat-label">Watchlist Changes Reviewed</div>
+                                            </div>
+                                            <div class="back">
+                                                <div class="stat-sublabel">
+                                                    <span id="stats-watchlist-changes-percentage"></span>% of your reviews came from your watchlist
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="inside shimmer shimmer-border">
+                                            <div class="front">
+                                                <div id="stats-reverts-made" class="stat-value"></div>
+                                                <div class="stat-label">Reverts Made</div>
+                                            </div>
+                                            <div class="back">
+                                                <div class="stat-sublabel">
+                                                    <span id="stats-reverts-percentage"></span>% of edits that cross your path are reverted by you
+                                                </div>
+                                                <div class="stat-sublabel">
+                                                    You assumed good faith <span id="stats-goodfaith-reverts-percentage"></span>% of the time
+                                                </div>
+                                                <div class="stat-sublabel">
+                                                    <span id="stats-recent-reverts-percentage"></span>% of your reverts were from recent changes
+                                                </div>
+                                                <div class="stat-sublabel">
+                                                    <span id="stats-pending-reverts-percentage"></span>% of your reverts were pending
+                                                </div>
+                                                <div class="stat-sublabel">
+                                                    <span id="stats-watchlist-reverts-percentage"></span>% of your reverts were from your watchlist
+                                                </div>
+                                                <div class="stat-sublabel">
+                                                    &hellip;and the last <span id="stats-other-reverts-percentage"></span>% weren&rsquo;t even in your queue!
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="inside shimmer shimmer-border">
+                                            <div class="front">
+                                                <div id="stats-users-welcomed" class="stat-value"></div>
+                                                <div class="stat-label">Users Welcomed</div>
+                                            </div>
+                                            <div class="back">
+                                                <div class="stat-sublabel">
+                                                    <span id="stats-users-welcomed-message"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="inside shimmer shimmer-border">
+                                            <div class="front">
+                                                <div id="stats-warnings" class="stat-value"></div>
+                                                <div class="stat-label">Warnings Issued</div>
+                                            </div>
+                                            <div class="back">
+                                                <div class="stat-sublabel">
+                                                    <span id="stats-warning-1-percentage"></span>% were level 1
+                                                </div>
+                                                <div class="stat-sublabel">
+                                                    <span id="stats-warning-2-percentage"></span>% were level 2
+                                                </div>
+                                                <div class="stat-sublabel">
+                                                    <span id="stats-warning-3-percentage"></span>% were level 3
+                                                </div>
+                                                <div class="stat-sublabel">
+                                                    <span id="stats-warning-4-percentage"></span>% were level 4
+                                                </div>
+                                                <div class="stat-sublabel">
+                                                    <span id="stats-warning-4im-percentage"></span>% were level 4im
+                                                </div>
+                                                <div class="stat-sublabel">
+                                                    &hellip;and the rest we were too lazy to track =&rpar;
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="inside shimmer shimmer-border">
+                                            <div class="front">
+                                                <div id="stats-reports" class="stat-value"></div>
+                                                <div class="stat-label">Reports Filed</div>
+                                            </div>
+                                            <div class="back">
+                                                <div class="stat-sublabel">
+                                                    AIV accounted for <span id="stats-AIV-reports-percentage"></span>% of your reports
+                                                </div>
+                                                <div class="stat-sublabel">
+                                                    another <span id="stats-UAA-reports-percentage"></span>% were for UAA
+                                                </div>
+                                                <div class="stat-sublabel">
+                                                    and <span id="stats-RFPP-reports-percentage"></span>% were posted at RFPP &lpar;yes, we count that as a report&rpar;
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="inside shimmer shimmer-border">
+                                            <div class="front">
+                                                <div id="stats-pages-watched" class="stat-value"></div>
+                                                <div class="stat-label">Pages Watched</div>
+                                            </div>
+                                            <div class="back">
+                                                <div class="stat-sublabel">
+                                                    <span id="stats-pages-unwatched"></span> pages were annoying enough to be unwatched
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="inside shimmer shimmer-border">
+                                            <div class="front">
+                                                <div id="stats-items-whitelisted" class="stat-value"></div>
+                                                <div class="stat-label">Items Whitelisted</div>
+                                            </div>
+                                            <div class="back">
+                                                <div class="stat-sublabel">
+                                                    <span id="stats-users-whitelisted"></span> &lpar;
+                                                        <span id="stats-users-whitelisted-percentage"></span>%
+                                                    &rpar; were users
+                                                </div>
+                                                <div class="stat-sublabel">
+                                                    <span id="stats-pages-whitelisted"></span> &lpar;
+                                                        <span id="stats-pages-whitelisted-percentage"></span>%
+                                                    &rpar; were pages
+                                                </div>
+                                                <div class="stat-sublabel">
+                                                    <span id="stats-tags-whitelisted"></span> &lpar;
+                                                        <span id="stats-tags-whitelisted-percentage"></span>%
+                                                    &rpar; were tags
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="inside shimmer shimmer-border">
+                                            <div class="front">
+                                                <div id="stats-items-highlighted" class="stat-value"></div>
+                                                <div class="stat-label">Items Highlighted</div>
+                                            </div>
+                                            <div class="back">
+                                                <div class="stat-sublabel">
+                                                    <span id="stats-users-highlighted"></span> &lpar;
+                                                        <span id="stats-users-highlighted-percentage"></span>%
+                                                    &rpar; were users
+                                                </div>
+                                                <div class="stat-sublabel">
+                                                    <span id="stats-pages-highlighted"></span> &lpar;
+                                                        <span id="stats-pages-highlighted-percentage"></span>%
+                                                    &rpar; were pages
+                                                </div>
+                                                <div class="stat-sublabel">
+                                                    <span id="stats-tags-highlighted"></span> &lpar;
+                                                        <span id="stats-tags-highlighted-percentage"></span>%
+                                                    &rpar; were tags
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="inside shimmer shimmer-border">
+                                            <div class="front">
+                                                <div id="stats-session-time" class="stat-value"></div>
+                                                <div class="stat-label">Session Time</div>
+                                            </div>
+                                            <div class="back">
+                                                <div class="stat-sublabel">
+                                                    <span id="stats-reports-per-day"></span> reports per day
+                                                </div>
+                                                <div class="stat-sublabel">
+                                                    <span id="stats-reverts-per-hour"></span> reverts per hour
+                                                </div>
+                                                <div class="stat-sublabel">
+                                                    <span id="stats-reviews-per-minute"></span> reviews per minute
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="save hidden">
+                            <div class="save settings-section">
+                                <div class="save-settings-header">
+                                    <div class="settings-section-title">Save Settings</div>
+                                    <div class="settings-section-desc">Manage how and where your WikiShield settings are stored.</div>
+                                </div>
+
+                                <div class="save-settings-content">
+                                    <div class="save-settings-card cloud-storage-card">
+                                        <div class="card-header">
+                                            <div class="card-icon">
+                                                <i class="fa fa-cloud"></i>
+                                            </div>
+                                            <div class="card-header-content">
+                                                <div class="card-title">Cloud Storage</div>
+                                                <div class="card-desc">Store your settings in the cloud for access across multiple browsers and devices.</div>
+                                            </div>
+                                            <toggle-input id="settings-cloud-storage-toggle" class="card-toggle"></toggle-input>
+                                        </div>
+                                    </div>
+
+                                    <div class="save-settings-card data-management-card">
+                                        <div class="card-header">
+                                            <div class="card-icon">
+                                                <i class="fa fa-database"></i>
+                                            </div>
+                                            <div class="card-header-content">
+                                                <div class="card-title">Data Management</div>
+                                                <div class="card-desc">Import, export, or reset your WikiShield settings. Settings are encoded as base64 for easy sharing.</div>
+                                            </div>
+                                        </div>
+
+                                        <div class="card-body">
+                                            <div class="action-buttons-grid">
+                                                <button type="button" id="settings-export-button" class="action-card export-card">
+                                                    <div class="action-card-icon">
+                                                        <i class="fa fa-download"></i>
+                                                    </div>
+                                                    <div class="action-card-content">
+                                                        <div class="action-card-title">Export Settings</div>
+                                                        <div class="action-card-desc">Save your configuration</div>
+                                                    </div>
+                                                </button>
+
+                                                <button type="button" id="settings-import-button" class="action-card import-card">
+                                                    <div class="action-card-icon">
+                                                        <i class="fa fa-upload"></i>
+                                                    </div>
+                                                    <div class="action-card-content">
+                                                        <div class="action-card-title">Import Settings</div>
+                                                        <div class="action-card-desc">Load saved configuration</div>
+                                                    </div>
+                                                </button>
+
+                                                <button type="button" id="settings-reset-button" class="action-card reset-card">
+                                                    <div class="action-card-icon">
+                                                        <i class="fa fa-undo"></i>
+                                                    </div>
+                                                    <div class="action-card-content">
+                                                        <div class="action-card-title">Reset Settings</div>
+                                                        <div class="action-card-desc">Restore to defaults</div>
+                                                    </div>
+                                                </button>
+                                            </div>
+
+                                            <div id="settings-save-status" class="status-message hidden"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
