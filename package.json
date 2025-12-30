@@ -1,6 +1,6 @@
 {
   "name": "WikiShield",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "WikiShield Application",
   "main": "index.js",
   "repository": {
@@ -59,11 +59,11 @@
           "CompanyName": "WikiShield Team",
           "FileDescription": "WikiShield Application",
           "ProductName": "WikiShield",
-          "FileVersion": "1.0.4",
-          "ProductVersion": "1.0.4"
+          "FileVersion": "1.0.5",
+          "ProductVersion": "1.0.5"
         },
-        "appVersion": "1.0.4",
-        "buildVersion": "1.0.4"
+        "appVersion": "1.0.5",
+        "buildVersion": "1.0.5"
       },
       "makers": [
         {
@@ -136,7 +136,7 @@
       "!dist/",
       "!scripts/"
     ],
-    "afterPack": "./build/after-pack.js",
+    "afterPack": "./scripts/after-pack.js",
     "win": {
       "target": [
         {
