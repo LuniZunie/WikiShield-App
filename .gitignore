@@ -4,6 +4,7 @@
 # Build outputs
 /out
 /dist
+/build
 
 # Logs
 *.log

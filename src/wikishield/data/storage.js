@@ -6,7 +6,6 @@ import { conditions } from "../config/conditions.js";
 import { expiryRegex } from "../utils/helpers.js";
 import { GUI } from "../ui/gui.js";
 import { sortDependencies } from "../utils/scripts.js";
-import { access } from "original-fs";
 
 const isObject = v => v !== null && typeof v === "object" && !Array.isArray(v);
 const isURL = str => {

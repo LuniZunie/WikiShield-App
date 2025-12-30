@@ -24,7 +24,7 @@
   "keywords": [],
   "author": "WikiShield Team",
   "license": "ISC",
-  "type": "module",
+  "type": "commonjs",
   "devDependencies": {
     "@electron-forge/cli": "^7.5.0",
     "@electron-forge/maker-deb": "^7.5.0",
@@ -41,7 +41,7 @@
   "dependencies": {
     "electron-log": "^5.4.3",
     "electron-squirrel-startup": "^1.0.1",
-    "electron-store": "^11.0.2",
+    "electron-store": "^8.2.0",
     "electron-updater": "^6.6.2"
   },
   "config": {
@@ -115,7 +115,6 @@
       "!LICENSE.md",
       "!package.json",
       "!package-lock.json",
-      "!src/",
       "!e2e/",
       "!hooks/",
       "!angular.json",
@@ -123,13 +122,18 @@
       "!karma.conf.js",
       "!tsconfig.json",
       "!tslint.json",
-      "!out/"
+      "!out/",
+      "!build/",
+      "!build.js",
+      "!dist/"
     ],
     "win": {
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "assets/icon.ico",

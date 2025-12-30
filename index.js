@@ -1,17 +1,14 @@
-const __DEV__ = false;
-
-import { shell } from 'electron/common';
-import {
+const { shell } = require('electron/common');
+const {
     app, BaseWindow, BrowserWindow, Menu, Tray, Notification, nativeImage, safeStorage,
     screen, ipcMain, dialog, globalShortcut, clipboard, crashReporter
-} from 'electron/main';
-import Store from 'electron-store';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import log from 'electron-log';
-import { autoUpdater } from 'electron-updater';
+} = require('electron/main');
+const Store = require('electron-store');
+const path = require('path');
+const log = require('electron-log');
+const { autoUpdater } = require('electron-updater');
 
-// Handle Squirrel events for Windows
+const __DEV__ = process.env.NODE_ENV === 'development' || !app.isPackaged;
 if (require('electron-squirrel-startup')) {
     app.quit();
 }
@@ -43,21 +40,16 @@ if (process.platform === 'win32') {
         switch (squirrelEvent) {
             case '--squirrel-install':
             case '--squirrel-updated':
-                // Install desktop and start menu shortcuts
                 spawnUpdate(['--createShortcut', exeName]);
                 setTimeout(app.quit, 1000);
                 return true;
 
             case '--squirrel-uninstall':
-                // Remove desktop and start menu shortcuts
                 spawnUpdate(['--removeShortcut', exeName]);
                 setTimeout(app.quit, 1000);
                 return true;
 
             case '--squirrel-obsolete':
-                // This is called on the outgoing version of your app before
-                // we update to the new version - it's the opposite of
-                // --squirrel-updated
                 app.quit();
                 return true;
         }
@@ -69,9 +61,6 @@ if (process.platform === 'win32') {
 }
 
 crashReporter.start({ submitURL: 'https://luni.me/crash-report' });
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 log.transports.file.level = 'debug';
 log.transports.file.file = path.join(app.getPath('userData'), 'logs', 'wikishield.log');
@@ -94,11 +83,6 @@ const store = new Store({
     }
 });
 
-/**
- * Creates a custom badge icon for Windows taskbar overlay
- * Matches the app's visual style with gradients and modern design
- * Uses Canvas rendering through a hidden window for reliable icon generation
- */
 async function createBadgeIcon(count) {
     const text = count > 99 ? '99+' : count.toString();
 
@@ -469,6 +453,29 @@ function AddAppMenuItems() {
                         }
                     },
                     { type: 'separator' },
+                    {
+                        label: 'Check for Updates...',
+                        click: () => {
+                            log.info('Manual update check triggered');
+                            autoUpdater.checkForUpdates()
+                                .then(result => {
+                                    log.info('Manual update check result:', result);
+                                    if (!result || result.updateInfo.version === app.getVersion()) {
+                                        dialog.showMessageBox({
+                                            type: 'info',
+                                            title: 'No Updates',
+                                            message: `You're running the latest version (${app.getVersion()})`,
+                                            buttons: ['OK']
+                                        });
+                                    }
+                                })
+                                .catch(err => {
+                                    log.error('Manual update check failed:', err);
+                                    dialog.showErrorBox('Update Check Failed', `Failed to check for updates: ${err.message}`);
+                                });
+                        }
+                    },
+                    { type: 'separator' },
                     ...(__DEV__ ? [
                         { role: 'toggleDevTools' },
                         { type: 'separator' }
@@ -492,7 +499,7 @@ async function BuildMainWindow() {
 
     windows.main = new BrowserWindow({
         show: false,
-        icon: nativeImage.createFromPath('./assets/icon.png'),
+        icon: nativeImage.createFromPath(path.join(__dirname, 'assets', 'icon.png')),
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
         },
@@ -524,7 +531,7 @@ async function BuildMainWindow() {
         contextMenu.popup(windows.main, params.x, params.y);
     });
 
-    windows.main.loadFile('./src/wikishield/index.html');
+    windows.main.loadFile(path.join(__dirname, 'src', 'wikishield', 'index.html'));
     windows.main.once('ready-to-show', () => {
         windows.main.maximize();
     });
@@ -545,7 +552,7 @@ function BuildLoginWindow() {
         resizable: false,
         maximizable: false,
         minimizable: false,
-        icon: nativeImage.createFromPath('./assets/icon.png'),
+        icon: nativeImage.createFromPath(path.join(__dirname, 'assets', 'icon.png')),
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
         }
@@ -575,7 +582,7 @@ function BuildLoginWindow() {
         contextMenu.popup(windows.login, params.x, params.y);
     });
 
-    windows.login.loadFile('./src/login/index.html');
+    windows.login.loadFile(path.join(__dirname, 'src', 'login', 'index.html'));
     windows.login.setMenuBarVisibility(false);
 
     windows.login.once('ready-to-show', () => {
@@ -598,7 +605,7 @@ function BuildAccountsWindow() {
         resizable: false,
         maximizable: false,
         minimizable: false,
-        icon: nativeImage.createFromPath('./assets/icon.png'),
+        icon: nativeImage.createFromPath(path.join(__dirname, 'assets', 'icon.png')),
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
         }
@@ -628,7 +635,7 @@ function BuildAccountsWindow() {
         contextMenu.popup(windows.accounts, params.x, params.y);
     });
 
-    windows.accounts.loadFile('./src/accounts/index.html');
+    windows.accounts.loadFile(path.join(__dirname, 'src', 'accounts', 'index.html'));
     windows.accounts.setMenuBarVisibility(false);
 
     windows.accounts.once('ready-to-show', () => {
@@ -639,7 +646,7 @@ function BuildAccountsWindow() {
 }
 
 function BuildTray() {
-    const tray = new Tray(nativeImage.createFromPath('./assets/icon.png'));
+    const tray = new Tray(nativeImage.createFromPath(path.join(__dirname, 'assets', 'icon.png')));
     tray.setToolTip('WikiShield');
 
     tray.on('click', () => {
@@ -976,16 +983,17 @@ function SetActiveAccount(username) {
 // Configure auto-updater
 autoUpdater.logger = log;
 autoUpdater.logger.transports.file.level = 'info';
-autoUpdater.autoDownload = true;
+autoUpdater.autoDownload = false; // Don't auto-download, ask user first
 autoUpdater.autoInstallOnAppQuit = true;
 
 // Auto-updater events
 autoUpdater.on('checking-for-update', () => {
     log.info('Checking for update...');
+    log.info(`Current version: ${app.getVersion()}`);
 });
 
 autoUpdater.on('update-available', (info) => {
-    log.info('Update available:', info);
+    log.info('Update available:', JSON.stringify(info));
     dialog.showMessageBox({
         type: 'info',
         title: 'Update Available',
@@ -1001,11 +1009,15 @@ autoUpdater.on('update-available', (info) => {
 });
 
 autoUpdater.on('update-not-available', (info) => {
-    log.info('Update not available:', info);
+    log.info('Update not available. Current version is latest:', JSON.stringify(info));
 });
 
 autoUpdater.on('error', (err) => {
     log.error('Error in auto-updater:', err);
+    // Don't show error dialog for network issues or no updates
+    if (!err.message.includes('net::') && !err.message.includes('ENOTFOUND')) {
+        dialog.showErrorBox('Update Error', `Failed to check for updates: ${err.message}`);
+    }
 });
 
 autoUpdater.on('download-progress', (progressObj) => {
@@ -1032,15 +1044,37 @@ autoUpdater.on('update-downloaded', (info) => {
 });
 
 app.whenReady().then(async () => {
-    if (!__DEV__) {
+    log.info(`App ready - DEV mode: ${__DEV__}, Packaged: ${app.isPackaged}`);
+
+    if (!__DEV__ && app.isPackaged) {
+        log.info('Auto-updater enabled, will check for updates in 3 seconds...');
+
+        // Check for updates after app is ready
         setTimeout(() => {
-            autoUpdater.checkForUpdates();
+            log.info('Initiating update check...');
+            log.info(`Update feed URL: ${autoUpdater.getFeedURL()}`);
+            autoUpdater.checkForUpdates()
+                .then(result => {
+                    log.info('Update check result:', result);
+                })
+                .catch(err => {
+                    log.error('Failed to check for updates:', err);
+                    // Only show error dialog for non-network errors
+                    if (!err.message.includes('net::') && !err.message.includes('ENOTFOUND') && !err.message.includes('ECONNREFUSED')) {
+                        dialog.showErrorBox('Update Error', `Failed to check for updates: ${err.message}`);
+                    }
+                });
         }, 3000);
 
         // Check for updates every 4 hours
         setInterval(() => {
-            autoUpdater.checkForUpdates();
+            log.info('Periodic update check...');
+            autoUpdater.checkForUpdates().catch(err => {
+                log.error('Failed to check for updates:', err);
+            });
         }, 4 * 60 * 60 * 1000);
+    } else {
+        log.info(`Auto-updater disabled - DEV: ${__DEV__}, Packaged: ${app.isPackaged}`);
     }
 
     globalShortcut.register('escape', () => {
