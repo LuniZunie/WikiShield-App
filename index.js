@@ -1009,6 +1009,12 @@ autoUpdater.autoInstallOnAppQuit = true;
 // Set the update feed URL based on the platform
 // electron-updater will automatically determine the correct feed URL from package.json publish config
 // For GitHub releases, it uses: https://github.com/{owner}/{repo}/releases
+autoUpdater.setFeedURL({
+    provider: 'github',
+    owner: 'LuniZunie',
+    repo: 'WikiShield-App',
+    private: false,
+});
 
 // Auto-updater events
 autoUpdater.on('checking-for-update', () => {

@@ -1,22 +1,22 @@
 ## Installation
 
 ### Windows
-- **Recommended**: [WikiShield-Setup-1.0.7.exe](https://github.com/LuniZunie/WikiShield-App/releases/download/v1.0.7/WikiShield-Setup-1.0.7.exe)
+- **Recommended**: [WikiShield-Setup-1.0.8.exe](https://github.com/LuniZunie/WikiShield-App/releases/download/v1.0.8/WikiShield-Setup-1.0.8.exe)
   - Full installer with auto-update support
   - Creates desktop and start menu shortcuts
 
 ### macOS
-- **Intel Macs**: [WikiShield-1.0.7-mac.zip](https://github.com/LuniZunie/WikiShield-App/releases/download/v1.0.7/WikiShield-1.0.7-mac.zip)
-- **Apple Silicon (M1/M2/M3)**: [WikiShield-1.0.7-arm64-mac.zip](https://github.com/LuniZunie/WikiShield-App/releases/download/v1.0.7/WikiShield-1.0.7-arm64-mac.zip)
-- **DMG Installer (Intel)**: [WikiShield-1.0.7.dmg](https://github.com/LuniZunie/WikiShield-App/releases/download/v1.0.7/WikiShield-1.0.7.dmg)
-- **DMG Installer (Apple Silicon)**: [WikiShield-1.0.7-arm64.dmg](https://github.com/LuniZunie/WikiShield-App/releases/download/v1.0.7/WikiShield-1.0.7-arm64.dmg)
+- **Intel Macs**: [WikiShield-1.0.8-mac.zip](https://github.com/LuniZunie/WikiShield-App/releases/download/v1.0.8/WikiShield-1.0.8-mac.zip)
+- **Apple Silicon (M1/M2/M3)**: [WikiShield-1.0.8-arm64-mac.zip](https://github.com/LuniZunie/WikiShield-App/releases/download/v1.0.8/WikiShield-1.0.8-arm64-mac.zip)
+- **DMG Installer (Intel)**: [WikiShield-1.0.8.dmg](https://github.com/LuniZunie/WikiShield-App/releases/download/v1.0.8/WikiShield-1.0.8.dmg)
+- **DMG Installer (Apple Silicon)**: [WikiShield-1.0.8-arm64.dmg](https://github.com/LuniZunie/WikiShield-App/releases/download/v1.0.8/WikiShield-1.0.8-arm64.dmg)
 
 ### Linux
-- **Universal (Recommended)**: [WikiShield-1.0.7.AppImage](https://github.com/LuniZunie/WikiShield-App/releases/download/v1.0.7/WikiShield-1.0.7.AppImage)
+- **Universal (Recommended)**: [WikiShield-1.0.8.AppImage](https://github.com/LuniZunie/WikiShield-App/releases/download/v1.0.8/WikiShield-1.0.8.AppImage)
   - Works on all Linux distributions
   - Just download, make executable, and run
-- **Debian/Ubuntu**: [WikiShield_1.0.7_amd64.deb](https://github.com/LuniZunie/WikiShield-App/releases/download/v1.0.7/WikiShield_1.0.7_amd64.deb)
-- **Fedora/RHEL/CentOS**: [WikiShield-1.0.7.x86_64.rpm](https://github.com/LuniZunie/WikiShield-App/releases/download/v1.0.7/WikiShield-1.0.7.x86_64.rpm)
+- **Debian/Ubuntu**: [WikiShield_1.0.8_amd64.deb](https://github.com/LuniZunie/WikiShield-App/releases/download/v1.0.8/WikiShield_1.0.8_amd64.deb)
+- **Fedora/RHEL/CentOS**: [WikiShield-1.0.8.x86_64.rpm](https://github.com/LuniZunie/WikiShield-App/releases/download/v1.0.8/WikiShield-1.0.8.x86_64.rpm)
 
 ---
 
