@@ -1,6 +1,6 @@
 {
   "name": "WikiShield",
-  "version": "1.0.0-dev5",
+  "version": "1.0.0-dev6",
   "description": "WikiShield Application",
   "main": "index.js",
   "repository": {
@@ -59,11 +59,11 @@
           "CompanyName": "WikiShield Team",
           "FileDescription": "WikiShield Application",
           "ProductName": "WikiShield",
-          "FileVersion": "1.0.0-dev5",
-          "ProductVersion": "1.0.0-dev5"
+          "FileVersion": "1.0.0-dev6",
+          "ProductVersion": "1.0.0-dev6"
         },
-        "appVersion": "1.0.0-dev5",
-        "buildVersion": "1.0.0-dev5"
+        "appVersion": "1.0.0-dev6",
+        "buildVersion": "1.0.0-dev6"
       },
       "makers": [
         {
@@ -145,9 +145,7 @@
         }
       ],
       "icon": "assets/icon.ico",
-      "verifyUpdateCodeSignature": false,
-      "fileVersion": "1.0.0-dev5",
-      "productVersion": "1.0.0-dev5"
+      "verifyUpdateCodeSignature": false
     },
     "mac": {
       "target": [

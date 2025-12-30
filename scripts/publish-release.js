@@ -25,10 +25,6 @@ try {
         // Tag doesn't exist, which is good
     }
 
-    // Generate release notes
-    console.log(`✓ Generating release notes...`);
-    execSync('node scripts/generate-release-notes.js', { stdio: 'inherit' });
-
     // Create the tag
     console.log(`✓ Creating tag ${tag}...`);
     execSync(`git tag ${tag}`, { stdio: 'inherit' });
