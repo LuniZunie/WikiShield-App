@@ -18,7 +18,7 @@ export class WikiShield {
 
 		changelog: {
 			version: "6",
-			HTML: fetch("https://raw.githubusercontent.com/LuniZunie/WikiShield-App/data/CHANGELOG.html")
+			HTML: fetch("https://raw.githubusercontent.com/LuniZunie/WikiShield-App/refs/heads/main/data/CHANGELOG.html")
 				.then(res => res.text())
 				.catch(() => "<em>Could not fetch changelog.</em>")
 		},
