@@ -283,10 +283,15 @@ export const events = {
                     return { valid: true }; // no warning to issue, still wanna check for reporting
 
                 let summary = "Message about ";
-                if (item.page.title)
+                if (Queue.groups[item.type] === "edit") // kinda redundant but whatever
                     summary += `[[Special:Diff/${item.id}|your edit]] on [[${item.page.title}]]`;
-                else
-                    summary += `[[Special:Contribs/${item.user.name}|your contributions]]`;
+                else if (item.type === "abuselog") {
+                    if (item.revid)
+                        summary += `[[Special:Diff/${item.revid}|your edit]] on [[${item.page.title}]]`;
+                    else
+                        summary += `[[Special:AbuseLog/${item.id}|your contribution]] on [[${item.page.title}]]`;
+                } else
+                    summary += `[[${item.page.title}]]`;
 
                 let newContent = "";
                 if (section === "new")
@@ -459,10 +464,15 @@ export const events = {
             }
 
             let summary = "Message about ";
-            if (item.page.title)
+            if (Queue.groups[item.type] === "edit")
                 summary += `[[Special:Diff/${item.id}|your edit]] on [[${item.page.title}]]`;
-            else
-                summary += `[[Special:Contribs/${item.user.name}|your contributions]]`;
+            else if (item.type === "abuselog") {
+                if (item.revid)
+                    summary += `[[Special:Diff/${item.revid}|your edit]] on [[${item.page.title}]]`;
+                else
+                    summary += `[[Special:AbuseLog/${item.id}|your contribution]] on [[${item.page.title}]]`;
+            } else
+                summary += `[[${item.page.title}]]`;
 
             let newContent = "";
             if (section === "new")

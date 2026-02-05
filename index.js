@@ -420,7 +420,10 @@ function UpdateMenu(options = { }) {
             submenu: [
                 {
                     label: "WikiShield",
-                    click: async () => Security.openExternal("https://en.wikipedia.org/wiki/Wikipedia:WikiShield")
+                    click() {
+                        if (glob.windows.main)
+                            glob.windows.main.webContents.send("open-url", "https://en.wikipedia.org/wiki/Wikipedia:WikiShield");
+                    }
                 },
                 {
                     label: "Changelog",

@@ -5801,94 +5801,6 @@ body {
                                 }
                             }
 
-                            .about-content {
-                                display: flex;
-                                flex-direction: column;
-                                gap: 12px;
-
-                                border: 1px solid;
-
-                                border-radius: 8px;
-                                padding: 14px;
-
-                                text-align: center;
-
-                                /* Theme dependent */
-                                border-color: rgba(255, 255, 255, .1);
-                                box-shadow: 0 2px 8px rgba(0, 0, 0, .3);
-
-                                background: rgba(40, 43, 52, .7);
-
-                                & > .about-version {
-                                    display: flex;
-                                    align-items: center;
-                                    justify-content: center;
-                                    gap: 10px;
-
-                                    font-size: 1.04em;
-                                    font-weight: 700;
-
-                                    & > .fa {
-                                        font-size: 1.2em;
-                                    }
-                                }
-
-                                & > .about-description {
-                                    & > p {
-                                        margin: 6px 0;
-
-                                        font-size: .95em;
-                                    }
-                                }
-
-                                & > .about-links {
-                                    display: flex;
-                                    flex-wrap: wrap;
-                                    justify-content: center;
-                                    gap: 10px;
-
-                                    font-size: .9em;
-
-                                    & > a {
-                                        display: inline-flex;
-                                        align-items: center;
-                                        gap: 8px;
-
-                                        border: 1px solid;
-
-                                        border-radius: 6px;
-                                        padding: 8px 10px;
-
-                                        text-decoration: none;
-
-                                        transition: background .2s ease,
-                                                    border-color .2s ease,
-                                                    box-shadow .2s ease,
-                                                    transform .2s ease;
-
-                                        /* Theme dependent */
-                                        border-color: rgba(255, 255, 255, .15);
-
-                                        background: rgba(50, 54, 66, .9);
-
-                                        &:hover {
-                                            transform: translateY(-2px);
-
-                                            /* Theme dependent */
-                                            border-color: rgba(143, 163, 255, 1);
-                                            box-shadow: 0 4px 12px rgba(20, 20, 30, .4);
-
-                                            background: rgba(60, 64, 78, .95);
-                                        }
-
-                                        & > .fa {
-                                            font-size: .95em;
-                                            color: inherit;
-                                        }
-                                    }
-                                }
-                            }
-
                             .changelog-content {
                                 & > .changelog-header {
                                     border-bottom: 2px solid;
@@ -6160,6 +6072,390 @@ body {
                                                             color: rgba(200, 200, 200, .85);
                                                         }
                                                     }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            .about-content {
+                                display: flex;
+                                flex-direction: column;
+                                gap: 0;
+
+                                border: 1px solid;
+
+                                border-radius: 16px;
+                                padding: 0;
+
+                                overflow: hidden;
+
+                                /* Theme dependent */
+                                border-color: rgba(143, 163, 255, .25);
+                                box-shadow: 0 8px 32px rgba(0, 0, 0, .4),
+                                            inset 0 1px 0 rgba(255, 255, 255, .08);
+
+                                background: linear-gradient(135deg,
+                                    rgba(30, 33, 42, .95),
+                                    rgba(25, 28, 36, .9)
+                                );
+                                -webkit-backdrop-filter: blur(20px);
+                                        backdrop-filter: blur(20px);
+
+                                & > .about-version {
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    gap: 16px;
+
+                                    padding: 32px;
+
+                                    font-size: 1.3em;
+                                    font-weight: 700;
+                                    letter-spacing: .5px;
+
+                                    /* Theme dependent */
+                                    box-shadow: 0 4px 20px rgba(143, 163, 255, .25),
+                                                inset 0 1px 0 rgba(255, 255, 255, .15),
+                                                inset 0 -1px 0 rgba(0, 0, 0, .3);
+
+                                    background: linear-gradient(135deg,
+                                        rgba(143, 163, 255, .25),
+                                        rgba(118, 75, 162, .2)
+                                    );
+
+                                    & > .fa {
+                                        font-size: 1.5em;
+
+                                        /* Theme dependent */
+                                        color: rgba(143, 163, 255, 1);
+                                        filter: drop-shadow(0 2px 8px rgba(143, 163, 255, .6));
+                                    }
+                                }
+
+                                & > .about-tagline {
+                                    padding: 24px 32px;
+
+                                    text-align: center;
+
+                                    /* Theme dependent */
+                                    border-bottom: 1px solid rgba(255, 255, 255, .08);
+
+                                    & > p {
+                                        margin: 0;
+
+                                        font-size: 1.05em;
+                                        line-height: 1.6;
+
+                                        /* Theme dependent */
+                                        color: rgba(180, 185, 200, 1);
+                                    }
+                                }
+
+                                & > .about-links {
+                                    display: flex;
+                                    flex-direction: column;
+                                    gap: 0;
+
+                                    padding: 16px;
+
+                                    & > .link-card {
+                                        display: flex;
+                                        align-items: center;
+                                        gap: 16px;
+
+                                        border: 1px solid;
+                                        border-radius: 12px;
+                                        margin-bottom: 12px;
+                                        padding: 16px 20px;
+
+                                        text-decoration: none;
+
+                                        transition:
+                                            border-color .3s ease,
+                                            box-shadow .3s ease,
+                                            background .3s ease,
+                                            transform .3s ease,
+                                            border-left-color .3s ease;
+
+                                        /* Theme dependent */
+                                        border-color: rgba(255, 255, 255, .08);
+                                        border-left: 3px solid rgba(143, 163, 255, .35);
+                                        box-shadow: 0 2px 8px rgba(0, 0, 0, .2);
+
+                                        background: linear-gradient(90deg,
+                                            rgba(143, 163, 255, .06),
+                                            rgba(40, 43, 52, .6) 40%
+                                        );
+
+                                        &:last-child {
+                                            margin-bottom: 0;
+                                        }
+
+                                        &:hover {
+                                            transform: translateX(6px);
+
+                                            /* Theme dependent */
+                                            border-color: rgba(143, 163, 255, .5);
+                                            border-left-color: rgba(143, 163, 255, .8);
+                                            box-shadow: 0 6px 24px rgba(143, 163, 255, .2),
+                                                        0 2px 12px rgba(0, 0, 0, .3),
+                                                        inset 0 1px 0 rgba(255, 255, 255, .1);
+
+                                            background: linear-gradient(90deg,
+                                                rgba(143, 163, 255, .15),
+                                                rgba(118, 75, 162, .08) 50%
+                                            );
+
+                                            & > .link-card-icon {
+                                                transform: scale(1.1);
+
+                                                /* Theme dependent */
+                                                background: rgba(143, 163, 255, .25);
+                                            }
+
+                                            & > .link-card-arrow {
+                                                transform: translateX(4px);
+
+                                                opacity: 1;
+                                            }
+                                        }
+
+                                        & > .link-card-icon {
+                                            display: flex;
+                                            align-items: center;
+                                            justify-content: center;
+                                            flex-shrink: 0;
+                                            width: 48px;
+                                            height: 48px;
+
+                                            border-radius: 10px;
+
+                                            font-size: 1.3em;
+
+                                            transition:
+                                                transform .3s ease,
+                                                background .3s ease;
+
+                                            /* Theme dependent */
+                                            background: rgba(143, 163, 255, .15);
+
+                                            & > .fa {
+                                                /* Theme dependent */
+                                                color: rgba(143, 163, 255, 1);
+                                            }
+                                        }
+
+                                        & > .link-card-content {
+                                            flex: 1;
+                                            text-align: left;
+
+                                            & > .link-card-title {
+                                                margin-bottom: 4px;
+
+                                                font-size: 1em;
+                                                font-weight: 700;
+
+                                                /* Theme dependent */
+                                                color: rgba(220, 220, 220, 1);
+                                            }
+
+                                            & > .link-card-desc {
+                                                font-size: .85em;
+
+                                                /* Theme dependent */
+                                                color: rgba(160, 160, 160, 1);
+                                            }
+                                        }
+
+                                        & > .link-card-arrow {
+                                            font-size: 1.2em;
+
+                                            opacity: .5;
+
+                                            transition:
+                                                transform .3s ease,
+                                                opacity .3s ease;
+
+                                            /* Theme dependent */
+                                            color: rgba(143, 163, 255, 1);
+                                        }
+                                    }
+                                }
+
+                                & > .about-footer {
+                                    padding: 0;
+
+                                    & > .footer-divider {
+                                        height: 1px;
+
+                                        margin: 0;
+
+                                        /* Theme dependent */
+                                        background: linear-gradient(90deg,
+                                            transparent,
+                                            rgba(143, 163, 255, .3) 20%,
+                                            rgba(143, 163, 255, .3) 80%,
+                                            transparent
+                                        );
+                                    }
+
+                                    & > .about-credits {
+                                        padding: 24px;
+
+                                        & > div {
+                                            display: grid;
+                                            grid-template-columns: repeat(auto-fill, minmax(max(280px, calc(50% - 6px)), 1fr));
+                                            gap: 12px;
+
+                                            &:not(:last-child) {
+                                                margin-bottom: 12px;
+                                            }
+
+                                            & > .credit-card {
+                                                cursor: pointer;
+
+                                                display: flex;
+                                                align-items: center;
+                                                gap: 14px;
+
+                                                border: 1px solid;
+                                                border-radius: 14px;
+                                                padding: 14px 16px;
+
+                                                transition: all .3s cubic-bezier(.4, 0, .2, 1);
+
+                                                /* Theme dependent */
+                                                border-color: rgba(255, 255, 255, .06);
+                                                border-top: 2px solid rgba(143, 163, 255, .18);
+
+                                                background: linear-gradient(180deg,
+                                                    rgba(143, 163, 255, .06),
+                                                    rgba(40, 43, 52, .4) 30%
+                                                );
+
+                                                &:hover {
+                                                    transform: translateY(-3px) scale(1.01);
+
+                                                    /* Theme dependent */
+                                                    border-color: rgba(143, 163, 255, .3);
+                                                    border-top-color: rgba(143, 163, 255, .5);
+                                                    box-shadow: 0 6px 20px rgba(143, 163, 255, .18),
+                                                                0 2px 8px rgba(0, 0, 0, .25);
+
+                                                    background: linear-gradient(180deg,
+                                                        rgba(143, 163, 255, .1),
+                                                        rgba(40, 43, 52, .6) 40%
+                                                    );
+                                                }
+
+                                                & > .credit-icon {
+                                                    display: flex;
+                                                    align-items: center;
+                                                    justify-content: center;
+                                                    flex-shrink: 0;
+                                                    width: 42px;
+                                                    height: 42px;
+
+                                                    border-radius: 50%;
+
+                                                    font-size: 1.1em;
+
+                                                    /* Theme dependent */
+                                                    background: linear-gradient(135deg,
+                                                        rgba(143, 163, 255, .2),
+                                                        rgba(118, 75, 162, .15)
+                                                    );
+
+                                                    & > .fa {
+                                                        /* Theme dependent */
+                                                        color: rgba(143, 163, 255, 1);
+                                                    }
+                                                }
+
+                                                & > .credit-info {
+                                                    flex: 1;
+                                                    min-width: 0;
+                                                    text-align: left;
+
+                                                    & > .credit-name {
+                                                        position: relative;
+                                                        overflow: hidden;
+
+                                                        margin-bottom: 2px;
+
+                                                        font-size: .95em;
+                                                        font-weight: 700;
+
+                                                        /* Theme dependent */
+                                                        color: rgba(220, 220, 220, 1);
+
+                                                        & > span {
+                                                            display: inline-block;
+                                                            white-space: nowrap;
+                                                        }
+                                                    }
+
+                                                    & > .credit-role {
+                                                        font-size: .8em;
+                                                        line-height: 1.4;
+                                                        white-space: nowrap;
+                                                        overflow: hidden;
+                                                        text-overflow: ellipsis;
+
+                                                        /* Theme dependent */
+                                                        color: rgba(160, 160, 160, 1);
+                                                    }
+                                                }
+
+                                                &:hover {
+                                                    & > .credit-info {
+                                                        & > .credit-name > span {
+                                                            animation: scroll-text 3s linear infinite;
+                                                        }
+                                                    }
+                                                }
+                                            }
+
+                                            & > .copyright-card {
+                                                cursor: pointer;
+
+                                                display: flex;
+                                                flex-direction: column;
+                                                gap: 4px;
+                                                flex: 1;
+
+                                                border: 1px solid;
+                                                border-radius: 12px;
+                                                padding: 16px;
+
+                                                text-align: center;
+                                                overflow: hidden;
+
+                                                transition: all .3s cubic-bezier(.4, 0, .2, 1);
+
+                                                /* Theme dependent */
+                                                border-color: rgba(255, 255, 255, .04);
+
+                                                background: rgba(35, 38, 46, .3);
+
+                                                & > .copyright-title {
+                                                    margin-bottom: 2px;
+
+                                                    font-size: .9em;
+                                                    font-weight: 600;
+
+                                                    /* Theme dependent */
+                                                    color: rgba(200, 200, 200, 1);
+                                                }
+
+                                                & > .copyright-desc {
+                                                    font-size: .75em;
+                                                    line-height: 1.4;
+
+                                                    /* Theme dependent */
+                                                    color: rgba(140, 140, 140, 1);
                                                 }
                                             }
                                         }

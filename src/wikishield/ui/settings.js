@@ -245,7 +245,7 @@ export class Settings {
 		document.querySelector("#settings-save-button").addEventListener("click", this.save.bind(this));
 
 		document.querySelector("#settings-changelog-button").addEventListener("click", this.changelog.bind(this));
-		// document.querySelector("#settings-about-button").addEventListener("click", this.about.bind(this));
+		document.querySelector("#settings-about-button").addEventListener("click", this.about.bind(this));
 
 		{
 			const $edits = document.querySelector("#settings-maximum-edit-count");
@@ -932,6 +932,12 @@ export class Settings {
 						</div>
 					</div>
 				`;
+			});
+		}
+
+		{
+			document.querySelectorAll("#settings-container > .settings > .settings-right > .about [data-link]").forEach($el => {
+				$el.addEventListener("click", () => this.ws.open($el.dataset.link));
 			});
 		}
 	}
@@ -2097,5 +2103,19 @@ export class Settings {
 		const $changelog = document.querySelector("#settings-container > .settings > .settings-right > .changelog > div > .changelog-content");
 		$changelog.innerHTML = "<em class='animate-loading-dots'>Loading changelog</em>";
 		WikiShield.config.changelog.HTML.then(html => $changelog.innerHTML = html);
+	}
+
+	about() {
+		this.deselect();
+
+		document.querySelector("#settings-about-button").classList.add("selected");
+		document.querySelector("#settings-container > .settings > .settings-right > .about").classList.remove("hidden");
+
+		document.querySelector("#settings-about-version").textContent = WikiShield.config.version;
+
+		document.querySelectorAll("#settings-container > .settings > .settings-right > .about > .randomize").forEach($el => {
+			for (let i = $el.children.length; i >= 0; i--)
+				$el.appendChild($el.children[Math.random() * i | 0]);
+		});
 	}
 }

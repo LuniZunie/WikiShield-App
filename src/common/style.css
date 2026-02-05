@@ -78,3 +78,24 @@ html, body {
 
 	animation: loading-dots 1.5s steps(3, start) infinite;
 }
+
+.auto-scroll {
+    white-space: nowrap;
+    overflow: auto hidden;
+
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+	&::-webkit-scrollbar { display: none; }
+
+    & > .auto-scroll-item {
+        display: inline-block;
+
+		&:not(:last-child) {
+			margin-right: 20px;
+		}
+    }
+    &:not(:has(> .auto-scroll-item)) {
+        opacity: 0;
+    }
+}

@@ -8,6 +8,7 @@ import { warnings, warningsLookup, warningTemplateColors, getWarningFromLookup }
 import { profanity } from "../data/profanity.js";
 import { generateRandomUUID } from "../../../global/UUID/script.esm.js";
 import { BuildPalette } from "../utilities/build-palette.js";
+import { AutoScroll } from "./auto-scroll.js";
 
 export class GUI {
 	static palettes = {
@@ -769,10 +770,20 @@ export class GUI {
 			this.events.button(document.querySelector(`#queue-tab-${type}`), `switch-to-${type}-queue`);
 		});
 
+		this.animation();
 		this.update();
+
 		this.renderQueue();
 
 		electronAPI.menuEnabler({ browser: true, settings: { preferences: true } });
+	}
+
+	animation() {
+		try {
+			AutoScroll();
+		} catch (error) { console.error("Error in animation loop:", error); }
+
+		requestAnimationFrame(() => this.animation());
 	}
 
 	update() {
