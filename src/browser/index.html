@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Browser</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../common/style.css">
+    <link rel="stylesheet" href="browser.css">
+
+    <script src="browser.js" defer></script>
+</head>
+<body>
+    <div id="browser-container">
+        <div id="top-bar">
+            <div id="tabs-bar">
+                <div id="tabs-container">
+                    <button type="button" id="new-tab" title="New Tab"><i class="fas fa-plus"></i></button>
+                </div>
+                <button type="button" id="close-browser" title="Close Browser (Esc)"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="navigation-bar">
+                <button type="button" id="nav-backward" title="Back" disabled><i class="fas fa-arrow-left"></i></button>
+                <button type="button" id="nav-forward" title="Forward" disabled><i class="fas fa-arrow-right"></i></button>
+                <button type="button" id="nav-refresh" title="Refresh"><i class="fas fa-rotate-right"></i></button>
+                <button type="button" id="nav-home" title="Home"><i class="fas fa-house"></i></button>
+                <button type="button" id="nav-external" title="Open in External Browser"><i class="fas fa-arrow-up-right-from-square"></i></button>
+                <div id="url-bar-wrapper">
+                    <input type="text" id="url-bar" placeholder="Search or enter URL..." autocomplete="off">
+                    <div id="autocomplete-dropdown"></div>
+                </div>
+            </div>
+        </div>
+        <div id="webviews-container"></div>
+    </div>
+</body>
+</html>

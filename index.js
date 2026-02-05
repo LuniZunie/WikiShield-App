@@ -1,687 +1,484 @@
-const { shell } = require('electron/common');
+const fs = require("fs");
+const path = require("path");
+const { spawn } = require("child_process");
+
 const {
-    app, BaseWindow, BrowserWindow, Menu, Tray, Notification, nativeImage, safeStorage,
+    app, BrowserWindow, Menu, Tray, Notification, nativeImage,
     screen, ipcMain, dialog, globalShortcut, clipboard, crashReporter
-} = require('electron/main');
-const Store = require('electron-store');
-const path = require('path');
-const log = require('electron-log');
-const { autoUpdater } = require('electron-updater');
+} = require("electron/main");
+const Store = require("electron-store");
+const Logger = require("electron-log");
+const { autoUpdater } = require("electron-updater");
 
-const __DEV__ = process.env.NODE_ENV === 'development' || !app.isPackaged;
-if (require('electron-squirrel-startup')) {
+const { generateRandomUUID } = require("./global/UUID/script.com.js");
+const { Security } = require("./app/security.js");
+const { Translator } = require("./app/translate.js");
+const { CreateBadgeIcon } = require("./app/badge.js");
+const { ORES } = require("./wikipedia/ores.js");
+const { MediaWikiOAuth2 } = require("./wikipedia/oauth2.js");
+const { MediaWikiAPI } = require("./wikipedia/api.js");
+const { PythonInstaller } = require("./py/installer.js");
+
+// constants
+const __dev__ = process.env.NODE_ENV === "development" || process.env.ELECTRON_ENV === "development" || !app.isPackaged;
+const __servers__ = [ "en.wikipedia.org", "test2.wikipedia.org" ];
+const __userAgent__ = `WikiShield-Bot/${app.getVersion()} (https://en.wikipedia.org/wiki/Wikipedia:WikiShield; lunizunie@gmail.com)`;
+
+// global references
+const glob = {
+    quitting: false,
+
+    windows: {
+        main: null,
+        signin: null,
+        authorize: null,
+        translation: null
+    },
+
+    window: {
+        width: null,
+        height: null,
+        isMaximized: true,
+        isFullScreen: false
+    },
+
+    server: null,
+
+    accounts: [ ],
+    account: null,
+
+    notifications: true,
+    externalServices: true,
+
+    python: null,
+    mwapi: null,
+};
+
+// single instance lock
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock)
     app.quit();
-}
 
-// Handle Squirrel events on Windows
-if (process.platform === 'win32') {
-    const handleSquirrelEvent = () => {
-        if (process.argv.length === 1) {
-            return false;
-        }
+// process
+if (process.platform === "win32")
+    app.setAppUserModelId("me.luni.wikishield");
 
-        const squirrelEvent = process.argv[1];
-        const appFolder = path.resolve(process.execPath, '..');
-        const rootAtomFolder = path.resolve(appFolder, '..');
-        const updateDotExe = path.resolve(path.join(rootAtomFolder, 'Update.exe'));
-        const exeName = path.basename(process.execPath);
-
-        const spawn = function(command, args) {
-            let spawnedProcess;
-            try {
-                spawnedProcess = require('child_process').spawn(command, args, { detached: true });
-            } catch (error) {}
-            return spawnedProcess;
-        };
-
-        const spawnUpdate = function(args) {
-            return spawn(updateDotExe, args);
-        };
-
-        switch (squirrelEvent) {
-            case '--squirrel-install':
-            case '--squirrel-updated':
-                spawnUpdate(['--createShortcut', exeName]);
-                setTimeout(app.quit, 1000);
-                return true;
-
-            case '--squirrel-uninstall':
-                spawnUpdate(['--removeShortcut', exeName]);
-                setTimeout(app.quit, 1000);
-                return true;
-
-            case '--squirrel-obsolete':
-                app.quit();
-                return true;
-        }
-    };
-
-    if (handleSquirrelEvent()) {
+// squirrel
+if (process.platform === "win32") {
+    if (process.argv.length === 1)
         app.quit();
+
+    const updateExe = path.resolve(path.resolve(process.execPath, "..", "..", "Update.exe"));
+    const spawner = (command, args) => {
+        try {
+            return spawn(command, args, { detached: true });
+        } catch (e) { }
+    };
+    const spawnerUpdate = args => spawner(updateExe, args);
+
+    const exeName = path.basename(process.execPath);
+    switch (process.argv[1]) {
+        case "--squirrel-install":
+        case "--squirrel-updated": {
+            spawnerUpdate([ "--createShortcut", exeName ]);
+            setTimeout(() => {
+                glob.quitting = true;
+                app.quit();
+            }, 1000);
+        } break;
+        case "--squirrel-uninstall": {
+            spawnerUpdate([ "--removeShortcut", exeName ]);
+            setTimeout(() => {
+                glob.quitting = true;
+                app.quit();
+            }, 1000);
+        } break;
+        case "--squirrel-obsolete": {
+            glob.quitting = true;
+            app.quit();
+        } break;
     }
 }
 
-crashReporter.start({ submitURL: 'https://luni.me/crash-report' });
+// listen for custom protocol (wikishield://)
+if (process.defaultApp) {
+    if (process.argv.length >= 2)
+        app.setAsDefaultProtocolClient("wikishield", process.execPath, [ path.resolve(process.argv[1]) ]);
+} else
+    app.setAsDefaultProtocolClient("wikishield");
 
-log.transports.file.level = 'debug';
-log.transports.file.file = path.join(app.getPath('userData'), 'logs', 'wikishield.log');
-log.transports.file.format = '[{y}-{m}-{d} {h}:{i}:{s}.{ms}] [{level}] {text}';
+app.on("second-instance", (event, argv) => {
+    const url = argv.find(arg => arg.startsWith("wikishield://"));
+    if (url) {
+        app.emit("open-url", event, url);
+        event.preventDefault();
+    }
 
-let loadedAccount = null;
-let server = null;
-const windows = {
-    main: null,
-    login: null,
-    accounts: null,
-};
-
-const userLoginCookies = { };
-
-const store = new Store({
-    defaults: {
-        server: null,
-        accounts: [],
+    if (glob.windows.main && !glob.windows.main.isDestroyed()) {
+        if (glob.windows.main.isMinimized())
+            glob.windows.main.restore();
+        if (!glob.windows.main.isVisible())
+            glob.windows.main.show();
+        glob.windows.main.focus();
+        glob.windows.main.moveTop();
+    } else if (glob.windows.signin && !glob.windows.signin.isDestroyed()) {
+        glob.windows.signin.focus();
+        glob.windows.signin.moveTop();
     }
 });
 
-async function createBadgeIcon(count) {
-    const text = count > 99 ? '99+' : count.toString();
-
-    // Create canvas using webContents to ensure proper rendering
-    const code = `
-        const canvas = document.createElement('canvas');
-        const size = 16; // Windows overlay icon size
-        canvas.width = size;
-        canvas.height = size;
-        const ctx = canvas.getContext('2d');
-
-        const text = '${text}';
-        const fontSize = text.length > 2 ? 8.5 : 10.5;
-
-        // Draw outer glow shadow
-        ctx.shadowColor = 'rgba(240, 147, 251, 0.8)';
-        ctx.shadowBlur = 3;
-        ctx.fillStyle = 'rgba(240, 147, 251, 0.3)';
-        ctx.beginPath();
-        ctx.arc(size / 2, size / 2, size / 2 - 0.5, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Draw main shadow
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
-        ctx.shadowBlur = 2;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 1.5;
-
-        // Create gradient background matching app theme
-        const gradient = ctx.createLinearGradient(0, 0, 0, size);
-        gradient.addColorStop(0, '#667eea');
-        gradient.addColorStop(1, '#f093fb');
-
-        // Draw main circle
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.arc(size / 2, size / 2, size / 2 - 1.5, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Reset shadows
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-
-        // Draw subtle border/rim
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
-        ctx.lineWidth = 0.5;
-        ctx.beginPath();
-        ctx.arc(size / 2, size / 2, size / 2 - 1.75, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // Draw inner top highlight
-        const highlightGradient = ctx.createRadialGradient(size / 2, size / 2 - 3, 0, size / 2, size / 2, size / 2);
-        highlightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
-        highlightGradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.15)');
-        highlightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-        ctx.fillStyle = highlightGradient;
-        ctx.beginPath();
-        ctx.arc(size / 2, size / 2, size / 2 - 1.5, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Draw text with shadow for depth
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-        ctx.shadowBlur = 1;
-        ctx.shadowOffsetY = 0.5;
-
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold ' + fontSize + 'px Segoe UI, -apple-system, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        // Fine-tune vertical centering
-        const yOffset = text.length > 2 ? 0.3 : 0.2;
-        ctx.fillText(text, size / 2, size / 2 + yOffset);
-
-        canvas.toDataURL('image/png');
-    `;
-
-    try {
-        const dataURL = await windows.main.webContents.executeJavaScript(code);
-        const image = nativeImage.createFromDataURL(dataURL);
-
-        // Ensure the image has the correct size
-        if (image.isEmpty()) {
-            throw new Error('Created image is empty');
-        }
-
-        // Resize to ensure it's 16x16 for overlay icon
-        return image.resize({ width: 16, height: 16 });
-    } catch (error) {
-        log.error('Failed to create badge icon:', error);
-        return null;
-    }
-}
-
-let cachedLoginToken = {
-    token: null,
-    cookies: null,
-};
-
-// Language code to name mapping
-const languageNames = {
-    'af': 'Afrikaans', 'sq': 'Albanian', 'am': 'Amharic', 'ar': 'Arabic', 'hy': 'Armenian',
-    'az': 'Azerbaijani', 'eu': 'Basque', 'be': 'Belarusian', 'bn': 'Bengali', 'bs': 'Bosnian',
-    'bg': 'Bulgarian', 'ca': 'Catalan', 'ceb': 'Cebuano', 'ny': 'Chichewa', 'zh-CN': 'Chinese (Simplified)',
-    'zh-TW': 'Chinese (Traditional)', 'co': 'Corsican', 'hr': 'Croatian', 'cs': 'Czech', 'da': 'Danish',
-    'nl': 'Dutch', 'en': 'English', 'eo': 'Esperanto', 'et': 'Estonian', 'tl': 'Filipino', 'fi': 'Finnish',
-    'fr': 'French', 'fy': 'Frisian', 'gl': 'Galician', 'ka': 'Georgian', 'de': 'German', 'el': 'Greek',
-    'gu': 'Gujarati', 'ht': 'Haitian Creole', 'ha': 'Hausa', 'haw': 'Hawaiian', 'iw': 'Hebrew', 'he': 'Hebrew',
-    'hi': 'Hindi', 'hmn': 'Hmong', 'hu': 'Hungarian', 'is': 'Icelandic', 'ig': 'Igbo', 'id': 'Indonesian',
-    'ga': 'Irish', 'it': 'Italian', 'ja': 'Japanese', 'jw': 'Javanese', 'kn': 'Kannada', 'kk': 'Kazakh',
-    'km': 'Khmer', 'ko': 'Korean', 'ku': 'Kurdish', 'ky': 'Kyrgyz', 'lo': 'Lao', 'la': 'Latin',
-    'lv': 'Latvian', 'lt': 'Lithuanian', 'lb': 'Luxembourgish', 'mk': 'Macedonian', 'mg': 'Malagasy',
-    'ms': 'Malay', 'ml': 'Malayalam', 'mt': 'Maltese', 'mi': 'Maori', 'mr': 'Marathi', 'mn': 'Mongolian',
-    'my': 'Myanmar', 'ne': 'Nepali', 'no': 'Norwegian', 'or': 'Odia', 'ps': 'Pashto', 'fa': 'Persian',
-    'pl': 'Polish', 'pt': 'Portuguese', 'pa': 'Punjabi', 'ro': 'Romanian', 'ru': 'Russian', 'sm': 'Samoan',
-    'gd': 'Scots Gaelic', 'sr': 'Serbian', 'st': 'Sesotho', 'sn': 'Shona', 'sd': 'Sindhi', 'si': 'Sinhala',
-    'sk': 'Slovak', 'sl': 'Slovenian', 'so': 'Somali', 'es': 'Spanish', 'su': 'Sundanese', 'sw': 'Swahili',
-    'sv': 'Swedish', 'tg': 'Tajik', 'ta': 'Tamil', 'te': 'Telugu', 'th': 'Thai', 'tr': 'Turkish',
-    'uk': 'Ukrainian', 'ur': 'Urdu', 'ug': 'Uyghur', 'uz': 'Uzbek', 'vi': 'Vietnamese', 'cy': 'Welsh',
-    'xh': 'Xhosa', 'yi': 'Yiddish', 'yo': 'Yoruba', 'zu': 'Zulu'
-};
-
-async function translateToEnglish(text) {
-    try {
-        const response = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=${encodeURIComponent(text)}`);
-        const data = await response.json();
-        const translated = data[0].map(item => item[0]).join('');
-        const detectedLang = data[2] || 'unknown';
-        const languageName = languageNames[detectedLang] || detectedLang;
-
-        return {
-            translated,
-            detectedLanguage: languageName,
-            detectedLanguageCode: detectedLang
-        };
-    } catch (error) {
-        log.error('Translation error:', error);
-        return null;
-    }
-}
-
-async function showTranslationDialog(window, original, result) {
-    const maxLength = 100;
-    const truncateText = (text) => text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
-
-    const message = [
-        `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-        ``,
-        `📝 Original (${result.detectedLanguage}):`,
-        `   ${truncateText(original)}`,
-        ``,
-        `🌐 English Translation:`,
-        `   ${truncateText(result.translated)}`,
-        ``,
-        `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
-    ].join('\n');
-
-    const response = await dialog.showMessageBox(window, {
-        type: 'info',
-        title: `Translation: ${result.detectedLanguage} → English`,
-        message: message,
-        buttons: ['Copy Translation', 'Copy Original', 'Close'],
-        defaultId: 0,
-        cancelId: 2,
-        noLink: true
-    });
-
-    if (response.response === 0)
-        clipboard.writeText(result.translated);
-    else if (response.response === 1)
-        clipboard.writeText(original);
-}
-
-function AddAppMenuItems() {
-    if (windows.main) {
-        const isMac = process.platform === 'darwin';
-        const template = [
-            {
-                label: GetActiveAccount() || 'WikiShield',
-                submenu: [
-                    {
-                        label: 'Accounts',
-
-                        type: 'submenu',
-                        submenu: Object.entries(global.accounts).sort((a, b) => b[1].lastLogin - a[1].lastLogin).map(([ username, account ]) => ({
-                            type: 'radio',
-                            label: username,
-                            checked: account.active,
-                            click() {
-                                SetActiveAccount(username);
-                            }
-                        })).concat([
-                            {
-                                label: 'Add Account',
-                                click() {
-                                    BuildLoginWindow();
-                                }
-                            },
-                            { type: 'separator' },
-                            {
-                                label: 'Manage Accounts',
-                                click() {
-                                    BuildAccountsWindow();
-                                }
-                            }
-                        ])
-                    },
-                    { type: 'separator' },
-                    { role: 'close' },
-                    { role: 'quit' }
-                ]
-            },
-            {
-                label: server || 'Server',
-                submenu: [
-                    {
-                        type: 'radio',
-                        label: 'en.wikipedia.org',
-                        checked: server === 'en.wikipedia.org',
-                        click() {
-                            SwitchServer('en.wikipedia.org');
-                        }
-                    },
-                    {
-                        type: 'radio',
-                        label: 'test.wikipedia.org',
-                        checked: server === 'test.wikipedia.org',
-                        click() {
-                            SwitchServer('test.wikipedia.org');
-                        }
-                    },
-                    {
-                        type: 'radio',
-                        label: 'test2.wikipedia.org',
-                        checked: server === 'test2.wikipedia.org',
-                        click() {
-                            SwitchServer('test2.wikipedia.org');
-                        }
-                    }
-                ]
-            },
-            {
-                label: 'Settings',
-                submenu: [
-                    {
-                        label: 'Notifications',
-                        click() {
-
-                        }
-                    },
-                    {
-                        label: 'Preferences',
-                        click() {
-                            if (windows.main) {
-                                windows.main.webContents.send("open-settings");
-                            }
-                        }
-                    },
-                    { type: 'separator' },
-                    {
-                        label: 'Import',
-                        submenu: [
-                            {
-                                label: 'From File',
-                                click() {
-                                    if (windows.main) {
-                                        windows.main.webContents.send("import-settings-from-file");
-                                    }
-                                }
-                            },
-                            {
-                                label: 'From Clipboard',
-                                click() {
-                                    if (windows.main) {
-                                        windows.main.webContents.send("import-settings-from-clipboard");
-                                    }
-                                }
-                            },
-                            {
-                                label: 'From Input',
-                                click() {
-                                    if (windows.main) {
-                                        windows.main.webContents.send("import-settings-from-input");
-                                    }
-                                }
-                            }
-                        ],
-                    },
-                    {
-                        label: 'Export',
-                        submenu: [
-                            {
-                                label: 'To File',
-                                click() {
-                                    if (windows.main) {
-                                        windows.main.webContents.send("export-settings-to-file");
-                                    }
-                                }
-                            },
-                            {
-                                label: 'To Clipboard',
-                                click() {
-                                    if (windows.main) {
-                                        windows.main.webContents.send("export-settings-to-clipboard");
-                                    }
-                                }
-                            }
-                        ],
-                    }
-                ]
-            },
-            {
-                label: 'Edit',
-                submenu: [
-                    { role: 'undo' },
-                    { role: 'redo' },
-                    { type: 'separator' },
-                    { role: 'selectAll' },
-                    { type: 'separator' },
-                    { role: 'cut' },
-                    { role: 'copy' },
-                    { role: 'paste' },
-                    { role: 'pasteAndMatchStyle' },
-                    { type: 'separator' },
-                    ...(isMac ? [
-                        {
-                            label: "Typing",
-                            submenu: [
-                                { role: 'showSubstitutions' },
-                                { role: 'toggleSmartQuotes' },
-                                { role: 'toggleSmartDashes' },
-                                { role: 'toggleTextReplacement' },
-                                { role: 'toggleSpellChecker' }
-                            ]
-                        }
-                    ] : [
-                        { role: 'toggleSpellChecker' }
-                    ])
-                ]
-            },
-            {
-                label: 'View',
-                submenu: [
-                    { role: 'reload' },
-                    { role: 'forcereload' },
-                    { type: 'separator' },
-                    { role: 'resetzoom' },
-                    { role: 'zoomin' },
-                    { role: 'zoomout' },
-                    { type: 'separator' },
-                    { role: 'minimize' },
-                    { role: 'togglefullscreen' }
-                ]
-            },
-            {
-                label: 'Help',
-                submenu: [
-                    {
-                        label: 'WikiShield',
-                        click: async () => {
-                            await shell.openExternal('https://en.wikipedia.org/wiki/Wikipedia:WikiShield');
-                        }
-                    },
-                    {
-                        label: 'Changelog',
-                        click: () => {
-
-                        }
-                    },
-                    { type: 'separator' },
-                    {
-                        label: 'Check for Updates...',
-                        click: () => {
-                            log.info('Manual update check triggered');
-                            autoUpdater.checkForUpdates()
-                                .then(result => {
-                                    log.info('Manual update check result:', result);
-                                    if (!result || result.updateInfo.version === app.getVersion()) {
-                                        dialog.showMessageBox({
-                                            type: 'info',
-                                            title: 'No Updates',
-                                            message: `You're running the latest version (${app.getVersion()})`,
-                                            buttons: ['OK']
-                                        });
-                                    }
-                                })
-                                .catch(err => {
-                                    log.error('Manual update check failed:', err);
-                                    dialog.showErrorBox('Update Check Failed', `Failed to check for updates: ${err.message}`);
-                                });
-                        }
-                    },
-                    { type: 'separator' },
-                    ...(__DEV__ ? [
-                        { role: 'toggleDevTools' },
-                        { type: 'separator' }
-                    ] : []),
-                    { type: 'separator' },
-                    { role: 'about' },
-                ]
-            }
-        ];
-
-        const menu = Menu.buildFromTemplate(template);
-        Menu.setApplicationMenu(menu);
-    }
-}
-
-async function BuildMainWindow() {
-    if (!GetActiveAccount()) {
-        BuildLoginWindow();
-        return;
-    }
-
-    windows.main = new BrowserWindow({
-        show: false,
-        icon: nativeImage.createFromPath(path.join(__dirname, 'assets', 'icon.png')),
-        webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),
-            contextIsolation: true,
-            nodeIntegration: false,
-            enableRemoteModule: false,
-            sandbox: true,
-            v8CacheOptions: 'code',
-            disableBlinkFeatures: 'Auxclick',
-            backgroundThrottling: false
+// storage
+const store = new Store({
+    clearInvalidConfig: true,
+    defaults: {
+        window: {
+            width: null,
+            height: null,
+            isMaximized: true,
+            isFullScreen: false
         },
+
+        server: __servers__[0],
+
+        accounts: { },
+        account: null,
+
+        notifications: true,
+        externalServices: true,
+    }
+});
+
+glob.window = store.get("window", { width: null, height: null, isMaximized: true, isFullScreen: false });
+
+glob.server = store.get("server", __servers__[0]);
+
+glob.notifications = store.get("notifications", true);
+glob.externalServices = store.get("externalServices", true);
+
+// crash reporter
+crashReporter.start({ uploadToServer: false });
+
+// logging
+Logger.transports.file.file = path.join(app.getPath("userData"), "logs", "wikishield.log");
+Logger.transports.file.level = __dev__ ? "debug" : "info";
+Logger.transports.file.format = "[{y}-{m}-{d} {h}:{i}:{s}] [{level}] {text}";
+
+// Auto-updater
+autoUpdater.logger = Logger;
+autoUpdater.autoDownload = true;
+autoUpdater.autoInstallOnAppQuit = true;
+
+autoUpdater.on("checking-for-update", () => Logger.debug("Checking for updates..."));
+autoUpdater.on("update-available", info => {
+    Logger.debug(`Update available: version ${info.version}`);
+    NotificationHandler.send({
+        title: "Update Available",
+        body: `Version ${info.version} is available and will be downloaded automatically.`,
     });
+});
+autoUpdater.on("update-not-available", () => Logger.debug("No updates available."));
+autoUpdater.on("download-progress", progressObj =>
+    Logger.debug(`Download speed: ${progressObj.bytesPerSecond} - Downloaded ${progressObj.percent.toFixed(2)}% (${progressObj.transferred}/${progressObj.total})`)
+);
+autoUpdater.on("error", err => {
+    Logger.error(`Auto-updater error: ${err == null ? "unknown" : (err.stack || err).toString()}`);
+    if (!(err.message.includes("net::") || err.message.includes("ENOTFOUND")))
+        dialog.showErrorBox("Update Error", `An error occurred while updating: ${err.message}`);
+});
+autoUpdater.on("update-downloaded", info =>
+    NotificationHandler.send({
+        title: "Update Ready to Install",
+        body: `Version ${info.version} has been downloaded and will be installed on quit.`,
+    })
+);
 
-    AddAppMenuItems();
+// windows
+function UpdateMenu(options = { }) {
+    const __mac__ = process.platform === "darwin";
+    const template = [
+        {
+            label: glob.account ? `${glob.account.username}@${glob.server}` : "Logged out",
+            submenu: [
+                {
+                    label: "Servers",
+                    type: "submenu",
+                    submenu: __servers__.map(server => ({
+                        label: server,
+                        type: "radio",
+                        click: () => {
+                            glob.server = server;
+                            store.set("server", server);
 
-    windows.main.webContents.on('context-menu', (e, params) => {
-        const contextMenu = Menu.buildFromTemplate([
-            ...(params.editFlags.canCopy ? [{ role: 'copy' }] : []),
-            ...(params.editFlags.canCut ? [{ role: 'cut' }] : []),
-            ...(params.editFlags.canPaste ? [{ role: 'paste' }] : []),
-            { type: 'separator' },
-            { role: 'selectAll' },
-            ...(params.selectionText ? [
+                            if (glob.windows.main)
+                                glob.windows.main.reload();
+
+                            UpdateMenu(options);
+                        },
+                        checked: glob.server === server
+                    }))
+                },
+                { type: "separator" },
+                ...Object.entries(glob.accounts)
+                    .sort(([ , a ], [ , b ]) => new Date(a.lastUsed || 0) < new Date(b.lastUsed || 0) ? 1 : -1)
+                    .map(([ username, account ]) => ({
+                        label: `${username}${account.valid ? "" : " (signed out)"}`,
+                        type: "submenu",
+                        submenu: [
+                            {
+                                label: "Switch to account",
+                                click: () => {
+                                    glob.account = account;
+                                    store.set("account", username);
+
+                                    if (glob.windows.main)
+                                        glob.windows.main.reload();
+
+                                    UpdateMenu(options);
+                                },
+                                enabled: glob.account !== account && account.valid
+                            },
+                            {
+                                label: "Remove account",
+                                click: () => {
+                                    delete glob.accounts[username];
+                                    store.set("accounts", Security.encryptAccounts(glob.accounts));
+
+                                    if (glob.account === account) {
+                                        glob.account = null;
+                                        store.set("account", null);
+
+                                        if (glob.windows.main)
+                                            glob.windows.main.close();
+
+                                        BuildWindow.signin();
+                                    }
+
+                                    UpdateMenu(options);
+                                },
+                            }
+                        ]
+                    })),
+                { type: "separator" },
+                {
+                    label: "Logout",
+                    click: () => {
+                        delete glob.accounts[glob.account.username];
+                        store.set("accounts", Security.encryptAccounts(glob.accounts));
+
+                        glob.account = null;
+                        store.set("account", null);
+
+                        if (glob.windows.main)
+                            glob.windows.main.close();
+
+                        BuildWindow.signin();
+                    }
+                },
+                {
+                    label: "Account Manager",
+                    click: () => BuildWindow.signin()
+                }
+            ]
+        },
+        {
+            label: 'Settings',
+            submenu: [
+                {
+                    label: 'Notifications',
+                    type: 'checkbox',
+                    click() {
+                        glob.notifications = !glob.notifications;
+                        store.set("notifications", glob.notifications);
+                    },
+                    checked: glob.notifications
+                },
+                {
+                    label: 'Allow External Services',
+                    type: 'checkbox',
+                    click() {
+                        glob.externalServices = !glob.externalServices;
+                        store.set("externalServices", glob.externalServices);
+                    },
+                    checked: glob.externalServices,
+                },
                 { type: 'separator' },
                 {
-                    label: 'Translate to English',
-                    click: async () => {
-                        const result = await translateToEnglish(params.selectionText);
-                        if (result)
-                            await showTranslationDialog(windows.main, params.selectionText, result);
-                        else
-                            dialog.showErrorBox('Translation Error', 'Failed to translate text. Please check your internet connection.');
+                    label: 'Preferences',
+                    click() {
+                        if (glob.windows.main)
+                            glob.windows.main.webContents.send("open-settings");
+                    },
+                    enabled: options?.settings?.preferences ?? false
+                },
+                { type: 'separator' },
+                {
+                    label: 'Import',
+                    submenu: [
+                        {
+                            label: 'From Clipboard',
+                            click() {
+                                if (glob.windows.main)
+                                    glob.windows.main.webContents.send("import-settings-from-clipboard");
+                            }
+                        },
+                        {
+                            label: 'From Input',
+                            click() {
+                                if (glob.windows.main)
+                                    glob.windows.main.webContents.send("import-settings-from-input");
+                            }
+                        }
+                    ],
+                },
+                {
+                    label: 'Export',
+                    submenu: [
+                        {
+                            label: 'To Clipboard',
+                            click() {
+                                if (glob.windows.main)
+                                    glob.windows.main.webContents.send("export-settings-to-clipboard");
+                            }
+                        }
+                    ],
+                }
+            ]
+        },
+        {
+            label: "Edit",
+            submenu: [
+                { role: "undo" },
+                { role: "redo" },
+                { type: "separator" },
+                { role: "selectAll" },
+                { type: "separator" },
+                { role: "cut" },
+                { role: "copy" },
+                { role: "paste" },
+                { role: "pasteAndMatchStyle" },
+                { type: "separator" },
+                ...(__mac__ ? [
+                    {
+                        label: "Typing",
+                        submenu: [
+                            { role: "showSubstitutions" },
+                            { role: "toggleSmartQuotes" },
+                            { role: "toggleSmartDashes" },
+                            { role: "toggleTextReplacement" },
+                            { role: "toggleSpellChecker" }
+                        ]
+                    }
+                ] : [
+                    { role: "toggleSpellChecker" }
+                ])
+            ]
+        },
+        {
+            label: "View",
+            submenu: [
+                { role: "reload" },
+                { role: "forcereload" },
+                { type: "separator" },
+                { role: "resetzoom" },
+                { role: "zoomin" },
+                { role: "zoomout" },
+                { type: "separator" },
+                { role: "minimize" },
+                { role: "togglefullscreen" }
+            ]
+        },
+        {
+            label: "Browser",
+            click() {
+                if (glob.windows.main)
+                    glob.windows.main.webContents.send("open-browser");
+            },
+            enabled: options?.browser ?? false
+        },
+        {
+            label: "Email",
+            submenu: [
+                {
+                    label: "Email oversight",
+                    click() {
+                        if (glob.windows.main)
+                            glob.windows.main.webContents.send("open-url", "https://en.wikipedia.org/wiki/Special:EmailUser/Oversight");
+                    }
+                },
+                {
+                    label: "Email emergency",
+                    click() {
+                        if (glob.windows.main)
+                            glob.windows.main.webContents.send("open-url", "https://en.wikipedia.org/wiki/Special:EmailUser/Emergency");
                     }
                 }
-            ] : [])
-        ]);
-        contextMenu.popup(windows.main, params.x, params.y);
-    });
-
-    windows.main.loadFile(path.join(__dirname, 'src', 'wikishield', 'index.html'));
-    windows.main.once('ready-to-show', () => {
-        windows.main.maximize();
-    });
-
-    return windows.main;
-}
-
-function BuildLoginWindow() {
-    const { width, height } = screen.getPrimaryDisplay().workAreaSize;
-    const min = Math.min(width, height);
-
-    windows.login = new BrowserWindow({
-        parent: windows.main instanceof BaseWindow ? windows.main : null,
-        modal: true,
-        show: false,
-        width: Math.floor(min * 0.8),
-        height: Math.floor(min * 0.8),
-        resizable: false,
-        maximizable: false,
-        minimizable: false,
-        icon: nativeImage.createFromPath(path.join(__dirname, 'assets', 'icon.png')),
-        webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),
-            contextIsolation: true,
-            nodeIntegration: false,
-            enableRemoteModule: false,
-            sandbox: true,
-            v8CacheOptions: 'code',
-            backgroundThrottling: false
+            ],
+            enabled: options?.browser ?? false
+        },
+        {
+            label: "Help",
+            submenu: [
+                {
+                    label: "WikiShield",
+                    click: async () => Security.openExternal("https://en.wikipedia.org/wiki/Wikipedia:WikiShield")
+                },
+                {
+                    label: "Changelog",
+                    click: () => {
+                        if (glob.windows.main)
+                            glob.windows.main.webContents.send("open-changelog");
+                    }
+                },
+                { type: "separator" },
+                {
+                    label: "Check for Updates...",
+                    click: () => {
+                        autoUpdater
+                            .checkForUpdates()
+                            .then(result => {
+                                if (!result || result.updateInfo.version === app.getVersion())
+                                    dialog.showMessageBox({
+                                        type: "info",
+                                        title: "No Updates",
+                                        message: `Latest version running (${app.getVersion()})`,
+                                        buttons: [ "OK" ]
+                                    });
+                            })
+                            .catch(err => dialog.showErrorBox("Update Check Failed", `Failed to check for updates: ${err.message}`));
+                    }
+                },
+                { type: "separator" },
+                ...(__dev__ ? [
+                    { role: "toggleDevTools" },
+                    { type: "separator" }
+                ] : []),
+                { type: "separator" },
+                { role: "about" },
+            ]
         }
-    });
+    ];
 
-    windows.login.webContents.on('context-menu', (e, params) => {
-        const contextMenu = Menu.buildFromTemplate([
-            ...(params.editFlags.canCopy ? [{ role: 'copy' }] : []),
-            ...(params.editFlags.canCut ? [{ role: 'cut' }] : []),
-            ...(params.editFlags.canPaste ? [{ role: 'paste' }] : []),
-            { type: 'separator' },
-            { role: 'selectAll' },
-            ...(params.selectionText ? [
-                { type: 'separator' },
-                {
-                    label: 'Translate to English',
-                    click: async () => {
-                        const result = await translateToEnglish(params.selectionText);
-                        if (result)
-                            await showTranslationDialog(windows.login, params.selectionText, result);
-                        else
-                            dialog.showErrorBox('Translation Error', 'Failed to translate text. Please check your internet connection.');
-                    }
-                }
-            ] : [])
-        ]);
-        contextMenu.popup(windows.login, params.x, params.y);
-    });
-
-    windows.login.loadFile(path.join(__dirname, 'src', 'login', 'index.html'));
-    windows.login.setMenuBarVisibility(false);
-
-    windows.login.once('ready-to-show', () => {
-        windows.login.show();
-    });
-
-    return windows.login;
-}
-
-function BuildAccountsWindow() {
-    const { width, height } = screen.getPrimaryDisplay().workAreaSize;
-    const min = Math.min(width, height);
-
-    windows.accounts = new BrowserWindow({
-        parent: windows.main instanceof BaseWindow ? windows.main : null,
-        modal: true,
-        show: false,
-        width: Math.floor(min * 0.8),
-        height: Math.floor(min * 0.6),
-        resizable: false,
-        maximizable: false,
-        minimizable: false,
-        icon: nativeImage.createFromPath(path.join(__dirname, 'assets', 'icon.png')),
-        webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),
-            contextIsolation: true,
-            nodeIntegration: false,
-            enableRemoteModule: false,
-            sandbox: true,
-            v8CacheOptions: 'code',
-            backgroundThrottling: false
-        }
-    });
-
-    windows.accounts.webContents.on('context-menu', (e, params) => {
-        const contextMenu = Menu.buildFromTemplate([
-            ...(params.editFlags.canCopy ? [{ role: 'copy' }] : []),
-            ...(params.editFlags.canCut ? [{ role: 'cut' }] : []),
-            ...(params.editFlags.canPaste ? [{ role: 'paste' }] : []),
-            { type: 'separator' },
-            { role: 'selectAll' },
-            ...(params.selectionText ? [
-                { type: 'separator' },
-                {
-                    label: 'Translate to English',
-                    click: async () => {
-                        const result = await translateToEnglish(params.selectionText);
-                        if (result)
-                            await showTranslationDialog(windows.accounts, params.selectionText, result);
-                        else
-                            dialog.showErrorBox('Translation Error', 'Failed to translate text. Please check your internet connection.');
-                    }
-                }
-            ] : [])
-        ]);
-        contextMenu.popup(windows.accounts, params.x, params.y);
-    });
-
-    windows.accounts.loadFile(path.join(__dirname, 'src', 'accounts', 'index.html'));
-    windows.accounts.setMenuBarVisibility(false);
-
-    windows.accounts.once('ready-to-show', () => {
-        windows.accounts.show();
-    });
-
-    return windows.accounts;
+    Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
 function BuildTray() {
-    const tray = new Tray(nativeImage.createFromPath(path.join(__dirname, 'assets', 'icon.png')));
-    tray.setToolTip('WikiShield');
+    const tray = new Tray(nativeImage.createFromPath(path.join(__dirname, "assets", "icon.png")));
+    tray.setToolTip("WikiShield");
 
-    tray.on('click', () => {
-        if (windows.main.isVisible()) {
-            windows.main.minimize();
-        } else {
-            windows.main.restore();
-            windows.main.focus();
+    tray.on("click", () => {
+        if (glob.windows.main.isVisible())
+            glob.windows.main.minimize();
+        else {
+            glob.windows.main.restore();
+            glob.windows.main.focus();
         }
     });
 
     const contextMenu = Menu.buildFromTemplate([
         {
-            label: 'Quit',
+            label: "Quit WikiShield",
             click: () => {
+                glob.quitting = true;
                 app.quit();
             }
         }
@@ -691,603 +488,845 @@ function BuildTray() {
     return tray;
 }
 
-function SendNotification(options, click) {
-    if (Notification.isSupported()) {
-        const iconPath = path.join(__dirname, 'assets', 'icon.png');
-        let icon = options.icon || nativeImage.createFromPath(iconPath);
+class BuildWindow {
+    static main() {
+        if (glob.quitting) return;
+        if (glob.account === null)
+            return BuildWindow.signin();
+        else if (glob.windows.main)
+            glob.windows.main.close();
 
-        if (!icon.isEmpty() && process.platform === 'win32') {
-            icon = icon.resize({ width: 256, height: 256 });
+        if (glob.windows.signin) {
+            glob.windows.signin.close();
+            glob.windows.signin = null;
         }
 
-        const notificationOptions = {
-            ...options,
-            icon: icon,
-        };
-        const notification = new Notification(notificationOptions);
-        notification.show();
-
-        if (typeof click === "string")
-            notification.on('click', () => {
-                shell.openExternal(click);
-            });
-    }
-}
-
-function SwitchServer(newServer) {
-    if (server !== newServer) {
-        server = newServer;
-        store.set('server', server);
-        AddAppMenuItems();
-
-        if (windows.main)
-            windows.main.reload();
-    }
-}
-
-function Save() {
-    global.accounts ??= { };
-    const accountsToStore = Object.fromEntries(Object.entries(global.accounts).map(([ username, account ]) => ([
-        username, {
-            password: safeStorage.isEncryptionAvailable() ? safeStorage.encryptString(account.password) : account.password,
-            active: account.active === true,
-            lastLogin: account.lastLogin,
-        }
-    ])));
-    store.set('accounts', accountsToStore);
-    store.set('server', server);
-
-    AddAppMenuItems();
-}
-
-function GetActiveAccount() {
-    for (const [ username, account ] of Object.entries(global.accounts))
-        if (account.active)
-            return username;
-
-    return null;
-}
-
-async function LoadAccounts() {
-    const storedAccounts = store.get('accounts');
-
-    let accounts = Object.entries((typeof storedAccounts === 'object' && storedAccounts !== null ? storedAccounts : { }));
-    accounts = accounts.filter(([ , account ]) => typeof account === 'object' && account !== null && account.password);
-    accounts = accounts.map(([ username, account ]) => {
-        try {
-            return [username, {
-                password: safeStorage.isEncryptionAvailable() ? safeStorage.decryptString(new Uint8Array(account.password.data)) : account.password,
-                active: account.active === true,
-                lastLogin: account.lastLogin,
-            }];
-        } catch (e) {
-            return null;
-        }
-    }).filter(entry => entry !== null);
-
-    global.accounts = { };
-
-    const errors = new Set();
-    await Promise.allSettled(accounts.map(async ([ username, account ]) => {
-        const valid = await CheckAccountLogin(username, account.password, errors);
-
-        global.accounts[username] = {
-            password: account.password,
-            active: account.active && valid,
-            valid: valid,
-            lastLogin: account.lastLogin,
-        }
-    }));
-
-    return global.accounts;
-}
-
-async function CheckAccountLogin(username, password, errors = new Set()) {
-    let token = cachedLoginToken.token;
-    let cookies = cachedLoginToken.cookies;
-
-    if (!token) {
-        const tokenResponse = await fetch('https://en.wikipedia.org/w/api.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: new URLSearchParams({
-                action: 'query',
-                meta: 'tokens',
-                type: 'login',
-                format: 'json'
-            }).toString()
-        }).catch(error => {
-            const errorText = error.message;
-            if (errors.has(errorText))
-                return;
-            errors.add(errorText);
-
-            dialog.showErrorBox(`Error fetching login token`, errorText);
-            return null;
-        });
-
-        if (!tokenResponse?.ok) {
-            const errorText = tokenResponse?.statusText || 'Unknown error';
-            if (errors.has(errorText))
-                return;
-            errors.add(errorText);
-
-            dialog.showErrorBox(`Error fetching login token`, errorText);
-            return false;
-        }
-
-        cookies = tokenResponse.headers.get('set-cookie');
-        const tokenData = await tokenResponse.json();
-        token = tokenData.query?.tokens?.logintoken;
-
-        if (!token) {
-            const errorText = 'No token received';
-            if (errors.has(errorText))
-                return;
-            errors.add(errorText);
-
-            dialog.showErrorBox(`Error fetching login token`, errorText);
-            return false;
-        }
-
-        // Cache the token and cookies
-        cachedLoginToken.token = token;
-        cachedLoginToken.cookies = cookies;
-    }
-
-    const loginResult = await fetch('https://en.wikipedia.org/w/api.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            ...(cookies && { 'Cookie': cookies })
-        },
-        body: new URLSearchParams({
-            action: 'login',
-            lgname: username,
-            lgpassword: password,
-            lgtoken: token,
-            format: 'json'
-        }).toString()
-    })
-        .then(response => {
-            userLoginCookies[username] = response.headers?.get('set-cookie') || null;
-
-            return response.json();
-        })
-        .then(data => {
-            if (data.login?.result === 'Success') {
-                return true;
-            } else if (data.login?.result === 'Failed' || data.login?.result === 'NeedToken') {
-                return 'retry';
-            } else {
-                const errorText = data.login?.reason || 'Unknown error';
-                if (errors.has(errorText))
-                    return;
-                errors.add(errorText);
-
-                dialog.showErrorBox(`Error during login for ${username}`, errorText);
-                return false;
+        const primary = screen.getPrimaryDisplay();
+        glob.windows.main = new BrowserWindow({
+            width: glob.window.width ?? primary.workAreaSize.width,
+            height: glob.window.height ?? primary.workAreaSize.height,
+            show: false,
+            backgroundColor: "#1e1e1e",
+            icon: nativeImage.createFromPath(path.join(__dirname, "assets", "icon.png")),
+            webPreferences: {
+                preload: path.join(__dirname, "preload", "main.js"),
+                contextIsolation: true,
+                nodeIntegration: false,
+                enableRemoteModule: false,
+                sandbox: true,
+                v8CacheOptions: "code",
+                disableBlinkFeatures: "Auxclick",
+                backgroundThrottling: false
             }
-        })
-        .catch(error => {
-            dialog.showErrorBox(`Error during login for ${username}`, errorText);
-            return false;
         });
 
-    if (loginResult === 'retry') {
-        cachedLoginToken.token = null;
-        cachedLoginToken.cookies = null;
+        UpdateMenu({ });
 
-        const tokenResponse = await fetch('https://en.wikipedia.org/w/api.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: new URLSearchParams({
-                action: 'query',
-                meta: 'tokens',
-                type: 'login',
-                format: 'json'
-            }).toString()
-        }).catch(error => {
-            const errorText = error.message;
-            if (errors.has(errorText))
-                return;
-            errors.add(errorText);
-
-            dialog.showErrorBox(`Error fetching login token`, errorText);
-            return null;
-        });
-
-        if (!tokenResponse?.ok) {
-            const errorText = tokenResponse?.statusText || 'Unknown error';
-            if (errors.has(errorText))
-                return;
-            errors.add(errorText);
-
-            dialog.showErrorBox(`Error fetching login token`, errorText);
-            return false;
-        }
-
-        cookies = tokenResponse.headers.get('set-cookie');
-        const tokenData = await tokenResponse.json();
-        token = tokenData.query?.tokens?.logintoken;
-
-        if (!token) {
-            const errorText = 'No token received';
-            if (errors.has(errorText))
-                return;
-            errors.add(errorText);
-
-            dialog.showErrorBox(`Error fetching login token`, errorText);
-            return false;
-        }
-
-        cachedLoginToken.token = token;
-        cachedLoginToken.cookies = cookies;
-
-        return await fetch('https://en.wikipedia.org/w/api.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                ...(cookies && { 'Cookie': cookies })
-            },
-            body: new URLSearchParams({
-                action: 'login',
-                lgname: username,
-                lgpassword: password,
-                lgtoken: token,
-                format: 'json'
-            }).toString()
-        })
-            .then(response => {
-                userLoginCookies[username] = response.headers?.get('set-cookie') || null;
-
-                return response.json();
-            })
-            .then(data => {
-                if (data.login?.result === 'Success') {
-                    return true;
-                } else {
-                    dialog.showErrorBox(`Error during login for ${username}`, data.login?.reason || 'Unknown error');
-                    return false;
-                }
-            })
-            .catch(error => {
-                dialog.showErrorBox(`Error during login for ${username}`, error.message);
-                return false;
-            });
-    }
-
-    return loginResult;
-}
-
-if (process.platform === 'win32') {
-    app.setAppUserModelId('com.wikishield.app');
-}
-
-if (process.defaultApp) {
-    if (process.argv.length >= 2) {
-        app.setAsDefaultProtocolClient('wikishield', process.execPath, [path.resolve(process.argv[1])]);
-    } else {
-        app.setAsDefaultProtocolClient('wikishield');
-    }
-}
-
-function SetActiveAccount(username) {
-    global.accounts ??= { };
-
-    const active = GetActiveAccount();
-    if (global.accounts[active]) {
-        global.accounts[active].active = false;
-    }
-
-    if (global.accounts[username]) {
-        global.accounts[username].active = true;
-        global.accounts[username].lastLogin = Date.now();
-    }
-
-    Save();
-
-    AddAppMenuItems();
-
-    if (loadedAccount !== username) {
-        loadedAccount = username;
-        if (windows.main)
-            windows.main.reload();
-    }
-}
-
-// Configure auto-updater (works on Windows, Mac, and Linux)
-autoUpdater.logger = log;
-autoUpdater.logger.transports.file.level = 'info';
-autoUpdater.autoDownload = true; // Automatically download updates
-autoUpdater.autoInstallOnAppQuit = true;
-
-// Auto-updater events
-autoUpdater.on('checking-for-update', () => {
-    log.info('Checking for update...');
-    log.info(`Current version: ${app.getVersion()}`);
-});
-
-autoUpdater.on('update-available', (info) => {
-    log.info('Update available:', JSON.stringify(info));
-    log.info(`Automatically downloading version ${info.version}...`);
-    // Update will be downloaded automatically due to autoDownload = true
-});
-
-autoUpdater.on('update-not-available', (info) => {
-    log.info('Update not available. Current version is latest:', JSON.stringify(info));
-});
-
-autoUpdater.on('error', (err) => {
-    log.error('Error in auto-updater:', err);
-    // Don't show error dialog for network issues or no updates
-    if (!err.message.includes('net::') && !err.message.includes('ENOTFOUND')) {
-        dialog.showErrorBox('Update Error', `Failed to check for updates: ${err.message}`);
-    }
-});
-
-autoUpdater.on('download-progress', (progressObj) => {
-    let logMessage = 'Download speed: ' + progressObj.bytesPerSecond;
-    logMessage = logMessage + ' - Downloaded ' + progressObj.percent + '%';
-    logMessage = logMessage + ' (' + progressObj.transferred + '/' + progressObj.total + ')';
-    log.info(logMessage);
-});
-
-autoUpdater.on('update-downloaded', (info) => {
-    log.info('Update downloaded:', info);
-    log.info('Update will be installed when the application quits.');
-    // Update will be installed automatically on next app quit due to autoInstallOnAppQuit = true
-    // Show a non-intrusive notification to let the user know
-    SendNotification({
-        title: 'Update Ready',
-        body: `WikiShield v${info.version} has been downloaded and will be installed when you close the app.`
-    });
-});
-
-app.whenReady().then(async () => {
-    log.info(`App ready - DEV mode: ${__DEV__}, Packaged: ${app.isPackaged}`);
-
-    // Check if app-update.yml exists (only exists in production builds from electron-builder)
-    const fs = require('fs');
-    const appUpdateFile = path.join(process.resourcesPath, 'app-update.yml');
-    const hasUpdateFile = fs.existsSync(appUpdateFile);
-
-    log.info(`Auto-updater file check: ${appUpdateFile} exists: ${hasUpdateFile}`);
-
-    if (!__DEV__ && app.isPackaged && hasUpdateFile) {
-        log.info('Auto-updater enabled, will check for updates in 3 seconds...');
-
-        // Check for updates after app is ready
-        setTimeout(() => {
-            log.info('Initiating update check...');
-            log.info(`Update feed URL: ${autoUpdater.getFeedURL()}`);
-            autoUpdater.checkForUpdates()
-                .then(result => {
-                    log.info('Update check result:', result);
-                })
-                .catch(err => {
-                    log.error('Failed to check for updates:', err);
-                    // Only show error dialog for non-network errors
-                    if (!err.message.includes('net::') && !err.message.includes('ENOTFOUND') && !err.message.includes('ECONNREFUSED')) {
-                        dialog.showErrorBox('Update Error', `Failed to check for updates: ${err.message}`);
+        glob.windows.main.webContents.on("context-menu", (event, params) => {
+            const contextMenu = Menu.buildFromTemplate([
+                ...(params.editFlags.canCopy ? [ { role: "copy" } ] : [ ]),
+                ...(params.editFlags.canCut ? [ { role: "cut" } ] : [ ]),
+                ...(params.editFlags.canPaste ? [ { role: "paste" } ] : [ ]),
+                { type: "separator" },
+                { role: "selectAll" },
+                ...(params.selectionText ? [
+                    { type: "separator" },
+                    {
+                        label: "Translate",
+                        click: async () => {
+                            BuildWindow.translation(glob.windows.main);
+                            const result = await Translator.translate(glob, params.selectionText);
+                            if (result && glob.windows.translation)
+                                glob.windows.translation.webContents.send("set-translation", {
+                                    before: params.selectionText,
+                                    after: result.text,
+                                    language: result.language,
+                                    target: result.target
+                                });
+                            else
+                                dialog.showErrorBox("Translation Error", "An error occurred while translating the selected text.");
+                        }
                     }
-                });
-        }, 3000);
-
-        // Check for updates every 4 hours
-        setInterval(() => {
-            log.info('Periodic update check...');
-            autoUpdater.checkForUpdates().catch(err => {
-                log.error('Failed to check for updates:', err);
-            });
-        }, 4 * 60 * 60 * 1000);
-    } else {
-        log.info(`Auto-updater disabled - DEV: ${__DEV__}, Packaged: ${app.isPackaged}, Has update file: ${hasUpdateFile}`);
-    }
-
-    globalShortcut.register('escape', () => {
-        if (windows.login && windows.login.isFocused()) {
-            windows.login.close();
-            windows.login = null;
-        }
-        if (windows.accounts && windows.accounts.isFocused()) {
-            windows.accounts.close();
-            windows.accounts = null;
-        }
-    });
-
-    ipcMain.on('set-badge-count', async (event, count) => {
-        if (process.platform === 'win32') {
-            // Windows: Custom overlay icon
-            if (!windows.main) return;
-
-            try {
-                if (count > 0) {
-                    const overlayIcon = await createBadgeIcon(count);
-                    if (overlayIcon && !overlayIcon.isEmpty()) {
-                        windows.main.setOverlayIcon(overlayIcon, `${count} notifications`);
+                ] : [ ]),
+                ...(__dev__ ? [
+                    { type: "separator" },
+                    {
+                        label: "Inspect Element",
+                        click: () => {
+                            glob.windows.main.webContents.inspectElement(params.x, params.y);
+                        }
                     }
-                } else {
-                    windows.main.setOverlayIcon(null, '');
+                ] : [ ])
+            ]);
+            contextMenu.popup(glob.windows.main, params.x, params.y);
+        });
+
+        glob.windows.main.webContents.executeJavaScript(`
+            document.addEventListener("auxclick", event => {
+                if (event.button === 1) {
+                    const $link = event.target.closest("a[href]");
+                    if ($link) {
+                        event.preventDefault();
+                        electronAPI.openInBrowser($link.href);
+                    }
                 }
-            } catch (error) {
-                log.error('Failed to set badge count:', error);
-            }
-        } else if (process.platform === 'darwin') {
-            // macOS: Dock badge
-            app.dock.setBadge(count > 0 ? count.toString() : '');
-        } else {
-            // Linux: App badge count
-            app.setBadgeCount(count);
-        }
-    });
+            }, true);
+        `);
 
-    ipcMain.on('open-external', (event, url) => {
-        shell.openExternal(url);
-    });
+        glob.windows.main.loadFile(path.join(__dirname, "src", "wikishield", "index.html"));
 
-    ipcMain.handle('send-notification', async (event, options, click) => SendNotification(options, click));
-    ipcMain.on('copy-to-clipboard', (event, text) => {
-        clipboard.writeText(text);
-    });
-    ipcMain.handle('get-clipboard-text', async () => {
-        return clipboard.readText();
-    });
+        glob.windows.main.once("ready-to-show", () => {
+            if (!glob.windows.main)
+                return;
 
-    ipcMain.handle('get-server', async () => {
-        return server;
-    });
+            if (glob.window.isMaximized)
+                glob.windows.main.maximize();
+            if (glob.window.isFullScreen)
+                glob.windows.main.setFullScreen(true);
+            glob.windows.main.show();
+        });
 
-    ipcMain.handle('get-active-account', async () => {
-        const active = GetActiveAccount();
-        return { username: active, password: global.accounts?.[active]?.password || null };
-    });
-    ipcMain.handle('load-accounts', async () => {
-        return Object.entries(global.accounts || { }).sort((a, b) => b[1].lastLogin - a[1].lastLogin).map(([ username, account ]) => ({ username, ...account }));
-    });
+        glob.windows.main.on("close", event => {
+            if (!glob.windows.main)
+                return;
 
-    ipcMain.on('save-account', async (event, account) => {
-        global.accounts ??= { };
+            glob.windows.main.webContents.send("beforeunload");
 
-        const valid = await CheckAccountLogin(account.username, account.password);
-        if (valid) {
-            const active = global.accounts[GetActiveAccount()];
-            if (active) active.active = false;
-        }
+            const [ width, height ] = glob.windows.main.getSize();
+            glob.window.width = width;
+            glob.window.height = height;
+            glob.window.isMaximized = glob.windows.main.isMaximized();
+            glob.window.isFullScreen = glob.windows.main.isFullScreen();
+            store.set("window", glob.window);
 
-        global.accounts[account.username] = {
-            password: account.password,
-            active: valid,
-            valid: valid,
-        };
-
-        Save();
-
-        if (windows.login) {
-            windows.login.close();
-            windows.login = null;
-        }
-
-        if (GetActiveAccount()) {
-            if (windows.main) {
-                windows.main.focus();
-            } else {
-                BuildMainWindow();
-            }
-        } else {
-            BuildLoginWindow();
-        }
-    });
-    ipcMain.on('set-active-account', async (event, username) => SetActiveAccount(username));
-    ipcMain.on('delete-account', async (event, username) => {
-        global.accounts ??= { };
-        delete global.accounts[username];
-
-        Save();
-    });
-
-    ipcMain.on('log', (event, message, level) => {
-        log[level || 'info']?.(message);
-    });
-    ipcMain.on('error', (event, message, detail) => {
-        dialog.showErrorBox(message, detail.toString());
-    });
-
-    let savePromise = [];
-    ipcMain.on('save-account-data', async (event, username, data) => {
-        savePromise = savePromise.filter(p => !p.isFulfilled);
-        savePromise.push(CheckAccountLogin(username, global.accounts?.[username]?.password).then(async valid => {
-            if (valid) {
-                const crsf = await fetch(`https://${server}/w/api.php`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'Cookie': userLoginCookies[username] || ''
-                    },
-                    body: new URLSearchParams({
-                        action: 'query',
-                        meta: 'tokens',
-                        type: 'csrf',
-                        format: 'json'
-                    }).toString()
-                }).then(response => response.json()).then(data => data.query?.tokens?.csrftoken);
-
-                if (!crsf) {
-                    log.error(`Failed to get CSRF token for saving account data for ${username}`);
-                    return;
-                }
-
-                await fetch(`https://${server}/w/api.php`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'Cookie': userLoginCookies[username] || ''
-                    },
-                    body: new URLSearchParams({
-                        action: 'options',
-                        optionname: "userjs-wikishield-storage",
-                        optionvalue: data,
-                        format: 'json',
-                        token: crsf
-                    }).toString()
-                }).then(response => response.json()).then(result => {
-                    if (result.options !== 'success')
-                        log.error(`Failed to save account data for ${username}: ${JSON.stringify(result)}`);
-                });
-            } else {
-                log.error(`Invalid login for ${username}, skipping save of account data`);
-            }
-        }));
-    });
-
-    app.on('before-quit', async (event) => {
-        savePromise = savePromise.filter(p => !p.isFulfilled);
-        if (savePromise.length > 0) {
             event.preventDefault();
-            await Promise.allSettled(savePromise);
+
+            ipcMain.once("unloaded", () => {
+                if (!glob.windows.main)
+                    return;
+
+                glob.windows.main.destroy();
+                glob.windows.main = null;
+            });
+            setTimeout(() => {
+                if (!glob.windows.main)
+                    return;
+
+                glob.windows.main.destroy();
+                glob.windows.main = null;
+            }, 250);
+        });
+
+        return glob.windows.main;
+    }
+    static signin() {
+        if (glob.quitting) return;
+        if (glob.windows.signin)
+            glob.windows.signin.close();
+        if (glob.windows.main)
+            glob.windows.main.close();
+        if (glob.windows.authorize) {
+            glob.windows.authorize.close();
+            glob.windows.authorize = null;
         }
 
-        app.exit(0);
+        const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+        const vmin = Math.min(width, height);
+
+        glob.windows.signin = new BrowserWindow({
+            modal: true,
+            show: false,
+            width: Math.floor(vmin * 0.9),
+            height: Math.floor(vmin * 0.7),
+            frame: false,
+            resizable: false,
+            maximizable: false,
+            minimizable: false,
+            backgroundColor: "#1e1e1e",
+            icon: nativeImage.createFromPath(path.join(__dirname, "assets", "icon.png")),
+            alwaysOnTop: true,
+            webPreferences: {
+                preload: path.join(__dirname, "preload", "signin.js"),
+                contextIsolation: true,
+                nodeIntegration: false,
+                enableRemoteModule: false,
+                sandbox: true,
+                v8CacheOptions: "code",
+                disableBlinkFeatures: "Auxclick",
+                backgroundThrottling: false
+            }
+        });
+
+        glob.windows.signin.webContents.on("context-menu", (event, params) => {
+            const contextMenu = Menu.buildFromTemplate([
+                ...(params.editFlags.canCopy ? [ { role: "copy" } ] : [ ]),
+                ...(params.editFlags.canCut ? [ { role: "cut" } ] : [ ]),
+                ...(params.editFlags.canPaste ? [ { role: "paste" } ] : [ ]),
+                { type: "separator" },
+                { role: "selectAll" },
+                ...(__dev__ ? [
+                    { type: "separator" },
+                    {
+                        label: "Inspect Element",
+                        click: () => {
+                            glob.windows.signin.webContents.inspectElement(params.x, params.y);
+                        }
+                    }
+                ] : [ ])
+            ]);
+            contextMenu.popup(glob.windows.signin, params.x, params.y);
+        });
+
+        glob.windows.signin.loadFile(path.join(__dirname, "src", "signin", "index.html"));
+        glob.windows.signin.setMenuBarVisibility(false);
+
+        glob.windows.signin.once("ready-to-show", () => glob.windows.signin.show());
+
+        glob.windows.signin.on("close", () => {
+            if (glob.windows.authorize) {
+                glob.windows.authorize.close();
+                glob.windows.authorize = null;
+            }
+
+            glob.windows.signin = null;
+            if (glob.account === null)
+                app.quit();
+        });
+
+        return glob.windows.signin;
+    }
+    static authorize() {
+        if (glob.quitting) return;
+        if (glob.windows.authorize)
+            glob.windows.authorize.close();
+
+        if (glob.windows.main)
+            glob.windows.main.close();
+
+        glob.windows.authorize = new BrowserWindow({
+            parent: glob.windows.signin || null,
+            modal: true,
+            show: false,
+            frame: false,
+            resizable: false,
+            maximizable: false,
+            minimizable: false,
+            backgroundColor: "#1e1e1e",
+            icon: nativeImage.createFromPath(path.join(__dirname, "assets", "icon.png")),
+            webPreferences: {
+                preload: path.join(__dirname, "preload", "authorize.js"),
+                contextIsolation: true,
+                nodeIntegration: false,
+                enableRemoteModule: false,
+                sandbox: true,
+                v8CacheOptions: "code",
+                disableBlinkFeatures: "Auxclick",
+                backgroundThrottling: false
+            }
+        });
+
+        glob.windows.authorize.webContents.on("context-menu", (event, params) => {
+            const contextMenu = Menu.buildFromTemplate([
+                ...(params.editFlags.canCopy ? [ { role: "copy" } ] : [ ]),
+                ...(params.editFlags.canCut ? [ { role: "cut" } ] : [ ]),
+                ...(params.editFlags.canPaste ? [ { role: "paste" } ] : [ ]),
+                { type: "separator" },
+                { role: "selectAll" },
+                ...(__dev__ ? [
+                    { type: "separator" },
+                    {
+                        label: "Inspect Element",
+                        click: () => {
+                            glob.windows.authorize.webContents.inspectElement(params.x, params.y);
+                        }
+                    }
+                ] : [ ])
+            ]);
+            contextMenu.popup(glob.windows.authorize, params.x, params.y);
+        });
+
+        glob.windows.authorize.loadFile(path.join(__dirname, "src", "authorize", "index.html"));
+        glob.windows.authorize.setMenuBarVisibility(false);
+
+        glob.windows.authorize.once("ready-to-show", () => {
+            glob.windows.authorize.show();
+            glob.windows.signin.webContents.send("signin-blur-window");
+        });
+
+        return glob.windows.authorize;
+    }
+
+    static translation(parent, translation) {
+        if (glob.quitting) return;
+
+        if (glob.windows.translation)
+            glob.windows.translation.close();
+
+        glob.windows.translation = new BrowserWindow({
+            parent: parent || null,
+            autoHideMenuBar: true,
+            titleBarStyle: "hidden",
+            resizable: false,
+            maximizable: false,
+            minimizable: false,
+            backgroundColor: "#1e1e1e",
+            icon: nativeImage.createFromPath(path.join(__dirname, "assets", "icon.png")),
+            webPreferences: {
+                preload: path.join(__dirname, "preload", "translation.js"),
+                contextIsolation: true,
+                nodeIntegration: false,
+                enableRemoteModule: false,
+                sandbox: true,
+                v8CacheOptions: "code",
+                disableBlinkFeatures: "Auxclick",
+                backgroundThrottling: false
+            }
+        });
+
+        glob.windows.translation.loadFile(path.join(__dirname, "src", "translation", "index.html"));
+        glob.windows.translation.setMenuBarVisibility(false);
+
+        glob.windows.translation.webContents.on("context-menu", (event, params) => {
+            const contextMenu = Menu.buildFromTemplate([
+                ...(params.editFlags.canCopy ? [ { role: "copy" } ] : [ ]),
+                ...(params.editFlags.canCut ? [ { role: "cut" } ] : [ ]),
+                ...(params.editFlags.canPaste ? [ { role: "paste" } ] : [ ]),
+                { type: "separator" },
+                { role: "selectAll" },
+                ...(__dev__ ? [
+                    { type: "separator" },
+                    {
+                        label: "Inspect Element",
+                        click: () => {
+                            glob.windows.translation.webContents.inspectElement(params.x, params.y);
+                        }
+                    }
+                ] : [ ])
+            ]);
+            contextMenu.popup(glob.windows.translation, params.x, params.y);
+        });
+
+        glob.windows.translation.once("closed", () => {
+            glob.windows.translation = null;
+        });
+
+        return glob.windows.translation;
+    }
+}
+
+class Popup {
+    static windows = new Map();
+
+    static create(url) {
+        const id = generateRandomUUID();
+        const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+
+        const popup = new BrowserWindow({
+            parent: glob.windows.main,
+            width: Math.floor(width * 0.8),
+            height: Math.floor(height * 0.8),
+            autoHideMenuBar: true,
+            titleBarStyle: "hidden",
+            resizable: false,
+            maximizable: false,
+            minimizable: false,
+            backgroundColor: "#1e1e1e",
+            icon: nativeImage.createFromPath(path.join(__dirname, "assets", "icon.png")),
+            webPreferences: {
+                preload: path.join(__dirname, "preload", "browser.js"),
+                contextIsolation: true,
+                nodeIntegration: false,
+                enableRemoteModule: false,
+                webviewTag: true,
+                sandbox: false,
+                v8CacheOptions: "code",
+                disableBlinkFeatures: "Auxclick",
+                backgroundThrottling: false
+            }
+        });
+        Popup.windows.set(id, popup);
+
+        popup.webContents.on("did-attach-webview", (event, webContents) => {
+            webContents.on("context-menu", (e, params) => {
+                const contextMenu = Menu.buildFromTemplate([
+                    ...(params.editFlags.canCopy ? [ { role: "copy" } ] : [ ]),
+                    ...(params.editFlags.canCut ? [ { role: "cut" } ] : [ ]),
+                    ...(params.editFlags.canPaste ? [ { role: "paste" } ] : [ ]),
+                    { type: "separator" },
+                    { role: "selectAll" },
+                    ...(params.linkURL ? [
+                        { type: "separator" },
+                        { role: "copyLinkAddress" },
+                        {
+                            label: "Open Link in New Tab",
+                            click: () => popup.webContents.send("open-link-in-new-tab", params.linkURL)
+                        },
+                        {
+                            label: "Open Link in Browser",
+                            click: () => Security.openExternal(params.linkURL)
+                        },
+                    ] : [ ]),
+                    ...(params.selectionText ? [
+                        { type: "separator" },
+                        {
+                            label: "Translate",
+                            click: async () => {
+                                BuildWindow.translation(popup);
+                                const result = await Translator.translate(glob, params.selectionText);
+                                if (result && glob.windows.translation)
+                                    glob.windows.translation.webContents.send("set-translation", {
+                                        before: params.selectionText,
+                                        after: result.text,
+                                        language: result.language,
+                                        target: result.target
+                                    });
+                                else
+                                    dialog.showErrorBox("Translation Error", "An error occurred while translating the selected text.");
+                            }
+                        }
+                    ] : [ ]),
+                    ...(__dev__ ? [
+                        { type: "separator" },
+                        {
+                            label: "Inspect Element",
+                            click: () => popup.webContents.inspectElement(params.x, params.y)
+                        }
+                    ] : [ ])
+                ]);
+                contextMenu.popup();
+            });
+        });
+        popup.webContents.on("context-menu", (e, params) => {
+            const contextMenu = Menu.buildFromTemplate([
+                ...(params.editFlags.canCopy ? [ { role: "copy" } ] : [ ]),
+                ...(params.editFlags.canCut ? [ { role: "cut" } ] : [ ]),
+                ...(params.editFlags.canPaste ? [ { role: "paste" } ] : [ ]),
+                { type: "separator" },
+                { role: "selectAll" },
+                ...(params.linkURL ? [
+                    { type: "separator" },
+                    { role: "copyLinkAddress" },
+                    {
+                        label: "Open Link in New Tab",
+                        click: () => popup.webContents.send("open-link-in-new-tab", params.linkURL)
+                    },
+                    {
+                        label: "Open Link in Browser",
+                        click: () => Security.openExternal(params.linkURL)
+                    },
+                ] : [ ]),
+                ...(params.selectionText ? [
+                    { type: "separator" },
+                    {
+                        label: "Translate",
+                        click: async () => {
+                            BuildWindow.translation(popup);
+                            const result = await Translator.translate(glob, params.selectionText);
+                            if (result && glob.windows.translation)
+                                glob.windows.translation.webContents.send("set-translation", {
+                                    before: params.selectionText,
+                                    after: result.text,
+                                    language: result.language,
+                                    target: result.target
+                                });
+                            else
+                                dialog.showErrorBox("Translation Error", "An error occurred while translating the selected text.");
+                        }
+                    }
+                ] : [ ]),
+                ...(__dev__ ? [
+                    { type: "separator" },
+                    {
+                        label: "Inspect Element",
+                        click: () => popup.webContents.inspectElement(params.x, params.y)
+                    }
+                ] : [ ])
+            ]);
+            contextMenu.popup(popup, params.x, params.y);
+        });
+
+        const browser = path.join(__dirname, "src", "browser", "index.html");
+        popup.loadFile(browser, { query: { url: url } });
+
+        const attached = new Set();
+        popup.webContents.on("did-attach-webview", (event, webContents) => {
+            attached.add(webContents);
+            webContents.on("destroyed", () => attached.delete(webContents));
+        });
+
+        popup.on("close", () => {
+            for (const webContents of attached)
+                if (!webContents.isDestroyed() && webContents.isDevToolsOpened())
+                    webContents.closeDevTools();
+            attached.clear();
+
+            if (!popup.webContents.isDestroyed() && popup.webContents.isDevToolsOpened())
+                popup.webContents.closeDevTools();
+        });
+        popup.on("closed", () => {
+            Popup.windows.delete(id);
+            if (glob.windows.main?.webContents && !glob.windows.main.isDestroyed())
+                glob.windows.main.webContents.send("popup-closed", id);
+        });
+
+        return id;
+    }
+}
+
+class NotificationHandler {
+    static garbage = new Set();
+
+    static send(options, url, force = false) {
+        if (!glob.notifications && !force)
+            return;
+
+        if (Notification.isSupported()) {
+            let icon = options.icon || nativeImage.createFromPath(path.join(__dirname, "assets", "icon.png"));
+            if (!icon.isEmpty() && process.platform === "win32")
+                icon = icon.resize({ width: 256, height: 256 });
+
+            const notification = new Notification({ ...options, icon });
+            NotificationHandler.garbage.add(notification);
+
+            if (typeof url === "string")
+                notification.on("click", () => {
+                    if (glob.windows.main) {
+                        if (glob.windows.main.isMinimized())
+                            glob.windows.main.restore();
+                        glob.windows.main.focus();
+                        glob.windows.main.webContents.send("open-notification", url);
+                    } else
+                        Security.openExternal(url);
+                });
+
+            notification.on("close", () => NotificationHandler.garbage.delete(notification));
+
+            notification.show();
+            return notification;
+        }
+    }
+}
+
+// API
+async function CreateAPI(username = null) {
+    const active = username ?? glob.account?.username ?? null;
+    if (active === null)
+        return null;
+
+    const oauth = glob.accounts[active];
+    if (!oauth)
+        return null;
+
+    const mw = new MediaWikiOAuth2(__userAgent__);
+    mw.set(oauth.accessToken, oauth.refreshToken, new Date(oauth.expires));
+    try {
+        const { accessToken, refreshToken, expires } = await mw.refresh();
+        oauth.accessToken = accessToken;
+        oauth.refreshToken = refreshToken;
+        oauth.expires = expires.toISOString();
+        oauth.lastUsed = new Date().toISOString();
+        oauth.valid = true;
+        store.set("accounts", Security.encryptAccounts(glob.accounts));
+    } catch (err) {
+        oauth.valid = false;
+        store.set("accounts", Security.encryptAccounts(glob.accounts));
+        return null;
+    }
+
+    if (glob.mwapi && MediaWikiAPI.controller)
+        MediaWikiAPI.controller.abort();
+
+    glob.mwapi = new MediaWikiAPI(glob, mw, new ORES(glob.server, glob.python), glob.server, active);
+    return glob.mwapi;
+}
+
+// app setup
+app.whenReady().then(async () => {
+    Logger.debug(`WikiShield starting (version ${app.getVersion()})`);
+    try {
+        Logger.debug("Building python environment...");
+
+        glob.python = await new PythonInstaller(app.getPath("userData")).setup();
+        ORES.enabled = true;
+
+        Logger.debug(`Python environment ready. (${glob.python})`);
+    } catch (err) { // ORES will just be done via web requests
+        ORES.enabled = false;
+        Logger.error(`Failed to set up python environment: ${err.stack || err}`);
+    }
+
+    glob.accounts = Security.decryptAccounts(store.get("accounts", { }));
+    glob.account = glob.accounts[store.get("account", null)] ?? null;
+
+    const hasUpdateFile = fs.existsSync(path.join(process.resourcesPath, "app-update.yml"));
+    if (!__dev__ && app.isPackaged && hasUpdateFile) {
+        const update = autoUpdater.checkForUpdates().catch(err => Logger.error(`Auto-updater initial check failed: ${err == null ? "unknown" : (err.stack || err).toString()}`));
+
+        setTimeout(update, 3000); // after 3 seconds
+        setInterval(update, 10 * 60 * 1000); // every 10 minutes
+    }
+
+    ipcMain.on("are-external-services-allowed", event => event.returnValue = glob.externalServices);
+
+    ipcMain.on('open-external', (event, url) => Security.openExternal(url));
+
+    ipcMain.handle("get-account", async () => glob.account);
+    ipcMain.handle("get-accounts", async () => Object.entries(glob.accounts).map(([ username, account ]) => ({
+        username, valid: account.valid, lastUsed: account.lastUsed
+    })));
+
+    ipcMain.on('signin', (event, username) => {
+        glob.account = glob.accounts[username];
+        glob.account.lastUsed = new Date().toISOString();
+        store.set("account", username);
+        store.set("accounts", Security.encryptAccounts(glob.accounts));
+
+        glob.windows.signin.close();
+        glob.windows.signin = null;
+
+        BuildWindow.main();
+    });
+    ipcMain.on('delete-account', (event, username) => {
+        delete glob.accounts[username];
+        store.set("accounts", Security.encryptAccounts(glob.accounts));
     });
 
-    ipcMain.on('quit', () => {
+    ipcMain.handle("authorize", async () => {
+        BuildWindow.authorize();
+
+        glob.windows.authorize.once("closed", () => {
+            glob.windows.authorize = null;
+
+            if (glob.windows.signin && !glob.windows.signin.isDestroyed())
+                glob.windows.signin.webContents.send("signin-focus-window");
+            else if (glob.account === null)
+                BuildWindow.signin();
+        });
+    });
+    ipcMain.handle("handle-authorization", async () => {
+        try {
+            const oauth = new MediaWikiOAuth2(__userAgent__);
+
+            const controller = new AbortController();
+            glob.windows.authorize.once("closed", () => controller.abort());
+
+            const data = await oauth.authorize(glob, controller.signal);
+
+            const username = await MediaWikiAPI.getUsername(oauth, glob.server);
+            glob.accounts[username] = {
+                username,
+                accessToken: data.accessToken,
+                refreshToken: data.refreshToken,
+                expires: data.expires.toISOString(),
+                valid: true,
+                lastUsed: new Date().toISOString()
+            };
+            store.set("accounts", Security.encryptAccounts(glob.accounts));
+
+            glob.account = glob.accounts[username];
+            store.set("account", username);
+
+            glob.windows.signin.close();
+            glob.windows.signin = null;
+
+            BuildWindow.main();
+        } catch (err) {
+            glob.windows.authorize.close();
+            glob.windows.authorize = null;
+
+            if (glob.windows.signin && !glob.windows.signin.isDestroyed())
+                glob.windows.signin.webContents.send("authorization-failed", err?.message ?? "An unknown error occurred during authorization.");
+            else
+                BuildWindow.signin();
+
+            return;
+        }
+    });
+
+    ipcMain.on('copy-to-clipboard', (event, text) => clipboard.writeText(text));
+    ipcMain.handle('get-clipboard-text', async () => clipboard.readText());
+
+    ipcMain.on("log", (event, message, level) => Logger[level ?? "info"]?.(message));
+    ipcMain.on("error", (event, message, detail) => dialog.showErrorBox(message, detail?.toString() ?? "No additional details provided."));
+    ipcMain.handle('send-notification', async (event, options, url) => void(NotificationHandler.send(options, url)));
+
+    ipcMain.on("menu-enabler", (event, options) => { UpdateMenu(options); });
+    ipcMain.on("set-badge-count", async(event, count) => {
+        switch (process.platform) {
+            case "win32": {
+                if (!glob.windows.main)
+                    return;
+
+                try {
+                    const icon = await CreateBadgeIcon(glob.windows.main, count);
+                    if (!glob.windows.main)
+                        return;
+
+                    if (!icon?.isEmpty())
+                        glob.windows.main.setOverlayIcon(icon, `You have ${count} unread notifications`);
+                    else
+                        glob.windows.main.setOverlayIcon(null, "");
+                } catch (err) {
+                    Logger.error(`Failed to set badge count on Windows: ${err.stack || err}`);
+                    glob.windows.main.setOverlayIcon(null, "");
+                }
+            } break;
+            case "darwin": {
+                let text = "";
+                if (count > 0) text = count > 99 ? "99+" : count.toString();
+                app.dock.setBadge(text);
+            } break;
+            default: {
+                let text = "";
+                if (count > 0) text = count > 99 ? "99+" : count.toString();
+                app.setBadgeCount(text);
+            } break;
+        }
+    });
+
+    ipcMain.handle("mwapi-loader", async event => {
+        const username = glob.account?.username ?? null;
+        if (username === null) {
+            if (glob.windows.main)
+                glob.windows.main.close();
+
+            return BuildWindow.signin();
+        }
+
+        try {
+            if (await CreateAPI(username)) {
+                if (glob.windows.main)
+                    glob.windows.main.webContents.send("mwapi-loaded", glob.server, username, MediaWikiAPI.pendingChangesServers);
+            } else {
+                if (glob.windows.main)
+                    glob.windows.main.close();
+
+                return BuildWindow.signin();
+            }
+
+        } catch (err) {
+            Logger.error(`Failed to create MediaWikiAPI for ${username ?? glob.account?.username ?? "unknown"}: ${err.stack || err}`);
+            throw err;
+        }
+    });
+    ipcMain.handle("mwapi", async (event, method, ...args) => {
+        try {
+            return await glob.mwapi[method](...args);
+        } catch (err) {
+            Logger.error(`MediaWikiAPI method ${method} failed: ${err.stack || err}`);
+            throw err;
+        }
+    });
+
+    { // save account
+        const promises = [ ];
+        ipcMain.on("save-account", async (event, username, data) => {
+            const promise = (async () => {
+                try {
+                    const result = await glob.mwapi.postWithToken({ action: "options", optionname: "userjs-wikishield-storage", optionvalue: data });
+                    if (result?.options === "success")
+                        Logger.debug(`Successfully saved account data for ${username}`);
+                    else
+                        Logger.error(`Failed to save account data for ${username}: unexpected API response`);
+                } catch (err) { Logger.error(`Failed to save account data for ${username}: ${err.stack || err}`); }
+            })();
+            promises.push(promise);
+            promise.finally(() => {
+                const index = promises.indexOf(promise);
+                if (index !== -1)
+                    promises.splice(index, 1);
+            });
+        });
+        app.on("before-quit", async event => {
+            if (promises.length > 0) {
+                event.preventDefault();
+                await Promise.allSettled(promises);
+            }
+
+            app.exit(0);
+        });
+    }
+
+    { // disabler
+        let disabled = false;
+        ipcMain.on("disable-app", (event, title, message) => {
+            if (disabled)
+                return;
+            disabled = true;
+
+            dialog.showErrorBox(title, message);
+
+            glob.quitting = true;
+            app.quit();
+        })
+    }
+
+    ipcMain.on("close-popup", async (event, id) => {
+        const popup = Popup.windows.get(id);
+        if (popup && !popup.isDestroyed())
+            popup.close();
+    });
+    ipcMain.handle("open-in-browser", async (event, url) => {
+        if (Popup.windows.size > 0) {
+            const first = Popup.windows.values().next().value;
+            if (first && !first.isDestroyed()) {
+                first.webContents.send("open-link-in-new-tab", url);
+                first.focus();
+                return;
+            }
+        }
+
+        return Popup.create(url);
+    });
+
+    ipcMain.on("close-signin-window", () => {
+        if (glob.windows.signin) {
+            glob.windows.signin.close();
+            glob.windows.signin = null;
+        }
+    });
+    ipcMain.on("close-authorization-window", () => {
+        if (glob.windows.authorize) {
+            glob.windows.authorize.close();
+            glob.windows.authorize = null;
+        }
+    });
+    ipcMain.on("close-translation-window", () => {
+        if (glob.windows.translation) {
+            glob.windows.translation.close();
+            glob.windows.translation = null;
+        }
+    });
+    ipcMain.on("close-browser-window", () => {
+        Popup.windows.forEach(popup => {
+            if (popup && !popup.isDestroyed())
+                popup.close();
+        });
+    });
+
+    ipcMain.on("quit", () => {
+        glob.quitting = true;
         app.quit();
+    });
+
+    globalShortcut.register("escape", () => {
+        if (glob.windows.signin?.isFocused()) {
+            glob.windows.signin.close();
+            glob.windows.signin = null;
+        } else if (glob.windows.authorize?.isFocused()) {
+            glob.windows.authorize.close();
+            glob.windows.authorize = null;
+        } else if (glob.windows.translation?.isFocused()) {
+            glob.windows.translation.close();
+            glob.windows.translation = null;
+        }
     });
 
     BuildTray();
-    server = store.get('server') || "en.wikipedia.org";
-    await LoadAccounts();
-    if (Object.keys(global.accounts).length === 0)
-        BuildLoginWindow();
-    else
-        BuildMainWindow();
+    BuildWindow.main();
 });
 
-if (process.platform === 'darwin') {
-    app.on('open-url', (event, url) => {
-        switch (url) {
-
-        }
-    });
-} else {
-    const gotTheLock = app.requestSingleInstanceLock()
-    if (!gotTheLock) {
+app.on("window-all-closed", () => {
+    if (!glob.quitting)
         app.quit();
-    } else {
-        app.on('second-instance', (event, commandLine, workingDirectory) => {
-            switch (commandLine[commandLine.length - 1]) {
-                default: {
-                    // Placeholder for handling other protocol URLs
-                } break;
-            }
-        });
-    }
-}
-
-app.on('window-all-closed', () => {
-    app.quit();
 });

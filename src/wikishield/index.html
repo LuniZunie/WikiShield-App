@@ -2,12 +2,14 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="Content-Security-Policy" content="script-src 'self'">
+
         <title>WikiShield</title>
 
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.0/css/all.min.css">
+        <link href="https://fonts.cdnfonts.com/css/open-dyslexic" rel="stylesheet">
 
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.0/css/all.min.css">
         <link rel="stylesheet" href="../common/style.css">
         <link rel="stylesheet" href="style.css">
 
@@ -37,9 +39,9 @@
 				</div>
 				<div id="rollback-needed" class="hidden">
 					<p><span class="fa fa-exclamation-triangle"></span> You must have rollback or admin rights to use this script.</p>
-					<p>You can apply for rollback rights <a rel="noopener" href="https://en.wikipedia.org/wiki/Wikipedia:PERM/R" target="_blank">here</a>.</p>
+					<p>You can apply for rollback rights <a rel="noopener" class="request-link" href="https://www.wikidata.org/wiki/Q7765871" target="_blank">here</a>.</p>
 				</div>
-				<button id="start-button">
+				<button type="button" id="start-button">
 					Start WikiShield <i class="fas fa-arrow-right"></i>
 				</button>
 			</div>
@@ -48,7 +50,7 @@
             <div id="container">
                 <div id="queue">
                     <div id="queue-top">
-                        <div id="queue-top-right">
+                        <div id="queue-top-left">
                             <span class="fa fa-bell" id="alerts-icon" data-tooltip="Alerts" data-zen-show="alerts">
                                 <span id="alerts-count" class="icon-count hidden red" data-zen-show="badges"></span>
                             </span>
@@ -56,11 +58,14 @@
                                 <span id="messages-count" class="icon-count hidden blue" data-zen-show="badges"></span>
                             </span>
                         </div>
+                        <div id="queue-top-right">
+                            <span class="fa fa-trash" id="clear-queue" data-tooltip="Clear queue"></span>
+                        </div>
                     </div>
                     <div id="queue-tabs">
                         <div id="queue-tab-recent" class="queue-tab selected" data-tooltip="Recent edits">
                             <span class="fas fa-stopwatch">
-                                <span class="icon-count hidden red" data-zen-show="badges"></span>
+                                <span class="icon-count hidden gray" data-zen-show="badges"></span>
                             </span>
                         </div>
                         <div id="queue-tab-pending" class="queue-tab" data-tooltip="Pending edits">
@@ -70,12 +75,17 @@
                         </div>
                         <div id="queue-tab-users" class="queue-tab" data-tooltip="User creation logs">
                             <span class="fas fa-user">
-                                <span class="icon-count hidden grey" data-zen-show="badges"></span>
+                                <span class="icon-count hidden green" data-zen-show="badges"></span>
                             </span>
                         </div>
                         <div id="queue-tab-watchlist" class="queue-tab" data-tooltip="Watchlist edits">
                             <span class="fas fa-book-bookmark">
                                 <span class="icon-count hidden blue" data-zen-show="badges"></span>
+                            </span>
+                        </div>
+                        <div id="queue-tab-abuselog" class="queue-tab" data-tooltip="Abuse logs">
+                            <span class="fas fa-filter-circle-xmark">
+                                <span class="icon-count hidden red" data-zen-show="badges"></span>
                             </span>
                         </div>
                     </div>
@@ -132,8 +142,8 @@
                                 <div class="reject">Reject</div>
                             </div>
                             <div id="progress-bar-container"></div>
-                            <div id="bottom-tools" data-queue-type="edit,logevent">
-                                <div class="bottom-tool-item" data-menu="revert" data-queue-type="edit,logevent">
+                            <div id="bottom-tools" data-queue-type="edit,logevent,abuselog">
+                                <div class="bottom-tool-item" data-menu="revert" data-queue-type="edit">
                                     <div class="bottom-tool-trigger">
                                         <i class="fas fa-undo"></i>
                                         <span>Revert</span>
@@ -141,7 +151,7 @@
                                     </div>
                                 </div>
 
-                                <div class="bottom-tool-item" data-menu="warn" data-queue-type="edit,logevent">
+                                <div class="bottom-tool-item" data-menu="warn" data-queue-type="edit,logevent,abuselog">
                                     <div class="bottom-tool-trigger">
                                         <i class="fas fa-exclamation-triangle"></i>
                                         <span>Warn</span>
@@ -149,7 +159,7 @@
                                     </div>
                                 </div>
 
-                                <div class="bottom-tool-item" data-menu="user" data-queue-type="edit,logevent">
+                                <div class="bottom-tool-item" data-menu="user" data-queue-type="edit,logevent,abuselog">
                                     <div class="bottom-tool-trigger">
                                         <i class="fas fa-user"></i>
                                         <span>User</span>
@@ -157,7 +167,7 @@
                                     </div>
                                 </div>
 
-                                <div class="bottom-tool-item" data-menu="page" data-queue-type="edit">
+                                <div class="bottom-tool-item" data-menu="page" data-queue-type="edit,abuselog">
                                     <div class="bottom-tool-trigger">
                                         <i class="fas fa-file-lines"></i>
                                         <span>Page</span>
@@ -172,10 +182,15 @@
                                         <i class="fas fa-chevron-up bottom-tool-chevron"></i>
                                     </div>
                                 </div>
+
+                                <div id="copy-link" class="bottom-tool-action" data-queue-type="*">
+                                    <i class="fas fa-link"></i>
+                                    <span>Copy link</span>
+                                </div>
                             </div>
                         </div>
                         <div id="right-details">
-                            <div id="user-contribs" class="right-detail" data-queue-type="edit,logevent">
+                            <div id="user-contribs" class="right-detail" data-queue-type="edit,logevent,abuselog">
                                 <div id="user-contribs-top" class="right-detail-top">
                                     <div class="right-detail-left">
                                         <div id="user-contribs-title" class="right-detail-title">User Contributions</div>
@@ -186,8 +201,7 @@
                                 </div>
                                 <div id="user-contribs-content" class="queue-list"></div>
                             </div>
-                            <div id="right-height-adjust" class="height-adjust" data-queue-type="edit"></div>
-                            <div id="page-history" class="right-detail" data-queue-type="edit">
+                            <div id="page-history" class="right-detail" data-queue-type="edit,abuselog">
                                 <div id="page-history-top" class="right-detail-top">
                                     <div class="right-detail-left">
                                         <div id="page-history-title" class="right-detail-title">Page History</div>
@@ -379,6 +393,9 @@
                             <div class="settings-left-menu-item" id="settings-zen-button">
                                 <span><i class="fas fa-spa"></i>Zen Mode</span>
                             </div>
+                            <div class="settings-left-menu-item" id="settings-accessibility-button">
+                                <span><i class="fas fa-universal-access"></i>Accessibility</span>
+                            </div>
                         </div>
 
                         <div class="settings-category">
@@ -432,22 +449,25 @@
 
                         <div class="settings-category">
                             <div class="settings-category-header">
-                                <span>INFO</span>
+                                <span>DATA</span>
                             </div>
                             <div class="settings-left-menu-item" id="settings-statistics-button">
                                 <span><i class="fas fa-chart-area"></i>Statistics</span>
                             </div>
-                            <div class="settings-left-menu-item" id="settings-about-button">
-                                <span><i class="fas fa-info"></i>About</span>
+                            <div class="settings-left-menu-item" id="settings-save-button">
+                                <span><i class="fas fa-floppy-disk"></i>Save</span>
                             </div>
                         </div>
 
                         <div class="settings-category">
                             <div class="settings-category-header">
-                                <span>MISC</span>
+                                <span>WIKISHIELD</span>
                             </div>
-                            <div class="settings-left-menu-item" id="settings-save-button">
-                                <span><i class="fas fa-floppy-disk"></i>Save</span>
+                            <div class="settings-left-menu-item" id="settings-changelog-button">
+                                <span><i class="fas fa-file-alt"></i>Changelog</span>
+                            </div>
+                            <div class="settings-left-menu-item" id="settings-about-button">
+                                <span><i class="fas fa-info"></i>About</span>
                             </div>
                         </div>
                     </div>
@@ -537,6 +557,13 @@
                         </div>
 
                         <div class="queue hidden">
+                            <div class="settings-section compact inline">
+                                <div class="settings-section-content">
+                                    <div class="settings-section-title">Dynamically hide bottom tool menus</div>
+                                    <div class="settings-section-desc">Automatically hide bottom tool menus when not needed to reduce clutter.</div>
+                                </div>
+                                <toggle-input id="settings-dynamic-bottom-menus" value="true"></toggle-input>
+                            </div>
                             <div class="settings-section">
                                 <div class="settings-section-title">Queues</div>
                                 <div class="settings-section-desc">Enable or disable different edit queues, and customize their order.</div>
@@ -596,6 +623,34 @@
                                         <div class="settings-section-title">Badges</div>
                                         <div class="settings-section-desc">Show badges in Zen Mode.</div>
                                         <toggle-input id="settings-zen-mode-badges" value="true"></toggle-input>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accessibility hidden">
+                            <div class="settings-section">
+                                <div class="settings-section-title">Accessibility Options</div>
+                                <div class="settings-section-desc">Customize accessibility features for better usability.</div>
+                                <div class="settings-compact-grid">
+                                    <!-- <div class="settings-section compact">
+                                        <div class="settings-section-title">Colorblind Mode</div>
+                                        <div class="settings-section-desc">Add indicators to help distinguish colors for colorblind users.</div>
+                                        <toggle-input id="settings-colorblind-mode" value="false"></toggle-input>
+                                    </div> -->
+                                    <div class="settings-section compact">
+                                        <div class="settings-section-title">Dyslexia Friendly Font</div>
+                                        <div class="settings-section-desc">Use a font that is easier to read for users with dyslexia.</div>
+                                        <toggle-input id="settings-dyslexia-font" value="false"></toggle-input>
+                                    </div>
+                                    <!-- <div class="settings-section compact">
+                                        <div class="settings-section-title">High Contrast Mode</div>
+                                        <div class="settings-section-desc">Increase contrast for better visibility.</div>
+                                        <toggle-input id="settings-high-contrast-mode" value="false"></toggle-input>
+                                    </div> -->
+                                    <div class="settings-section compact">
+                                        <div class="settings-section-title">Reduce Motion</div>
+                                        <div class="settings-section-desc">Minimize motion effects for users sensitive to motion.</div>
+                                        <toggle-input id="settings-reduce-motion" value="false"></toggle-input>
                                     </div>
                                 </div>
                             </div>
@@ -951,6 +1006,20 @@
                                     <div class="stat-card">
                                         <div class="inside shimmer shimmer-border">
                                             <div class="front">
+                                                <div id="stats-abuselogs-changes-reviewed" class="stat-value"></div>
+                                                <div class="stat-label">Abuse Log Changes Reviewed</div>
+                                            </div>
+                                            <div class="back">
+                                                <div class="stat-sublabel">
+                                                    <span id="stats-abuselogs-changes-percentage"></span>% of your reviews came from your abuse log
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="stat-card">
+                                        <div class="inside shimmer shimmer-border">
+                                            <div class="front">
                                                 <div id="stats-reverts-made" class="stat-value"></div>
                                                 <div class="stat-label">Reverts Made</div>
                                             </div>
@@ -969,6 +1038,9 @@
                                                 </div>
                                                 <div class="stat-sublabel">
                                                     <span id="stats-watchlist-reverts-percentage"></span>% of your reverts were from your watchlist
+                                                </div>
+                                                <div class="stat-sublabel">
+                                                    <span id="stats-abuselog-reverts-percentage"></span>% of your reverts were from your abuse log
                                                 </div>
                                                 <div class="stat-sublabel">
                                                     &hellip;and the last <span id="stats-other-reverts-percentage"></span>% weren&rsquo;t even in your queue!
@@ -1190,6 +1262,14 @@
                                             <div id="settings-save-status" class="status-message hidden"></div>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="changelog hidden">
+                            <div class="settings-section">
+                                <div class="changelog-content">
+                                    
                                 </div>
                             </div>
                         </div>

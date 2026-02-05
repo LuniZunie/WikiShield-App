@@ -2,7 +2,7 @@ import { Queue } from "../core/queue.js";
 import { WikiShield } from "../core/wikishield.js";
 import { getWarningFromLookup, warningsLookup } from "../data/warnings.js";
 import { welcomes } from "../data/welcomes.js";
-import { fullTrim } from "../utils/formatting.js";
+import { fullTrim } from "../../../global/full-trim/script.esm.js";
 
 export const events = {
     "next-item": {
@@ -82,8 +82,8 @@ export const events = {
             users.sort((a, b) => b[1] - a[1]); // sort by number of edits
             const overflow = Math.max(users.reduce((sum, user) => {
                 const len = user[0].length;
-                if (sum[1] + len <= 250)
-                    return [ sum[1] + len, sum[0] + 1 ];
+                if (sum[0] + len <= 250)
+                    return [ sum[0] + len, sum[1] + 1 ];
 
                 return sum;
             }, [ 0, 0 ])[1], 1);
@@ -98,7 +98,7 @@ export const events = {
                 userText = join(users.map(user => user[0]));
 
             return await ws.api.acceptPendingEdit(
-                item,
+                item.pending.revid,
                 ws.api.summary(`Accepted ${count} by ${userText}`, params.summary)
             );
         },
@@ -150,8 +150,8 @@ export const events = {
             users.sort((a, b) => b[1] - a[1]); // sort by number of edits
             const overflow = Math.max(users.reduce((sum, user) => {
                 const len = user[0].length;
-                if (sum[1] + len <= 250)
-                    return [ sum[1] + len, sum[0] + 1 ];
+                if (sum[0] + len <= 250)
+                    return [ sum[0] + len, sum[1] + 1 ];
 
                 return sum;
             }, [ 0, 0 ])[1], 1);
@@ -166,12 +166,199 @@ export const events = {
                 userText = join(users.map(user => user[0]));
 
             return await ws.api.rejectPendingEdit(
-                item,
-                ws.api.summary(`Rejected ${count} by ${userText} to [[Special:Diff/${item.pending.stable_revid}|last stable revision]]`, params.summary)
+                item.id,
+                pending.prior,
+                item.page.title,
+                ws.api.summary(`Rejected ${count} by ${userText} to [[Special:Diff/${pending.prior}|last stable revision]]`, params.summary)
             );
         },
         successful: (ws, item, params) => {
             ws.store.statistics.pending_changes_reviewed.rejected++;
+        }
+    },
+
+    "revert": {
+        title: "Revert and auto warn/report",
+        icon: "fas fa-undo-alt",
+
+        parameters: (ws, item) => [
+            {
+                id: "warning",
+                title: "Warning template",
+
+                type: "choice",
+                options: Object.keys(warningsLookup),
+                default: Object.keys(warningsLookup)[0],
+            }
+        ],
+
+        progress: "Reverting edit",
+        valid: (ws, item, params) => {
+            let type = item.type;
+            if (type === "abuselog" && item.revid)
+                type = "edit"; // treat abuse log items with revids as edits for the sake of the revert menu
+
+            if (Queue.groups[type] !== "edit")
+                return { valid: false, reason: "Edit can only be reverted when an edit is selected." };
+
+            const warning = getWarningFromLookup(params.warning);
+            if (!("summary" in warning))
+                return { valid: false, reason: "Selected warning template does not support reverting." };
+
+            return { valid: true };
+        },
+        script: async (ws, item, params) => {
+            await ws.gui.settings.waitForClose();
+            if (
+                (item.user.name === ws.api.username && await ws.gui.dialog.confirm(
+                    "Reverting yourself",
+                    `You are about to revert your own edit. Are you sure you want to proceed?`
+                ) === false) ||
+                (ws.store.whitelist.users.has(item.user.name) && await ws.gui.dialog.confirm(
+                    "User is whitelisted",
+                    `The user <a href="https://${ws.server}/wiki/User:${encodeURIComponent(item.user.name)}" target="_blank">${item.user.name}</a> is whitelisted. Are you sure you want to revert their edit?`
+                ) === false) ||
+                (ws.store.whitelist.pages.has(item.page.title) && await ws.gui.dialog.confirm(
+                    "Page is whitelisted",
+                    `The page <a href="https://${ws.server}/wiki/${encodeURIComponent(item.page.title)}" target="_blank">${item.page.title}</a> is whitelisted. Are you sure you want to revert the edit on it?`
+                ) === false) ||
+                (item.tags?.some(tag => ws.store.whitelist.tags.has(tag)) && await ws.gui.dialog.confirm(
+                    "Edit is whitelisted",
+                    `This edit has one or more whitelisted tags. Are you sure you want to revert it?`
+                ) === false)
+            )
+                return { valid: false, reason: "Revert cancelled by user." };
+
+            const rollback = await (async () => {
+                return await ws.api.rollbackEdit(item.page.title, item.user.name, ws.api.summary(`Reverted edits by ${ws.api.user(item.user.name)}`, warning.summary));
+            })();
+            if (!rollback.valid)
+                return rollback;
+            else {
+                ws.store.statistics.reverts_made.total++;
+                switch (item.type) {
+                    case "recent": {
+                        ws.store.statistics.reverts_made.from_recent_changes++;
+                    } break;
+                    case "pending": {
+                        ws.store.statistics.reverts_made.from_pending_changes++;
+                    } break;
+                    case "watchlist": {
+                        ws.store.statistics.reverts_made.from_watchlist++;
+                    } break;
+                    case "abuselog": {
+                        ws.store.statistics.reverts_made.from_abuse_log++;
+                    } break;
+                    default: {
+                        ws.store.statistics.reverts_made.from_loaded_edits++;
+                    } break;
+                }
+            }
+
+            let oldLevel;
+            const warn = await (async () => {
+                const talk = `User talk:${item.user.name}`;
+                const monthSection = ws.util.monthSectionName();
+
+                const content = (await ws.api.getPagesContent([ talk ]))[talk] || "";
+                const sections = ws.util.getPageSections(content);
+
+                let section = "new";
+                const len = sections.length;
+                for (let i = 0; i < len; i++)
+                    if (sections[i].title === monthSection)
+                        section = i + 1;
+
+                let level;
+                oldLevel = ws.queue.getWarningLevel(content);
+                if (typeof warning.auto === "string")
+                    level = warning.auto;
+                else if (typeof warning.auto === "function")
+                    level = warning.auto(item, oldLevel);
+                else
+                    level = warning.auto[oldLevel];
+
+                const template = warning.templates.find(template => template.name === level.toString());
+                if (!template)
+                    return { valid: true }; // no warning to issue, still wanna check for reporting
+
+                let summary = "Message about ";
+                if (item.page.title)
+                    summary += `[[Special:Diff/${item.id}|your edit]] on [[${item.page.title}]]`;
+                else
+                    summary += `[[Special:Contribs/${item.user.name}|your contributions]]`;
+
+                let newContent = "";
+                if (section === "new")
+                    newContent = `{{subst:${template.template}|${item.page.title}|${template.generic || ""}}} ~~~~`;
+                else
+                    newContent = `${sections[section - 1].heading}\n${sections[section - 1].content}\n\n{{subst:${template.template}|${item.page.title}|${template.generic || ""}}} ~~~~`;
+
+                const result = await ws.api.editSection(
+                    talk,
+                    section,
+                    monthSection,
+                    newContent,
+                    ws.api.summary(summary, template.template)
+                );
+
+                if (result.valid) {
+                    ws.queue.talks.set(item.user.name, true);
+
+                    const levels = [ "0", "1", "2", "3", "4", "4im" ];
+                    if (levels.indexOf(level) > levels.indexOf(item.user.warning || "0"))
+                        ws.queue.warnings.set(item.user.name, level);
+
+                    ws.store.statistics.warnings_issued.total++;
+                    switch (level) {
+                        case "1": {
+                            ws.store.statistics.warnings_issued.level_1++;
+                        } break;
+                        case "2": {
+                            ws.store.statistics.warnings_issued.level_2++;
+                        } break;
+                        case "3": {
+                            ws.store.statistics.warnings_issued.level_3++;
+                        } break;
+                        case "4": {
+                            ws.store.statistics.warnings_issued.level_4++;
+                        } break;
+                        case "4im": {
+                            ws.store.statistics.warnings_issued.level_4im++;
+                        } break;
+                    }
+                }
+
+                return result;
+            })();
+            if (!warn.valid)
+                return warn;
+
+            if (oldLevel === "4" || oldLevel === "4im")
+                if (warning.reportable && ws.store.settings.auto_report.enabled && ws.store.settings.auto_report.for.has(params.warning)) {
+                    const report = await (async () => {
+                        if (await ws.api.areUsersBlocked([ item.user.name ])[item.user.name])
+                            return { valid: false, reason: "User cannot be reported because they are blocked." };
+
+                        return await ws.api.append(WikiShield.config.pages.AIV, null, fullTrim(`
+                            * {{vandal|${item.user.name}}} &ndash; ${params.reason}${params.summary ? `: ${params.summary}` : ""} ~~~~
+                        `), ws.api.summary(`Reporting ${ws.api.user(item.user.name)}`), page => {
+                            return {
+                                valid: !ws.util.getPageSections(page).find(section => section.title === "User-reported")?.content.includes(`{{vandal|${item.user.name}}`),
+                                reason: "User has already been reported to AIV."
+                            };
+                        });
+                    })();
+
+                    if (!report.valid)
+                        return report;
+                    else {
+                        ws.store.statistics.reports_filed.total++;
+                        ws.store.statistics.reports_filed.AIV++;
+                    }
+                }
+
+            return { valid: true };
         }
     },
 
@@ -217,6 +404,27 @@ export const events = {
             return { valid: true };
         },
         script: async (ws, item, params) => {
+            await ws.gui.settings.waitForClose();
+            if (
+                (item.user.name === ws.api.username && await ws.gui.dialog.confirm(
+                    "Warning yourself",
+                    `You are about to warn yourself. Are you sure you want to proceed?`
+                ) === false) ||
+                (ws.store.whitelist.users.has(item.user.name) && await ws.gui.dialog.confirm(
+                    "User is whitelisted",
+                    `The user <a href="https://${ws.server}/wiki/User:${encodeURIComponent(item.user.name)}" target="_blank">${item.user.name}</a> is whitelisted. Are you sure you want to warn them?`
+                ) === false) ||
+                (ws.store.whitelist.pages.has(item.page.title) && await ws.gui.dialog.confirm(
+                    "Page is whitelisted",
+                    `The page <a href="https://${ws.server}/wiki/${encodeURIComponent(item.page.title)}" target="_blank">${item.page.title}</a> is whitelisted. Are you sure you want to warn the user about the edit on it?`
+                ) === false) ||
+                (item.tags?.some(tag => ws.store.whitelist.tags.has(tag)) && await ws.gui.dialog.confirm(
+                    "Edit is whitelisted",
+                    `This edit has one or more whitelisted tags. Are you sure you want to warn the user about it?`
+                ) === false)
+            )
+                return { valid: false, reason: "Warning cancelled by user." };
+
             const warning = getWarningFromLookup(params.warning);
 
             const talk = `User talk:${item.user.name}`;
@@ -247,7 +455,7 @@ export const events = {
                 if (params.level !== "auto")
                     return { valid: false, reason: "Selected warning template does not support the specified level." };
 
-                return { valid: false };
+                return { valid: true }; // no warning to issue, still wanna check for reporting
             }
 
             let summary = "Message about ";
@@ -271,6 +479,12 @@ export const events = {
             );
 
             if (result.valid) {
+                ws.queue.talks.set(item.user.name, true);
+
+                const levels = [ "0", "1", "2", "3", "4", "4im" ];
+                if (levels.indexOf(level) > levels.indexOf(item.user.warning || "0"))
+                    ws.queue.warnings.set(item.user.name, level);
+
                 ws.store.statistics.warnings_issued.total++;
                 switch (level) {
                     case "1": {
@@ -310,11 +524,36 @@ export const events = {
 
         progress: "Rolling back edit",
         valid: (ws, item, params) => {
-            if (Queue.groups[item.type] !== "edit")
+            let type = item.type;
+            if (type === "abuselog" && item.revid)
+                type = "edit"; // treat abuse log items with revids as edits for the sake of the revert menu
+
+            if (Queue.groups[type] !== "edit")
                 return { valid: false, reason: "Edit can only be rolled back when an edit is selected." };
             return { valid: true };
         },
         script: async (ws, item, params) => {
+            await ws.gui.settings.waitForClose();
+            if (
+                (item.user.name === ws.api.username && await ws.gui.dialog.confirm(
+                    "Rollbacking own edit",
+                    `You are about to revert your own edit. Are you sure you want to proceed?`
+                ) === false) ||
+                (ws.store.whitelist.users.has(item.user.name) && await ws.gui.dialog.confirm(
+                    "User is whitelisted",
+                    `The user <a href="https://${ws.server}/wiki/User:${encodeURIComponent(item.user.name)}" target="_blank">${item.user.name}</a> is whitelisted. Are you sure you want to rollback their edit?`
+                ) === false) ||
+                (ws.store.whitelist.pages.has(item.page.title) && await ws.gui.dialog.confirm(
+                    "Page is whitelisted",
+                    `The page <a href="https://${ws.server}/wiki/${encodeURIComponent(item.page.title)}" target="_blank">${item.page.title}</a> is whitelisted. Are you sure you want to rollback the edit on it?`
+                ) === false) ||
+                (item.tags?.some(tag => ws.store.whitelist.tags.has(tag)) && await ws.gui.dialog.confirm(
+                    "Edit is whitelisted",
+                    `This edit has one or more whitelisted tags. Are you sure you want to rollback it?`
+                ) === false)
+            )
+                return { valid: false, reason: "Rollback cancelled by user." };
+
             return await ws.api.rollbackEdit(item.page.title, item.user.name, ws.api.summary(`Reverted edits by ${ws.api.user(item.user.name)}`, params.summary));
         },
         successful: (ws, item, params) => {
@@ -329,6 +568,9 @@ export const events = {
                 } break;
                 case "watchlist": {
                     ws.store.statistics.reverts_made.from_watchlist++;
+                } break;
+                case "abuselog": {
+                    ws.store.statistics.reverts_made.from_abuse_log++;
                 } break;
                 default: {
                     ws.store.statistics.reverts_made.from_loaded_edits++;
@@ -351,11 +593,36 @@ export const events = {
 
         progress: "Rolling back good faith edit",
         valid: (ws, item, params) => {
-            if (Queue.groups[item.type] !== "edit")
+            let type = item.type;
+            if (type === "abuselog" && item.revid)
+                type = "edit"; // treat abuse log items with revids as edits for the sake of the revert menu
+
+            if (Queue.groups[type] !== "edit")
                 return { valid: false, reason: "Edit can only be rolled back when an edit is selected." };
             return { valid: true };
         },
         script: async (ws, item, params) => {
+            await ws.gui.settings.waitForClose();
+            if (
+                (item.user.name === ws.api.username && await ws.gui.dialog.confirm(
+                    "Rollbacking own edit",
+                    `You are about to revert your own edit. Are you sure you want to proceed?`
+                ) === false) ||
+                (ws.store.whitelist.users.has(item.user.name) && await ws.gui.dialog.confirm(
+                    "User is whitelisted",
+                    `The user <a href="https://${ws.server}/wiki/User:${encodeURIComponent(item.user.name)}" target="_blank">${item.user.name}</a> is whitelisted. Are you sure you want to rollback their edit?`
+                ) === false) ||
+                (ws.store.whitelist.pages.has(item.page.title) && await ws.gui.dialog.confirm(
+                    "Page is whitelisted",
+                    `The page <a href="https://${ws.server}/wiki/${encodeURIComponent(item.page.title)}" target="_blank">${item.page.title}</a> is whitelisted. Are you sure you want to rollback the edit on it?`
+                ) === false) ||
+                (item.tags?.some(tag => ws.store.whitelist.tags.has(tag)) && await ws.gui.dialog.confirm(
+                    "Edit is whitelisted",
+                    `This edit has one or more whitelisted tags. Are you sure you want to rollback it?`
+                ) === false)
+            )
+                return { valid: false, reason: "Rollback cancelled by user." };
+
             return await ws.api.rollbackEdit(item.page.title, item.user.name, ws.api.summary(`Reverted [[Wp:AGF|Good faith]] edits by ${ws.api.user(item.user.name)}`, params.summary));
         },
         successful: (ws, item, params) => {
@@ -371,6 +638,9 @@ export const events = {
                 } break;
                 case "watchlist": {
                     ws.store.statistics.reverts_made.from_watchlist++;
+                } break;
+                case "abuselog": {
+                    ws.store.statistics.reverts_made.from_abuse_log++;
                 } break;
                 default: {
                     ws.store.statistics.reverts_made.from_loaded_edits++;
@@ -394,13 +664,65 @@ export const events = {
 
         progress: "Undoing edit",
         valid: (ws, item, params) => {
-            if (Queue.groups[item.type] !== "edit")
+            let type = item.type;
+            if (type === "abuselog" && item.revid)
+                type = "edit"; // treat abuse log items with revids as edits for the sake of the revert menu
+
+            if (Queue.groups[type] !== "edit")
                 return { valid: false, reason: "Edit can only be undone when an edit is selected." };
             return { valid: true };
         },
         script: async (ws, item, params) => {
-            return await ws.api.undoEdit(item.page.title, item.id, ws.api.summary(`Undid revision [[Special:Diff/${item.id}|${item.id}]] by ${ws.api.user(item.user.name)}`, params.summary));
+            await ws.gui.settings.waitForClose();
+            if (
+                (item.user.name === ws.api.username && await ws.gui.dialog.confirm(
+                    "Undoing own edit",
+                    `You are about to undo your own edit. Are you sure you want to proceed?`
+                ) === false) ||
+                (ws.store.whitelist.users.has(item.user.name) && await ws.gui.dialog.confirm(
+                    "User is whitelisted",
+                    `The user <a href="https://${ws.server}/wiki/User:${encodeURIComponent(item.user.name)}" target="_blank">${item.user.name}</a> is whitelisted. Are you sure you want to undo their edit?`
+                ) === false) ||
+                (ws.store.whitelist.pages.has(item.page.title) && await ws.gui.dialog.confirm(
+                    "Page is whitelisted",
+                    `The page <a href="https://${ws.server}/wiki/${encodeURIComponent(item.page.title)}" target="_blank">${item.page.title}</a> is whitelisted. Are you sure you want to undo the edit on it?`
+                ) === false) ||
+                (item.tags?.some(tag => ws.store.whitelist.tags.has(tag)) && await ws.gui.dialog.confirm(
+                    "Edit is whitelisted",
+                    `This edit has one or more whitelisted tags. Are you sure you want to undo it?`
+                ) === false)
+            )
+                return { valid: false, reason: "Undo cancelled by user." };
+
+            return await ws.api.undoEdit(item.page.title, item.id, ws.api.summary(`Undid revision ${ws.api.revision(item.id)} by ${ws.api.user(item.user.name)}`, params.summary));
         },
+    },
+    "restore-edit": {
+        title: "Restore edit",
+        icon: "fas fa-redo",
+
+        parameters: (ws, item) => [
+            {
+                id: "summary",
+                title: "Summary (optional)",
+
+                type: "text",
+            }
+        ],
+
+        progress: "Restoring edit",
+        valid: (ws, item, params) => {
+            let type = item.type;
+            if (type === "abuselog" && item.revid)
+                type = "edit"; // treat abuse log items with revids as edits for the sake of the revert menu
+
+            if (Queue.groups[type] !== "edit")
+                return { valid: false, reason: "Edit can only be restored when an edit is selected." };
+            return { valid: true };
+        },
+        script: async (ws, item, params) => {
+            return await ws.api.restoreEdit(item.page.title, item.id, ws.api.summary(`Restored revision ${ws.api.revision(item.id)} by ${ws.api.user(item.user.name)}`, params.summary));
+        }
     },
 
     "report-user-to-aiv": {
@@ -434,11 +756,19 @@ export const events = {
         valid: (ws, item, params) => {
             if (!item)
                 return { valid: false, reason: "User can only be reported when an item is selected." };
-            else if (item.user.anon)
-                return { valid: false, reason: "User cannot be reported because they are anonymous." };
             return { valid: true };
         },
         script: async (ws, item, params) => {
+            if (item.user.name === ws.api.username)
+                return { valid: false, reason: "You cannot report yourself, silly!" };
+
+            await ws.gui.settings.waitForClose();
+            if (ws.store.whitelist.users.has(item.user.name) && await ws.gui.dialog.confirm(
+                "User is whitelisted",
+                `The user <a href="https://${ws.server}/wiki/User:${encodeURIComponent(item.user.name)}" target="_blank">${item.user.name}</a> is whitelisted. Are you sure you want to report them?`
+            ) === false)
+                return { valid: false, reason: "User report cancelled by user." };
+
             if (await ws.api.areUsersBlocked([ item.user.name ])[item.user.name])
                 return { valid: false, reason: "User cannot be reported because they are blocked." };
 
@@ -492,6 +822,16 @@ export const events = {
             return { valid: true };
         },
         script: async (ws, item, params) => {
+            if (item.user.name === ws.api.username)
+                return { valid: false, reason: "You cannot report yourself, silly!" };
+
+            await ws.gui.settings.waitForClose();
+            if (ws.store.whitelist.users.has(item.user.name) && await ws.gui.dialog.confirm(
+                "User is whitelisted",
+                `The user <a href="https://${ws.server}/wiki/User:${encodeURIComponent(item.user.name)}" target="_blank">${item.user.name}</a> is whitelisted. Are you sure you want to report them?`
+            ) === false)
+                return { valid: false, reason: "User report cancelled by user." };
+
             if (await ws.api.areUsersBlocked([ item.user.name ])[item.user.name])
                 return { valid: false, reason: "User cannot be reported because they are blocked." };
 
@@ -568,11 +908,22 @@ export const events = {
 
         progress: "Requesting page protection",
         valid: (ws, item, params) => {
-            if (Queue.groups[item.type] !== "edit")
+            let type = item.type;
+            if (type === "abuselog" && item.revid)
+                type = "edit"; // treat abuse log items with revids as edits for the sake of the revert menu
+
+            if (Queue.groups[type] !== "edit")
                 return { valid: false, reason: "Page protection can only be requested for edits." };
             return { valid: true };
         },
         script: async (ws, item, params) => { // what in the skibidi is this structured spaghetti code
+            await ws.gui.settings.waitForClose();
+            if (ws.store.whitelist.pages.has(item.page.title) && await ws.gui.dialog.confirm(
+                "Page is whitelisted",
+                `The page <a href="https://${ws.server}/wiki/${encodeURIComponent(item.page.title)}" target="_blank">${item.page.title}</a> is whitelisted. Are you sure you want to request protection for it?`
+            ) === false)
+                return { valid: false, reason: "Page protection request cancelled by user." };
+
             const reason = params.reason === "Generic" ? params.summary : `${params.reason} &ndash; ${params.summary}`;
             return await ws.api.append(WikiShield.config.pages.RFPP, null, `\n${fullTrim(`
                 === [[${item.page.title}]] ===
@@ -597,7 +948,11 @@ export const events = {
 
         progress: "Thanking user",
         valid: (ws, item, params) => {
-            if (Queue.groups[item.type] !== "edit")
+            let type = item.type;
+            if (type === "abuselog" && item.revid)
+                type = "edit"; // treat abuse log items with revids as edits for the sake of the revert menu
+
+            if (Queue.groups[type] !== "edit")
                 return { valid: false, reason: "User can only be thanked when an edit is selected." };
             return { valid: true };
         },
@@ -638,8 +993,8 @@ export const events = {
 
         progress: "Welcoming user",
         valid: (ws, item, params) => {
-            if (Queue.groups[item.type] !== "edit")
-                return { valid: false, reason: "User can only be welcomed when an edit is selected." };
+            if (!item)
+                return { valid: false, reason: "User can only be welcomed when an item is selected." };
             else if (item.user.talk !== undefined)
                 return { valid: false, reason: "User cannot be welcomed because their talk page is not empty." };
             return { valid: true };
@@ -678,7 +1033,7 @@ export const events = {
         successful: (ws, item, params) => {
             ws.store.statistics.users_welcomed.total++;
 
-            ws.queue.talks[item.user.name] = true;
+            ws.queue.talks.set(item.user.name, true);
             ws.gui.renderQueue();
         }
     },
@@ -698,7 +1053,7 @@ export const events = {
         },
         successful: (ws, item, params) => {
             ws.store.statistics.watchlist.watched++;
-            ws.queue.watchlist[item.page.title] = true;
+            ws.queue.watchlist.set(item.page.title, true);
         }
     },
     "unwatch-page": {
@@ -716,7 +1071,7 @@ export const events = {
         },
         successful: (ws, item, params) => {
             ws.store.statistics.watchlist.unwatched++;
-            ws.queue.watchlist[item.page.title] = false;
+            ws.queue.watchlist.set(item.page.title, false);
         }
     },
 
@@ -976,7 +1331,11 @@ export const events = {
         icon: "fas fa-file-lines",
 
         valid: (ws, item, params) => {
-            if (Queue.groups[item.type] !== "edit")
+            let type = item.type;
+            if (type === "abuselog" && item.revid)
+                type = "edit"; // treat abuse log items with revids as edits for the sake of the revert menu
+
+            if (Queue.groups[type] !== "edit")
                 return { valid: false, reason: "Revision can only be opened for edits." };
             return { valid: true };
         },
@@ -990,7 +1349,11 @@ export const events = {
         icon: "fas fa-code-compare",
 
         valid: (ws, item, params) => {
-            if (Queue.groups[item.type] !== "edit")
+            let type = item.type;
+            if (type === "abuselog" && item.revid)
+                type = "edit"; // treat abuse log items with revids as edits for the sake of the revert menu
+
+            if (Queue.groups[type] !== "edit")
                 return { valid: false, reason: "Diff can only be opened for edits." };
             return { valid: true };
         },
@@ -1000,12 +1363,55 @@ export const events = {
         }
     },
 
+    "copy-link": {
+        title: "Copy link",
+        icon: "fas fa-link",
+
+        valid: (ws, item, params) => {
+            if (!item)
+                return { valid: false, reason: "Link can only be copied when an item is selected." };
+            return { valid: true };
+        },
+        script: (ws, item, params) => {
+            if (item.group === "edit")
+                navigator.clipboard.writeText(ws.page(`?diff=${item.id}`, true));
+            else if (item.group === "logevent")
+                navigator.clipboard.writeText(ws.page(`?title=Special:Log&logid=${item.id}`, true));
+            else if (item.group === "abuselog") {
+                if (item.revid)
+                    navigator.clipboard.writeText(ws.page(`?diff=${item.revid}`, true));
+                else
+                    navigator.clipboard.writeText(ws.page(`?title=Special:AbuseLog/${item.id}`, true));
+            } else {
+                ws.gui.dialog.toast(
+                    "Cannot copy link",
+                    `Please report this issue to a developer, including the error code below:<br><br><code>UNKNOWN_ITEM_GROUP_FOR_LINK_COPY</code>`,
+                    "error",
+                    3000,
+                );
+                return { valid: false };
+            }
+
+            ws.gui.dialog.toast(
+                "Link copied",
+                `The link has been copied to your clipboard.`,
+                "success",
+                3000,
+            );
+            return { valid: true };
+        }
+    },
+
     "open-revert-menu": {
         title: "Open revert menu",
         icon: "fas fa-undo",
 
         valid: (ws, item, params) => {
-            if (Queue.groups[item.type] !== "edit")
+            let type = item.type;
+            if (type === "abuselog" && item.revid)
+                type = "edit"; // treat abuse log items with revids as edits for the sake of the revert menu
+
+            if (Queue.groups[type] !== "edit")
                 return { valid: false, reason: "Revert menu is only available for edits." };
             return { valid: true };
         },
@@ -1051,7 +1457,7 @@ export const events = {
 
             const $container = document.querySelector("#warn-menu");
             $container.innerHTML = "";
-            ws.gui.createRevertMenu("warns", $container, item);
+            ws.gui.createRevertMenu("warnings", $container, item);
 
             if ($button) {
                 const $trigger = $button.querySelector('.bottom-tool-trigger');
@@ -1143,7 +1549,11 @@ export const events = {
         icon: "fas fa-flag",
 
         valid: (ws, item, params) => {
-            if (Queue.groups[ws.queue.current.item.type] !== "edit")
+            let type = ws.queue.current.item.type;
+            if (type === "abuselog" && item.revid)
+                type = "edit"; // treat abuse log items with revids as edits for the sake of the revert menu
+
+            if (Queue.groups[type] !== "edit")
                 return { valid: false, reason: "Edit menu is only available for edits." };
             return { valid: true };
         },
@@ -1228,6 +1638,20 @@ export const events = {
         },
         script: (ws, item, params) => {
             ws.queue.switch("users");
+            return { valid: true };
+        }
+    },
+    "switch-to-abuselog-queue": {
+        title: "Switch to abuse log queue",
+        icon: "fas fa-filter-circle-xmark",
+
+        valid: (ws, item, params) => {
+            if (!ws.store.settings.queue.abuselog.enabled)
+                return { valid: false, reason: "Abuse log queue is not enabled." };
+            return { valid: true };
+        },
+        script: (ws, item, params) => {
+            ws.queue.switch("abuselog");
             return { valid: true };
         }
     },

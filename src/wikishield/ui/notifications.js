@@ -2,11 +2,29 @@ export class Notifications {
     constructor(ws) {
         this.ws = ws;
 
-        this.alert = [ ];
-		this.message = [ ];
+        this.first = { };
+        [ "alert", "message" ].forEach(type => {
+            this[type] = [ ];
+            this.update(type);
 
-        this.load("alert");
-        this.load("message");
+            this.first[type] = true;
+            this.load(type);
+        });
+    }
+
+    find(type, id) {
+        if ((type ?? false) === false) {
+            let notification = this.alert.find(n => n.id === id);
+            if (notification)
+                return { type: "alert", notification };
+
+            notification = this.message.find(n => n.id === id);
+            if (notification)
+                return { type: "message", notification };
+
+            return undefined;
+        } else
+            return this[type].find(n => n.id === id);
     }
 
     async load(type) {
@@ -20,9 +38,9 @@ export class Notifications {
                 notsections: type,
                 notformat: "model"
             })).responses.flatMap(response => response.query?.notifications?.list || []);
-            await Promise.all(response.map(async n => {
-                return this.ws.api.parse(n["*"].body).then(parsed => { return void (n["*"].parsed = parsed) ?? n; });
-            }));
+            await Promise.all(response.map(async n =>
+                this.ws.api.parse(n["*"].body).then(parsed => { return void (n["*"].parsed = parsed) ?? n; })
+            ));
 
             let update = false;
             for (const n of response) {
@@ -39,9 +57,7 @@ export class Notifications {
 
                 this.update(type);
             }
-        } finally {
-            window.setTimeout(() => this.load(type), 10 * 1000);
-        }
+        } finally { setTimeout(() => this.load(type), 10 * 1000); }
     }
 
     update(type) {
@@ -49,10 +65,20 @@ export class Notifications {
 
         const notifications = this[type];
         const unread = notifications.filter(n => !n.read);
-        unread.forEach(n => window.electronAPI.notify({
-            title: this.ws.util.textify(n["*"].header),
-            body: this.ws.util.textify(n["*"].body),
-        }, n["*"].links.primary.url));
+
+        const zen = this.ws.store.settings.zen_mode;
+        if (!zen.enabled || zen[`${type}s`].enabled)
+            unread.filter(n => !n.seen && !n.notified)
+                .forEach(n => {
+                    n.notified = true;
+                    if (!this.first[type])
+                        electronAPI.sendNotification({
+                            title: this.ws.util.textify(n["*"].header),
+                            body: this.ws.util.textify(n["*"].body),
+                        }, n["*"].links.primary.url);
+                });
+
+        this.first[type] = false;
 
         const $count = document.querySelector(`#${type}s-count`);
         const $list = document.querySelector(`#${type}s-list`);
@@ -158,30 +184,29 @@ export class Notifications {
     }
 
     seen(type) {
-        this.ws.api.postWithToken({
-            action: "echomarkseen",
-            type
-        });
+        this.ws.api.postWithToken({ action: "echomarkseen", type });
+        this[type].forEach(n => n.seen = true);
     }
     read(type, notification) {
-        if (notification)
+        if (notification) {
+            notification.read = true;
+            this.update(type);
+
             this.ws.api.postWithToken({
                 action: "echomarkread",
                 sections: type,
                 list: notification.id
-            }).then(() => {
-                notification.read = true;
-                this.update(type);
             });
-        else
+        } else {
+            this[type].forEach(n => n.read = true);
+            this.update(type);
+
             this.ws.api.postWithToken({
                 action: "echomarkread",
                 sections: type,
                 all: true
-            }).then(() => {
-                this[type].forEach(n => n.read = true);
-                this.update(type);
             });
+        }
     }
 
     count() {
@@ -189,11 +214,11 @@ export class Notifications {
 
         let unread = 0;
         if (!zen.enabled || zen.alerts.enabled)
-            unread += this.alert.filter(n => !n.read).length;
+            unread += this.alert?.filter(n => !n.read).length || 0;
         if (!zen.enabled || zen.messages.enabled)
-            unread += this.message.filter(n => !n.read).length;
+            unread += this.message?.filter(n => !n.read).length || 0;
 
-        window.electronAPI.setBadgeCount(unread);
+        electronAPI.setBadgeCount(unread);
         if (unread > 0)
             document.title = `(${unread}) WikiShield`;
         else

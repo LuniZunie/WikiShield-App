@@ -15,11 +15,9 @@ yarn-debug.log*
 yarn-error.log*
 
 # Environment variables
-.env
-.env.local
-.env.*.local
+*.env
 
-# Certificates (NEVER commit these!)
+# Certificates
 *.pfx
 *.p12
 *.cer
@@ -38,6 +36,7 @@ desktop.ini
 *.swp
 *.swo
 *~
+*.hintrc
 
 # Test files
 coverage/

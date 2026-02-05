@@ -1,6 +1,6 @@
 import { events } from '../config/events.js';
 import { conditions } from '../config/conditions.js';
-import { sortDependencies } from '../utils/scripts.js';
+import { sortDependencies } from '../utilities/scripts.js';
 
 export class EventManager {
 	constructor(ws) {

@@ -1,7 +1,7 @@
 {
   "name": "WikiShield",
   "version": "1.0.11",
-  "description": "WikiShield Application",
+  "description": "WikiShield is an anti-vandalism tool for Wikipedia.",
   "main": "index.js",
   "repository": {
     "type": "git",
@@ -16,17 +16,22 @@
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",
-    "make:all": "electron-forge make --platform=win32,darwin,linux",
-    "test": "electron --trace-warnings .",
-    "build": "node build.js",
+    "test": "electron . --trace-warnings",
+    "build": "electron-builder --publish never",
     "version": "node scripts/sync-version.js",
     "publish": "node scripts/publish-release.js",
     "publish:win": "electron-builder --win --publish always",
     "publish:mac": "electron-builder --mac --publish always",
-    "publish:linux": "electron-builder --linux --publish always",
-    "build:local": "electron-builder --publish never"
+    "publish:linux": "electron-builder --linux --publish always"
   },
-  "keywords": [],
+  "keywords": [
+    "Electron",
+    "WikiShield",
+    "Wikipedia",
+    "MediaWiki",
+    "Anti-Vandalism",
+    "ORES"
+  ],
   "author": "WikiShield Team",
   "license": "ISC",
   "type": "commonjs",
@@ -125,6 +130,9 @@
     ],
     "files": [
       "**/*",
+      "ores_score.py",
+      "python-installer.js",
+      "local-ores.js",
       "!**/*.ts",
       "!*.code-workspace",
       "!LICENSE.md",

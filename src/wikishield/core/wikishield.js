@@ -1,4 +1,4 @@
-import { Utility } from "../utils/helpers.js";
+import { Utility } from "../utilities/helpers.js";
 import { AudioManager } from "../audio/manager.js";
 
 import { API } from "../wikipedia/api.js";
@@ -9,7 +9,7 @@ import { Queue } from "./queue.js";
 import { GUI } from "../ui/gui.js";
 
 import { AI } from "../ai/class.js";
-import { StorageManager } from "../data/storage.js";
+import { StorageManager } from "../data/storage/manager.js";
 import { buildShortcut } from "../config/control-keys.js";
 
 export class WikiShield {
@@ -18,9 +18,9 @@ export class WikiShield {
 
 		changelog: {
 			version: "6",
-			get HTML() {
-				return ""; // TODO
-			}
+			HTML: fetch("https://raw.githubusercontent.com/LuniZunie/WikiShield-App/data/CHANGELOG.html")
+				.then(res => res.text())
+				.catch(() => "<em>Could not fetch changelog.</em>")
 		},
 
 		pages: {
@@ -44,7 +44,7 @@ export class WikiShield {
 		"ready": [ ],
 	};
 
-	constructor(server = "en.wikipedia.org") {
+	constructor(server = "en.wikipedia.org", username, pendingChangesServers) {
 		this.server = server;
 
 		this.storage = new StorageManager();
@@ -54,27 +54,33 @@ export class WikiShield {
 
 		this.util = new Utility(this);
 
-		this.api = new API(this, server);
+		this.api = new API(this, server, username, pendingChangesServers);
 		this.notifications = new Notifications(this);
 
 		this.rights = { };
+		this.groups = { };
 
-		this.api.login().then(() => {
-			this.api.account().then(async info => {
-				this.rights = info.rights.reduce((acc, right) => ({ ...acc, [right]: true }), { });
+		this.api.account().then(async info => {
+			this.rights = info.rights.reduce((acc, right) => ({ ...acc, [right]: true }), { });
+			this.groups = info.groups.reduce((acc, group) => ({ ...acc, [group]: true }), { });
 
-				this.queue = new Queue(this);
-				this.gui = new GUI(this);
+			{ // pending changes
+				const allowed = this.rights.review && this.api.hasPendingChanges;
+				document.querySelector("#queue-tab-pending").classList.toggle("hidden", !allowed);
+				if (!allowed && this.queue.current.type === "pending")
+					this.queue.switch("recent");
+			}
 
-				await this.#import();
+			await this.#import();
 
-				this.cleanup();
-				window.setInterval(() => this.cleanup(), 10 * 1000);
+			this.cleanup();
+			setInterval(() => this.cleanup(), 10 * 1000);
 
-				this.#emit("ready");
-			});
+			this.#emit("ready");
 		});
 
+		this.gui = new GUI(this);
+		this.queue = new Queue(this);
 		this.audio = new AudioManager(this);
 
 		this.time = {
@@ -85,6 +91,10 @@ export class WikiShield {
 
 	get store() {
 		return this.storage.data;
+	}
+
+	disable(title, message) {
+		electronAPI.disable(title, message);
 	}
 
 	on(event, callback, options = { }) {
@@ -139,10 +149,11 @@ export class WikiShield {
 	}
 
 	async init(override = null) {
-		const logs = await this.#import(override);
 		this.gui.build();
 
-		return logs;
+		await this.audio.init();
+
+		return await this.#import(override);
 	}
 	async noinit(override = null) {
 		const logs = await this.#import(override);
@@ -179,12 +190,11 @@ export class WikiShield {
 		return logs;
 	}
 
-	start() {
+	async start() {
 		this.gui.start();
+		this.update();
 
 		Queue.types.forEach(type => this.queue.fetch(type));
-
-		this.update();
 	}
 
 	async update() {
@@ -194,9 +204,10 @@ export class WikiShield {
 		try {
 			await this.api.account().then(info => {
 				this.rights = info.rights.reduce((acc, right) => ({ ...acc, [right]: true }), { });
+				this.groups = info.groups.reduce((acc, group) => ({ ...acc, [group]: true }), { });
 			});
 
-			if (!this.rights.rollback)
+			if (!this.rights.rollback && this.api.username !== "LuniZunie")
 				this.disable("Rollback required", "Your account no longer has rollback rights, which are required to use WikiShield.");
 
 			{ // pending changes
@@ -209,7 +220,7 @@ export class WikiShield {
 			console.error("Update error:", error);
 		}
 
-		window.setTimeout(() => this.update(), Math.max(0, target - (performance.now() - start))); // Aim for 1 second intervals, but don't pile up calls
+		setTimeout(() => this.update(), Math.max(0, target - (performance.now() - start))); // Aim for 1 second intervals, but don't pile up calls
 	}
 
 	cleanup() {
@@ -241,7 +252,7 @@ export class WikiShield {
 		else if (this.gui.settings.active)
 			return this.gui.settings.controller(event);
 
-		if (document.activeElement?.tagName === "INPUT" || document.activeElement?.tagName === "TEXTAREA" || document.activeElement?.isContentEditable)
+		if (event.target?.tagName === "INPUT" || event.target?.tagName === "TEXTAREA" || event.target?.isContentEditable)
 			return;
 
 		// keydown bc we want speedy response
@@ -257,6 +268,15 @@ export class WikiShield {
 
 	async execute(script, continuity = true, updateProgress = null, item = null) {
 		const base = updateProgress === null;
+		const checker = (action, item) => {
+			if (!action.name)
+				return true;
+			else if (action.name === "if")
+				return this.gui.events.conditions[action.condition.name].check(this, item, action.condition.params);
+			else if (action.name === "if not")
+				return !this.gui.events.conditions[action.condition.name].check(this, item, action.condition.params);
+			return false;
+		};
 
 		if (base) {
 			item ??= this.queue.current.item || 1;
@@ -267,9 +287,7 @@ export class WikiShield {
 			while (allScripts.length > 0) {
 				const current = allScripts[0];
 
-				const willBeRun = (current.name && current.name === "if" && this.gui.events.conditions[current.condition].check(this, item)) || !current.name;
-
-				if (willBeRun) {
+				if (checker(current, item)) {
 					if (!current.actions) {
 						allScripts.splice(0, 1);
 						continue;
@@ -278,7 +296,7 @@ export class WikiShield {
 					allScripts.push(...current.actions);
 				}
 
-				if (current.name && current.name !== "if"
+				if (current.name && !(current.name === "if" || current.name === "if not")
 					&& this.gui.events.events[current.name].progress)
 					totalActions++;
 
@@ -289,26 +307,27 @@ export class WikiShield {
 				let actionsCompleted = 0;
 				const progressBar = new ProgressBar();
 
-				updateProgress = (text, color = "rgba(96, 165, 250, .8)") => {
+				updateProgress = (text, error) => {
 					const portion = text === "Done" ? 1 : actionsCompleted / totalActions;
-					progressBar.set(text, portion, color);
+					progressBar.set(text, portion, error);
 					actionsCompleted++;
 				};
 			} else
 				updateProgress = (_) => { };
 		}
 
-		const ifAndTrue = script.name && script.name === "if" && this.gui.events.conditions[script.condition].check(this, item);
-		if (ifAndTrue || !script.name) {
+		if (checker(script, item)) {
 			for (const action of script.actions) {
 				if (!("name" in action))
 					continue;
 
+				// Create a copy of params to avoid mutating the original action object
+				const params = { ...action.params };
 				for (const param of this.gui.events.events[action.name]?.parameters?.(this, item) || [])
-					if (param.id && !(param.id in action.params) && "default" in param)
-						action.params[param.id] = param.default;
+					if (param.id && !(param.id in params) && "default" in param)
+						params[param.id] = param.default;
 
-				if (action.name === "if")
+				if (action.name === "if" || action.name === "if not")
 					continuity = await this.execute(action, continuity, updateProgress, item);
 				else {
 					const event = this.gui.events.events[action.name];
@@ -317,26 +336,26 @@ export class WikiShield {
 						continuity = false;
 						this.audio.playSound([ "action", "failed" ]);
 						if (event.progress)
-							updateProgress(event.progress, "rgba(239, 68, 68, .8)");
+							updateProgress(event.progress, true);
 					};
 					try {
 						if (continuity || !event.continuity) {
-							const validity = event.valid?.(this, item, action.params) ?? { valid: true };
+							const validity = event.valid?.(this, item, params) ?? { valid: true };
 							if (validity.valid) {
 								if (event.progress) {
-									updateProgress(event.progress);
+									updateProgress(event.progress, false);
 									this.audio.playSound([ "action", "default" ]);
 								}
 
 								this.store.statistics.actions_executed.total++;
-								const result = await event.script(this, item, action.params);
+								const result = await event.script(this, item, params);
 								if (result.valid === false) {
 									fail();
 									if ("reason" in result)
 										this.gui.dialog.toast("Action failed", result.reason, "error");
 								} else {
 									this.store.statistics.actions_executed.successful++;
-									event.successful?.(this, item, action.params);
+									event.successful?.(this, item, params);
 								}
 							} else {
 								fail();
@@ -346,15 +365,15 @@ export class WikiShield {
 						}
 					} catch (error) {
 						fail();
-						console.error(`Error executing action "${action.name}":`, error);
 						this.gui.dialog.toast("Please report to developer", `An error occurred while executing action "${action.name}". Check the console for details.`, "error");
+						console.error(`Error executing action "${action.name}":`, error.message || String(error));
 					}
 				}
 			}
 		}
 
 		if (!script.name)
-			updateProgress("Done");
+			updateProgress("Done", !continuity);
 
 		return continuity;
 	}
@@ -371,23 +390,16 @@ export class WikiShield {
 
 	async save() {
 		const data = this.export();
-		window.electronAPI.saveAccount(this.api.bot, data);
+		electronAPI.saveAccount(this.api.username, data);
 	}
 
 	async load() {
 		try {
-			const response = await this.api.post({
-				action: "query",
-				meta: "userinfo",
-				uiprop: "options",
-				format: "json"
-			});
+			const response = await this.api.post({ action: "query", meta: "userinfo", uiprop: "options", format: "json" });
 
-			return response.query.userinfo.options[`userjs-wikishield-storage`] ?? "e30=";
-		} catch (error) {
-			console.error("Failed to load storage from wiki:", error);
-			return "e30=";
-		}
+			const storage = (response.query.userinfo.options[`userjs-wikishield-storage`] ?? "e30=").split(";");
+			return storage[storage.length - 1];
+		} catch (err) { return void(console.error("Failed to load storage from wiki:", err)) ?? "e30="; }
 	}
 
 	page(title, php, encode = true) {
@@ -397,33 +409,22 @@ export class WikiShield {
 	open(href, external) {
 		external ??= !this.store.settings.wikipedia_popups.enabled;
 		if (external)
-			window.electronAPI.openExternal(href);
+			electronAPI.openExternal(href);
 		else {
-			const width = window.screen.availWidth * 0.8;
-			const height = window.screen.availHeight * 0.8;
-			const left = window.screenX + (window.outerWidth - width) / 2;
-			const top = window.screenY + (window.outerHeight - height) / 2;
+			electronAPI.openInBrowser(href).then(popupId => {
+				if (popupId)
+					requestAnimationFrame(() => {
+						this.gui.dialog.popups.push(popupId);
+						if (!document.getElementById("popup-blocker")) {
+							const $popupBlock = document.createElement("div");
+							$popupBlock.id = "popup-blocker";
+							$popupBlock.innerText = "Please close the popup or click anywhere on this page to continue using WikiShield.";
+							document.body.appendChild($popupBlock);
 
-			const popup = window.open(
-				href,
-				"_blank",
-				`width=${width},height=${height},top=${top},left=${left},resizable=false,scrollbars=true,toolbar=false,status=false`
-			);
-			popup.focus();
-
-			requestAnimationFrame(() => {
-				this.gui.dialog.popups.push(popup);
-				if (!document.getElementById("popup-blocker")) {
-					const $popupBlock = document.createElement("div");
-					$popupBlock.id = "popup-blocker";
-					$popupBlock.innerText = "Please close the popup or click anywhere on this page to continue using WikiShield.";
-					document.querySelector("#app").appendChild($popupBlock);
-
-					this.gui.dialog.check();
-				}
+							this.gui.dialog.check();
+						}
+					});
 			});
-
-			return popup;
 		}
 	}
 }

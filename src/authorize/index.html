@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>WikiShield - Authorize</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../common/style.css">
+    <link rel="stylesheet" href="style.css">
+
+    <script defer src="script.js"></script>
+</head>
+<body>
+    <div id="authorize-container">
+        <div id="authorize-content">
+            <div class="authorize-header">
+                <div class="header-icon">
+                    <i class="fas fa-user-shield"></i>
+                </div>
+                <h1>Authorize WikiShield</h1>
+                <p class="header-subtitle">Connect your Wikipedia account</p>
+            </div>
+
+            <div class="authorize-body">
+                <div class="info-card">
+                    <div class="info-item">
+                        <i class="fas fa-shield-alt"></i>
+                        <div>
+                            <h3>Encryption</h3>
+                            <p>All requests to Wikipedia are made over secure HTTPS connections, and sensitive data is encrypted using your system's secure storage.</p>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-user-secret"></i>
+                        <div>
+                            <h3>Privacy</h3>
+                            <p>Your account credentials are never used. WikiShield only uses OAuth tokens to access your account with your permission.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="button" id="authorize">
+                    <i class="fas fa-external-link-alt"></i>
+                    <span>Authorize with Wikipedia</span>
+                </button>
+                <button type="button" id="cancel" title="Cancel Authorization (Esc)">
+                    <i class="fas fa-times"></i>
+                    <span>Cancel</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

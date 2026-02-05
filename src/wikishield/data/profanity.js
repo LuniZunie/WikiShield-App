@@ -199,7 +199,7 @@ class Profanity {
             multiWord: true,
             note: "Well-known sockpuppeteer on Wikipedia."
         },
-        { term: "ass", severity: 0.6, ignore: [ "456" ] },
+        { term: "ass", severity: 0.6, ignore: [ "456", "a62", "a56", "a62", "a65", "a26", "a25", "4s2", "4s5", "4s6", "42s", "45s", "46s", "466", "422", "455" ] },
         { term: "arse", severity: 0.6 },
         { term: "anal", severity: 0.7 },
         { term: "anus", severity: 0.5 },
@@ -207,6 +207,11 @@ class Profanity {
         {
             term: "secs",
             severity: 0.05,
+            note: "Obfuscated form of 'sex'."
+        },
+        {
+            term: "seggs",
+            severity: 0.2,
             note: "Obfuscated form of 'sex'."
         },
         {
@@ -648,7 +653,8 @@ class Profanity {
         {
             term: "isis",
             severity: 0.7,
-            note: "Terrorist organization reference, though also Egyptian goddess."
+            note: "Terrorist organization reference, though also Egyptian goddess.",
+            ignore: [ "1212", "i2i2", "1s1s", "is12", "12is", "121s", "1s12", "i212", "12i2" ]
         },
         { term: "antisemit", severity: 1.0 },
         {
@@ -803,7 +809,7 @@ class Profanity {
             term: "lsd",
             severity: 0.2,
             note: "Drug abbreviation with multiple meanings.",
-            ignore: [ "166" ]
+            ignore: [ "166", "l66", "i66" ]
         },
         {
             term: "acid",
@@ -1201,15 +1207,13 @@ class Profanity {
 
     constructor(lookalikes = {}) {
         this.conversion = {};
-        for (const [key, variants] of Object.entries(lookalikes)) {
+        for (const [key, variants] of Object.entries(lookalikes))
             for (const variant of variants) {
-                if (this.conversion[variant]) {
+                if (this.conversion[variant])
                     console.warn(`Profanity lookalike collision: ${variant} is already mapped to ${this.conversion[variant]}, remapping to ${key}`);
-                }
 
                 this.conversion[variant] = key;
             }
-        }
     }
 
     removeAccents(str) {
@@ -1233,54 +1237,33 @@ class Profanity {
     }
 
     parseString(str, preserveSpaces = false) {
-        // Remove spaces and separator characters used for obfuscation
-        // e.g., "h.e.l.l" or "h_e_l_l"
-        // NOTE: Do NOT remove *, #, - as these are lookalike characters handled by pattern matching
-        // For multi-word terms, preserve spaces by only removing other separators
-        if (preserveSpaces) {
-            // Replace separators with space, then normalize multiple spaces to single space
+        if (preserveSpaces)
             str = str.replace(/[._,;:|]/g, ' ').replace(/\s+/g, ' ').toLowerCase();
-        } else {
+        else
             str = str.replace(/[\s._,;:|]/g, '').toLowerCase();
-        }
 
         str = this.removeAccents(str);
         let result = "";
-        for (const char of str) {
-            if (this.conversion[char]) {
+        for (const char of str)
+            if (this.conversion[char])
                 result += this.conversion[char];
-            } else {
+            else
                 result += char;
-            }
-        }
 
         str = this.obscureReplacements(result);
         return str;
     }
 
-    /**
-     * Analyzes the original text for obfuscation indicators
-     * Returns a score from 0-1 indicating how likely the match is intentional obfuscation
-     */
     analyzeObfuscation(originalText, matchStart, matchEnd, matchedWord, isMultiWord = false) {
         const segment = originalText.substring(matchStart, matchEnd);
-        let obfuscation = 0;
-        let indicators = 0;
+        let obfuscation = 0, indicators = 0;
 
-        // 0. CRITICAL: Check if the match spans across multiple words (crosses word boundaries)
-        // Skip this check for legitimate multi-word terms like "concentration camp"
         const hasInternalSpaces = /\s/.test(segment);
-        if (hasInternalSpaces && !isMultiWord) {
-            // Match crosses word boundaries - very strong indicator of false positive
-            // e.g., "is is" matching "isis" in "This is just"
-            // Return immediately with very negative score
+        if (hasInternalSpaces && !isMultiWord)
             return -0.95;
-        }
 
-        // 1. Case pattern analysis
         const caseChanges = this.countCaseChanges(segment);
         if (caseChanges > 0) {
-            // Irregular case changes suggest obfuscation (e.g., "pAss", "AsS")
             const irregularCaseRatio = caseChanges / Math.max(1, segment.length - 1);
             if (irregularCaseRatio > 0.3) {
                 obfuscation += 0.3;
@@ -1288,20 +1271,13 @@ class Profanity {
             }
         }
 
-        // 2. Separator character insertion detection (intentional obfuscation)
-        // e.g., "h.e.l.l", "a_s_s"
-        // NOTE: Don't check for *, #, - as these could be part of normal obfuscation (f**k)
         const hasInternalSeparators = /[._,;:|]/.test(segment);
         if (hasInternalSeparators) {
-            // Count how many separators vs letters
             const separatorCount = (segment.match(/[._,;:|]/g) || []).length;
             const letterCount = (segment.match(/[a-zA-Z0-9]/g) || []).length;
 
             if (letterCount > 0) {
                 const separatorRatio = separatorCount / letterCount;
-
-                // If there are many separators relative to letters, it's likely intentional
-                // e.g., "h.e.l.l" has 3 separators for 4 letters = 0.75 ratio
                 if (separatorRatio > 0.3) {
                     obfuscation += Math.min(0.5, separatorRatio * 0.7);
                     indicators++;
@@ -1309,40 +1285,31 @@ class Profanity {
             }
         }
 
-        // 3. Check if match crosses word boundaries unnaturally
         const wordBoundaryScore = this.checkWordBoundaries(originalText, matchStart, matchEnd, matchedWord, isMultiWord);
         obfuscation += wordBoundaryScore;
-        if (wordBoundaryScore !== 0) {
+        if (wordBoundaryScore !== 0)
             indicators++;
-        }
 
-        // 4. Check for intentional character substitution (l33t speak)
         const substitutionScore = this.checkSubstitution(segment, matchedWord);
         if (substitutionScore > 0) {
             obfuscation += substitutionScore;
             indicators++;
         }
 
-        // 5. Check if the match is a complete word vs part of a larger word
-        // Skip this check if wordBoundaryScore is 0 or positive (padding/obfuscation detected)
         if (wordBoundaryScore < 0) {
             const isStandalone = this.isStandaloneWord(originalText, matchStart, matchEnd);
             if (!isStandalone) {
-                // Part of a larger word - check if it's camelCase boundary
                 const isCamelCaseBoundary = this.isCamelCaseBoundary(originalText, matchStart, matchEnd);
                 if (isCamelCaseBoundary) {
                     obfuscation += 0.2;
                     indicators++;
                 } else {
-                    // Strong indicator it's NOT obfuscation (already added negative wordBoundaryScore)
-                    // Don't double-penalize
                     obfuscation -= 0.2;
                     indicators++;
                 }
             }
         }
 
-        // Allow negative scores to indicate legitimate words
         return Math.max(-1, Math.min(1, obfuscation));
     }
 
@@ -1354,9 +1321,8 @@ class Profanity {
             if (/[a-zA-Z]/.test(prev) && /[a-zA-Z]/.test(curr)) {
                 const prevUpper = prev === prev.toUpperCase();
                 const currUpper = curr === curr.toUpperCase();
-                if (prevUpper !== currUpper) {
+                if (prevUpper !== currUpper)
                     changes++;
-                }
             }
         }
         return changes;
@@ -1366,7 +1332,6 @@ class Profanity {
         const before = start > 0 ? text[start - 1] : '';
         const after = end < text.length ? text[end] : '';
 
-        // ALWAYS check legitimate patterns first, regardless of boundaries
         const segment = text.substring(Math.max(0, start - 8), Math.min(text.length, end + 8)).toLowerCase();
 
         const legitimatePatterns = [
@@ -1381,98 +1346,59 @@ class Profanity {
             /brass|crass|harass|morass|surpass|trespass|compass/i,
         ];
 
-        for (const pattern of legitimatePatterns) {
-            if (pattern.test(segment)) {
-                return -0.8; // Very strong indicator it's legitimate
-            }
-        }
+        for (const pattern of legitimatePatterns)
+            if (pattern.test(segment))
+                return -0.8;
 
-        // Check if it's in the middle of a legitimate word
         const beforeIsAlpha = /[a-zA-Z]/.test(before);
         const afterIsAlpha = /[a-zA-Z]/.test(after);
 
         if (beforeIsAlpha && afterIsAlpha) {
-            // Completely surrounded by letters
-            // Analyze the surrounding context for legitimacy
             const beforeText = text.substring(Math.max(0, start - 8), start).toLowerCase();
             const afterText = text.substring(end, Math.min(text.length, end + 8)).toLowerCase();
             const fullContext = text.substring(Math.max(0, start - 8), Math.min(text.length, end + 8)).toLowerCase();
 
-            // Check if surrounding text looks like random padding vs real words
             const paddingScore = this.analyzePaddingLikelihood(beforeText, afterText, matchedWord);
 
-            if (paddingScore >= 0.4) {
-                // Looks like intentional padding/obfuscation - don't penalize
+            if (paddingScore >= 0.4)
                 return 0;
-            }
-
-            // Check if the broader context looks like intentional concatenation
-            // e.g., "letskillthatlittlefucker" vs "classroom"
-            if (fullContext.length > 15 && fullContext === fullContext.toLowerCase() && !/\s/.test(fullContext)) {
-                // Long lowercase string - likely intentional concatenation
+            if (fullContext.length > 15 && fullContext === fullContext.toLowerCase() && !/\s/.test(fullContext))
                 return 0;
-            }
-
-            // Otherwise, likely part of a legitimate word
             return -0.5;
         }
 
         if (beforeIsAlpha || afterIsAlpha) {
-            // Partial word boundary
-            // Check padding likelihood for partial boundaries too
             const beforeText = text.substring(Math.max(0, start - 8), start).toLowerCase();
             const afterText = text.substring(end, Math.min(text.length, end + 8)).toLowerCase();
             const paddingScore = this.analyzePaddingLikelihood(beforeText, afterText, matchedWord);
 
-            if (paddingScore >= 0.4) {
-                // Looks like padding - don't penalize
+            if (paddingScore >= 0.4)
                 return 0;
-            }
-
             return 0;
         }
 
-        // Check if the match spans across multiple words (crosses word boundaries)
-        // Skip this check for legitimate multi-word terms like "concentration camp"
         const matchSegment = text.substring(start, end);
         const hasInternalSpaces = /\s/.test(matchSegment);
-
-        if (hasInternalSpaces && !isMultiWord) {
-            // Match crosses word boundaries - very strong indicator of false positive
-            // e.g., "is is" matching "isis" in "This is just"
+        if (hasInternalSpaces && !isMultiWord)
             return -0.9;
-        }
-
         return 0;
     }
 
-    /**
-     * Analyzes if surrounding text looks like random padding/obfuscation
-     * Returns a score from 0-1 where higher = more likely to be padding
-     */
     analyzePaddingLikelihood(beforeText, afterText, matchedWord) {
         let paddingScore = 0;
         let indicators = 0;
 
-        // 1. Check for excessive consonant clusters (unpronounceable patterns)
-        // Real words rarely have 3+ consonants in a row
         const consonantCluster = /[bcdfghjklmnpqrstvwxyz]{3,}/i;
-
         if (consonantCluster.test(beforeText) || consonantCluster.test(afterText)) {
             paddingScore += 0.4;
             indicators++;
         }
 
-        // 2. Check for doubled/repeated characters that don't make sense
-        // "kerr" has "rr", which is uncommon except in specific words
         const suspiciousRepeats = /([a-z])\1{1,}/i;
         const afterRepeats = afterText.match(suspiciousRepeats);
-
         if (afterRepeats && afterRepeats[0].length >= 2) {
-            // Check if it's at or near the end (common padding pattern)
             const repeatPos = afterText.indexOf(afterRepeats[0]);
             if (repeatPos >= afterText.length - 3) {
-                // Double letters at the end are suspicious unless it's a common pattern
                 const commonDoubles = /\b(ll|ss|tt|nn|mm|pp|dd|bb|gg|ff)$/i;
                 if (!commonDoubles.test(afterRepeats[0]) || afterText.length <= 3) {
                     paddingScore += 0.35;
@@ -1481,14 +1407,12 @@ class Profanity {
             }
         }
 
-        // 3. Check for very short prefix/suffix (1-2 chars)
         if (beforeText.length <= 2 && beforeText.length > 0) {
             paddingScore += 0.25;
             indicators++;
         }
 
         if (afterText.length <= 3 && afterText.length > 0) {
-            // Short suffix - check if it looks like a real word ending
             const commonSuffixes = /^(er|ed|ing|ion|ly|al|ful|less|ness|ment|s)$/i;
             if (!commonSuffixes.test(afterText)) {
                 paddingScore += 0.2;
@@ -1496,20 +1420,17 @@ class Profanity {
             }
         }
 
-        // 4. Check for uncommon letter combinations
         const uncommonPatterns = /([qx][^u]|[jqxz]{2}|[bcdfghjklmnpqrstvwxz]{4,})/i;
         if (uncommonPatterns.test(beforeText + afterText)) {
             paddingScore += 0.3;
             indicators++;
         }
 
-        // 5. Analyze vowel-consonant ratio
         const combined = beforeText + afterText;
         if (combined.length > 0) {
             const vowels = (combined.match(/[aeiou]/gi) || []).length;
             const ratio = vowels / combined.length;
 
-            // Too few vowels suggests random consonants
             if (ratio < 0.2) {
                 paddingScore += 0.3;
                 indicators++;
@@ -1525,13 +1446,10 @@ class Profanity {
 
         if (!hasSubstitution) return 0;
 
-        // Count how many characters are substitutions
         let subCount = 0;
-        for (const char of segment) {
-            if (substitutionChars.test(char)) {
+        for (const char of segment)
+            if (substitutionChars.test(char))
                 subCount++;
-            }
-        }
 
         const subRatio = subCount / segment.length;
         return Math.min(0.3, subRatio * 0.6);
@@ -1553,31 +1471,23 @@ class Profanity {
         const lastChar = text[end - 1];
         const after = text[end];
 
-        // Check for camelCase pattern: lowerUpper or Upperlower boundaries
         const startsWithCapital = /[A-Z]/.test(firstChar);
         const beforeIsLower = /[a-z]/.test(before);
         const afterIsLower = /[a-z]/.test(after);
         const endsWithLower = /[a-z]/.test(lastChar);
 
-        // Patterns like "myAss" or "AssHole" where the profanity is at a case boundary
-        if ((beforeIsLower && startsWithCapital) || (endsWithLower && /[A-Z]/.test(after))) {
+        if ((beforeIsLower && startsWithCapital) || (endsWithLower && /[A-Z]/.test(after)))
             return true;
-        }
-
         return false;
     }
 
     findMatchPosition(originalText, matchedText, parsedOriginal, parsedMatch) {
-        // Find where in the original text this match occurred
-        // This is tricky because we've normalized the text
         const lowerOriginal = originalText.toLowerCase();
 
-        // Try to find approximate position
         let bestStart = -1;
         let bestEnd = -1;
         let bestScore = -1;
 
-        // Search for the match in the original text
         for (let i = 0; i <= lowerOriginal.length - matchedText.length; i++) {
             const candidate = this.parseString(originalText.substring(i, i + matchedText.length + 10));
             if (candidate.includes(parsedMatch)) {
@@ -1596,9 +1506,9 @@ class Profanity {
     calculateSimilarity(str1, str2) {
         const len = Math.min(str1.length, str2.length);
         let matches = 0;
-        for (let i = 0; i < len; i++) {
-            if (str1[i] === str2[i]) matches++;
-        }
+        for (let i = 0; i < len; i++)
+            if (str1[i] === str2[i])
+                matches++;
         return matches / Math.max(str1.length, str2.length);
     }
 
@@ -1607,29 +1517,20 @@ class Profanity {
         const found = [];
 
         for (const hit of Profanity.hits) {
-            // Handle object format { term: "word", severity: 0.5, multiWord: true, note: "..." }
             if (hit.term) {
                 const term = hit.term;
-                const severity = hit.severity || 0.5; // Default to moderate severity
-                const note = hit.note || null; // Extract note if available
+                const severity = hit.severity || 0.5;
+                const note = hit.note || null;
                 const isMultiWord = hit.multiWord || false;
 
-                // Skip single-character hits that are special Unicode symbols
-                if (term.length === 1 && /[^\x00-\x7F]/.test(term)) {
+                if (term.length === 1 && /[^\x00-\x7F]/.test(term))
                     continue;
-                }
 
-                // For multi-word terms, we need to parse the input with spaces preserved
                 const searchString = isMultiWord ? this.parseString(raw, true) : str;
 
-                // Build pattern without repetition quantifiers
-                // For multi-word terms, replace spaces with flexible pattern that matches:
-                // - no space (concatenated), single/multiple spaces, or separator converted to space
                 const pattern = term.split("").reduce((acc, char) => {
-                    if (isMultiWord && char === ' ') {
-                        // Match: no space, one or more spaces
+                    if (isMultiWord && char === ' ')
                         return acc + ' *';
-                    }
                     const charPattern = _[char] ?? char;
                     return acc + charPattern;
                 }, "");
@@ -1639,7 +1540,6 @@ class Profanity {
                 let match;
 
                 const positionMap = this.buildPositionMap(raw, isMultiWord);
-
                 while ((match = regex.exec(searchString)) !== null) {
                     const matchedText = match[0];
                     const parsedStart = match.index;
@@ -1659,25 +1559,20 @@ class Profanity {
 
                     let matchConfidence = this.calculateMatchConfidence(matchedText, term);
 
-                    // Apply obfuscation modifier
-                    if (obfuscation < -0.5) {
+                    if (obfuscation < -0.5)
                         matchConfidence *= Math.max(0.01, 1 + obfuscation * 3);
-                    } else if (obfuscation < -0.2) {
+                    else if (obfuscation < -0.2)
                         matchConfidence *= Math.max(0.1, 1 + obfuscation * 2);
-                    } else if (obfuscation > 0.3) {
+                    else if (obfuscation > 0.3)
                         matchConfidence = Math.min(1, matchConfidence + obfuscation * 0.3);
-                    }
 
                     const threshold = Math.max(0.02, 0.15 - (term.length * 0.02));
 
                     if (matchConfidence >= threshold) {
-                        // Check if this match should be ignored
                         const originalSegment = raw.substring(originalStart, originalEnd);
-                        if (hit.ignore && Array.isArray(hit.ignore)) {
-                            if (hit.ignore.includes(originalSegment)) {
-                                continue; // Skip this match
-                            }
-                        }
+                        if (hit.ignore && Array.isArray(hit.ignore))
+                            if (hit.ignore.includes(originalSegment))
+                                continue;
 
                         found.push({
                             name: term,
@@ -1691,10 +1586,9 @@ class Profanity {
                     }
                 }
             } else if (hit.regex) {
-                // Apply regex to raw string to preserve formatting for URLs, emails, phone numbers
                 const matches = raw.match(new RegExp(hit.regex.source, "g"));
-                if (matches) {
-                    for (const match of matches) {
+                if (matches)
+                    for (const match of matches)
                         found.push({
                             name: hit.name,
                             match: match,
@@ -1704,11 +1598,8 @@ class Profanity {
                             note: hit.note || "Pattern-based detection with high confidence. Obfuscation is moderate for formatted data.",
                             originalSegment: match
                         });
-                    }
-                }
             } else if (hit.test) {
-                // Apply test to raw string to preserve formatting
-                if (hit.test(raw)) {
+                if (hit.test(raw))
                     found.push({
                         name: hit.name,
                         match: raw,
@@ -1718,28 +1609,19 @@ class Profanity {
                         note: hit.note || "Test-based detection with high confidence.",
                         originalSegment: raw
                     });
-                }
             }
         }
         return found;
     }
 
-    /**
-     * Builds a map from parsed string positions to original string positions
-     */
     buildPositionMap(original, preserveSpaces = false) {
         const map = {};
         let parsedIndex = 0;
 
         for (let i = 0; i < original.length; i++) {
             const char = original[i];
-            // Skip separator characters that are removed during parsing
-            // NOTE: *, #, - are NOT removed (they're lookalike chars)
             if (preserveSpaces) {
-                // For multi-word terms, separators become spaces, spaces/separators map to space positions
                 if (/[\s._,;:|]/.test(char)) {
-                    // Check if this is part of a sequence of spaces/separators
-                    // Only map the first one in a sequence (since multiple spaces collapse to one)
                     if (i === 0 || !/[\s._,;:|]/.test(original[i - 1])) {
                         map[parsedIndex] = i;
                         parsedIndex++;
@@ -1749,7 +1631,6 @@ class Profanity {
                     parsedIndex++;
                 }
             } else {
-                // For single-word terms, remove all separators
                 if (!/[\s._,;:|]/.test(char)) {
                     map[parsedIndex] = i;
                     parsedIndex++;
@@ -1777,7 +1658,6 @@ class Profanity {
     }
 
     calculateMatchConfidence(matchedString, originalWord) {
-        // Count how many characters in the match are actual letters/numbers vs special characters
         let actualChars = 0;
         let fillerChars = 0;
         let consecutiveFillers = 0;
@@ -1800,51 +1680,40 @@ class Profanity {
         const totalChars = actualChars + fillerChars;
         if (totalChars === 0) return 0;
 
-        // 1. Character quality score - ratio of actual characters to total
         const charQuality = actualChars / totalChars;
 
-        // 2. Length deviation - how much longer is the match than the original word
         const lengthDeviation = totalChars / originalWord.length;
-        const lengthPenalty = Math.max(0, 1 - (lengthDeviation - 1) * 0.4); // Penalize excessive length
+        const lengthPenalty = Math.max(0, 1 - (lengthDeviation - 1) * 0.4);
 
-        // 3. Filler clustering penalty - consecutive fillers are more suspicious
         const clusterPenalty = maxConsecutiveFillers > 2 ?
-            1 - Math.min(0.5, (maxConsecutiveFillers - 2) * 0.1) : 1;
+              1 - Math.min(0.5, (maxConsecutiveFillers - 2) * 0.1) : 1;
 
-        // 4. Character repetition detection
         const charCounts = {};
-        for (const char of matchedString) {
-            if (!fillerPattern.test(char)) {
+        for (const char of matchedString)
+            if (!fillerPattern.test(char))
                 charCounts[char] = (charCounts[char] || 0) + 1;
-            }
-        }
 
         let totalRepetition = 0;
         let repetitionInstances = 0;
-        for (const count of Object.values(charCounts)) {
-            if (count > 2) { // More than 2 of the same character
-                totalRepetition += count - 2; // Count excessive repetitions
+        for (const count of Object.values(charCounts))
+            if (count > 2) {
+                totalRepetition += count - 2;
                 repetitionInstances++;
             }
-        }
 
         const repetitionRatio = actualChars > 0 ? totalRepetition / actualChars : 0;
-        const repetitionPenalty = Math.max(0.3, 1 - (repetitionRatio * 0.8)); // Heavy penalty for repetition
+        const repetitionPenalty = Math.max(0.3, 1 - (repetitionRatio * 0.8));
 
-        // 5. Pattern disruption score - how much the match deviates from the original pattern
         let patternScore = 0;
         let originalIndex = 0;
-        for (let i = 0; i < matchedString.length && originalIndex < originalWord.length; i++) {
+        for (let i = 0; i < matchedString.length && originalIndex < originalWord.length; i++)
             if (!fillerPattern.test(matchedString[i])) {
-                if (matchedString[i] === originalWord[originalIndex]) {
+                if (matchedString[i] === originalWord[originalIndex])
                     patternScore++;
-                }
                 originalIndex++;
             }
-        }
         const patternAccuracy = originalWord.length > 0 ? patternScore / originalWord.length : 0;
 
-        // Weighted combination of all factors
         const weights = {
             charQuality: 0.25,
             lengthPenalty: 0.20,
@@ -1860,17 +1729,15 @@ class Profanity {
             (repetitionPenalty * weights.repetitionPenalty) +
             (patternAccuracy * weights.patternAccuracy);
 
-        return Math.max(0, Math.min(1, finalScore)); // Clamp to [0, 1]
+        return Math.max(0, Math.min(1, finalScore));
     }
 
     score(raw) {
         const matches = this.match(raw);
 
-        // Sum up all the match confidences for a weighted score
         let totalScore = 0;
-        for (const match of matches) {
+        for (const match of matches)
             totalScore += match.confidence;
-        }
 
         return totalScore;
     }
@@ -1879,7 +1746,7 @@ class Profanity {
         const matches = this.match(raw);
         const str = this.parseString(raw);
 
-        if (matches.length === 0) {
+        if (matches.length === 0)
             return {
                 finalScore: 0,
                 risk: "No",
@@ -1902,9 +1769,7 @@ class Profanity {
                     lowConfidenceMatches: 0
                 }
             };
-        }
 
-        // Categorize matches by confidence level and calculate severity
         let highConfidenceMatches = 0;
         let mediumConfidenceMatches = 0;
         let lowConfidenceMatches = 0;
@@ -1916,89 +1781,71 @@ class Profanity {
         for (const match of matches) {
             const matchSeverity = match.severity || 0.5;
 
-            // Weight the match by both confidence AND severity
             const weightedMatch = match.confidence * matchSeverity;
             weightedScore += match.confidence;
             severityScore += weightedMatch;
             totalObfuscation += match.obfuscation || 0;
             uniqueMatches.add(match.name);
 
-            if (match.confidence >= 0.7) {
+            if (match.confidence >= 0.7)
                 highConfidenceMatches++;
-            } else if (match.confidence >= 0.4) {
+            else if (match.confidence >= 0.4)
                 mediumConfidenceMatches++;
-            } else {
+            else
                 lowConfidenceMatches++;
-            }
         }
 
         const averageConfidence = weightedScore / matches.length;
         const averageObfuscation = totalObfuscation / matches.length;
         const averageSeverity = severityScore / weightedScore;
 
-        // 1. Base score calculation with confidence AND severity weighting
         const baseScore =
-            (highConfidenceMatches * averageSeverity * 1.0) +
-            (mediumConfidenceMatches * averageSeverity * 0.5) +
-            (lowConfidenceMatches * averageSeverity * 0.2);
+              (highConfidenceMatches * averageSeverity * 1.0) +
+              (mediumConfidenceMatches * averageSeverity * 0.5) +
+              (lowConfidenceMatches * averageSeverity * 0.2);
 
-        // 2. Match density analysis - detects spam-like behavior
         const textLength = str.length;
         const matchDensity = matches.length / Math.max(textLength / 5, 1);
-        const densityPenalty = Math.tanh(matchDensity * 0.3) * 0.6; // Use tanh for smooth penalty curve
+        const densityPenalty = Math.tanh(matchDensity * 0.3) * 0.6;
 
-        // 3. Character repetition analysis across entire text
+
         const charFrequency = {};
-        for (const char of str) {
-            if (/[a-z0-9]/.test(char)) {
+        for (const char of str)
+            if (/[a-z0-9]/.test(char))
                 charFrequency[char] = (charFrequency[char] || 0) + 1;
-            }
-        }
 
         let repetitionScore = 0;
         const totalChars = Object.values(charFrequency).reduce((a, b) => a + b, 0);
-
-        for (const count of Object.values(charFrequency)) {
-            if (count > 3) {
-                // Exponential penalty for excessive character repetition
+        for (const count of Object.values(charFrequency))
+            if (count > 3)
                 repetitionScore += Math.pow((count - 3) / totalChars, 1.5);
-            }
-        }
 
         const repetitionPenalty = Math.min(0.8, repetitionScore * 2);
 
-        // 4. Match diversity bonus - multiple different violations is worse
         const uniqueMatchRatio = uniqueMatches.size / matches.length;
         const diversityBonus = uniqueMatchRatio > 0.6 ?
-            (uniqueMatchRatio - 0.6) * 1.5 : 0; // Bonus for diverse violations
+              (uniqueMatchRatio - 0.6) * 1.5 : 0;
 
-        // 5. Text length modifier - scale based on text length
         const lengthModifier = Math.max(0.5, Math.min(1.5,
             1 + Math.log10(Math.max(10, textLength)) / 10
         ));
 
-        // 6. Confidence distribution scoring - penalize inconsistent matches
         const confidenceVariance = matches.reduce((variance, match) => {
             return variance + Math.pow(match.confidence - averageConfidence, 2);
         }, 0) / matches.length;
 
         const consistencyBonus = averageConfidence > 0.5 && confidenceVariance < 0.1 ? 0.3 : 0;
 
-        // 7. Critical pattern detection - severity >= 1.0 are automatically high risk
-        const criticalPatterns = matches.filter(m =>
-            m.severity >= 1.0 || m.confidence >= 0.9
-        ).length;
+        const criticalPatterns = matches.filter(m => m.severity >= 1.0 || m.confidence >= 0.9).length;
         const criticalBonus = criticalPatterns * 1.2;
 
-        // 8. Obfuscation modifier - high obfuscation scores indicate intentional evasion
         const obfuscationModifier = averageObfuscation > 0.3 ?
-            averageObfuscation * 1.2 : averageObfuscation * 0.5;
+              averageObfuscation * 1.2 : averageObfuscation * 0.5;
 
-        // Calculate base components before applying severity multiplier
         const baseComponents = (
             (baseScore * lengthModifier) +
-            (severityScore * 0.8) + // Severity-weighted component
-            (weightedScore * 0.1) + // Raw confidence score
+            (severityScore * 0.8) +
+            (weightedScore * 0.1) +
             diversityBonus +
             consistencyBonus +
             obfuscationModifier -
@@ -2006,34 +1853,24 @@ class Profanity {
             repetitionPenalty
         );
 
-        // Apply severity as a strong multiplier to the entire score
-        // This ensures low severity (e.g., 0.1) drastically reduces the final score
-        const severityMultiplier = Math.pow(averageSeverity, 1.5); // Exponential impact
-
-        // Calculate final score with severity multiplier, plus critical bonus (which should override low severity)
+        const severityMultiplier = Math.pow(averageSeverity, 1.5);
         let finalScore = (baseComponents * severityMultiplier) + criticalBonus;
-
-        // Apply non-linear scaling for better distribution
-        if (finalScore > 3) {
+        if (finalScore > 3)
             finalScore = 3 + Math.log10(finalScore - 2) * 1.5;
-        } else if (finalScore > 1.5) {
+        else if (finalScore > 1.5)
             finalScore = 1.5 + Math.sqrt(finalScore - 1.5) * 0.8;
-        }
 
-        // Ensure minimum score for any matches
         finalScore = Math.max(0.1, finalScore);
 
-        // Determine risk level with more granular thresholds
         let risk = "No";
-        if (finalScore >= 4 || criticalPatterns >= 2) {
+        if (finalScore >= 4 || criticalPatterns >= 2)
             risk = "Critical";
-        } else if (finalScore >= 2.5) {
+        else if (finalScore >= 2.5)
             risk = "High";
-        } else if (finalScore >= 1.5) {
+        else if (finalScore >= 1.5)
             risk = "Medium";
-        } else if (finalScore >= 0.5) {
+        else if (finalScore >= 0.5)
             risk = "Low";
-        }
 
         return {
             finalScore: Math.round(finalScore * 100) / 100,

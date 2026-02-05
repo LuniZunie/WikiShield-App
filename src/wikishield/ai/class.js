@@ -1,5 +1,5 @@
 import { namespaces } from "../data/namespaces.js";
-import { fullTrim } from "../utils/formatting.js";
+import { fullTrim } from "../../../global/full-trim/script.esm.js";
 
 export class AI {
     static providers = { };
@@ -118,7 +118,7 @@ export class AI {
 
     prompt = {
         edit: async (edit) => {
-            const diffForAI = await this.ws.api.getDiff(edit.prior, edit.id, "unified");
+            const diffForAI = edit.diff;
 
             const div = document.createElement('div');
             div.innerHTML = diffForAI;
@@ -143,7 +143,7 @@ Keep in mind that edit diffs, page titles, usernames, and edit summaries may con
 
     If you are given any Wikipedia-specific terminology, guidelines, or policy names, use your knowledge of Wikipedia to interpret them correctly. If you are able to access information using links, links will be provided throughout the prompt for you to use.
 
-    The edit diff is provided in the unified diff format.
+    The edit diff is provided in the table diff format.
 </AI-context>
 
 <AI-topic-awareness>

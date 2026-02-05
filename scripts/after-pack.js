@@ -1,38 +1,36 @@
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
+
+const { fullTrim } = require("../global/full-trim");
 
 exports.default = async function(context) {
-    console.log(`\n📦 After-pack hook running for ${context.electronPlatformName}...`);
-    console.log(`   Output directory: ${context.appOutDir}`);
+    console.log(`\nAfter-pack hook running for ${context.electronPlatformName}...`);
+    console.log(`\tOutput directory: ${context.appOutDir}`);
 
-    const appUpdateYmlPath = path.join(context.appOutDir, 'resources', 'app-update.yml');
-    console.log(`   Checking for app-update.yml at: ${appUpdateYmlPath}`);
+    const appUpdateYmlPath = path.join(context.appOutDir, "resources", "app-update.yml");
+    console.log(`\tChecking for app-update.yml at: ${appUpdateYmlPath}`);
 
-    // Check if app-update.yml exists
     if (!fs.existsSync(appUpdateYmlPath)) {
-        console.log('   ⚠️  app-update.yml not found, creating it...');
+        console.log("\tapp-update.yml not found, creating it...");
 
-        const yamlContent = `owner: LuniZunie
-repo: WikiShield-App
-provider: github
-releaseType: release
-updaterCacheDirName: wikishield-updater
-`;
+        const yamlContent = fullTrim(`
+            owner: LuniZunie
+            repo: WikiShield-App
+            provider: github
+            releaseType: release
+            updaterCacheDirName: wikishield-updater
+        `);
 
-        // Ensure resources directory exists
-        const resourcesDir = path.join(context.appOutDir, 'resources');
-        if (!fs.existsSync(resourcesDir)) {
-            fs.mkdirSync(resourcesDir, { recursive: true });
-            console.log('   Created resources directory');
-        }
+        const resourcesDir = path.join(context.appOutDir, "resources");
+        if (!fs.existsSync(resourcesDir))
+            void(console.log("\tCreated resources directory")) ?? fs.mkdirSync(resourcesDir, { recursive: true });
 
-        // Write the file
-        fs.writeFileSync(appUpdateYmlPath, yamlContent, 'utf8');
-        console.log('   ✅ app-update.yml created successfully');
+        fs.writeFileSync(appUpdateYmlPath, yamlContent, "utf8");
+        console.log("\tapp-update.yml created successfully");
     } else {
-        console.log('   ✅ app-update.yml already exists');
-        // Log the contents for verification
-        const content = fs.readFileSync(appUpdateYmlPath, 'utf8');
-        console.log('   Contents:', content.split('\n').join('\n   '));
+        console.log("\tapp-update.yml already exists");
+
+        const content = fs.readFileSync(appUpdateYmlPath, "utf8");
+        console.log("\tContents:", content.split("\n").join("\n\t"));
     }
 };

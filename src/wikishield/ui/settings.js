@@ -3,11 +3,12 @@ import { conditions } from "../config/conditions.js";
 import { buildShortcut, controls, validateShortcut } from "../config/control-keys.js";
 import { events } from "../config/events.js";
 import { Queue } from "../core/queue.js";
+import { WikiShield } from "../core/wikishield.js";
 import { namespaces } from "../data/namespaces.js";
-import { StorageManager } from "../data/storage.js";
+import { StorageManager } from "../data/storage/manager.js";
 import { warningsLookup } from "../data/warnings.js";
-import { sortDependencies } from "../utils/scripts.js";
-import { Text } from "../utils/text.js";
+import { sortDependencies } from "../utilities/scripts.js";
+import { Text } from "../utilities/text.js";
 import { GUI } from "./gui.js";
 
 const formatTime = ms => {
@@ -35,41 +36,8 @@ export class Settings {
 	constructor(ws) {
 		this.ws = ws;
 
-		window.electronAPI.onImportSettingsFromFile(async (event, ...args) => { // FIX make not require user interaction
-			try {
-				const handle = (await window.showOpenFilePicker({
-					id: "wikishield_app-settings",
-					types: [
-						{
-							description: "WikiShield Settings File",
-							accept: {
-								"text/plain": [ ".wssave" ]
-							}
-						}
-					]
-				}))[0];
-				if (!handle)
-					return;
-
-				const file = await handle.getFile();
-				const text = await file.text();
-				const logs = await this.ws.noinit(text);
-				StorageManager.output(logs, "Import from file");
-				this.ws.gui.dialog.toast(
-					"Settings Imported",
-					`${new Text("%n issue").get(logs.filter(log => !log.expected).length)} encountered during import.`,
-					logs.filter(log => !log.expected).length > 0 ? "warning" : "success"
-				);
-			} catch (error) {
-				if (error.name === "AbortError")
-					return;
-
-				console.error(error);
-				this.ws.gui.dialog.toast("Import Failed", "The settings could not be imported from the selected file.", "error");
-			}
-		});
-		window.electronAPI.onImportSettingsFromClipboard(async (event, ...args) => {
-			const b64 = await window.electronAPI.getClipboardText();
+		electronAPI.onImportSettingsFromClipboard(async () => {
+			const b64 = await electronAPI.getClipboardText();
 			try {
 				const logs = await this.ws.noinit(b64);
 				StorageManager.output(logs, "Import for clipboard");
@@ -84,7 +52,7 @@ export class Settings {
 				this.ws.gui.dialog.toast("Import Failed", "The settings could not be imported from the clipboard.", "error");
 			}
 		});
-		window.electronAPI.onImportSettingsFromInput(async (event, ...args) => {
+		electronAPI.onImportSettingsFromInput(async () => {
 			const b64 = await this.ws.gui.dialog.input("Import Settings", "Paste your WikiShield settings data below:");
 			if (!b64)
 				return;
@@ -104,38 +72,9 @@ export class Settings {
 			}
 		});
 
-		window.electronAPI.onExportSettingsToFile(async (event, ...args) => {
+		electronAPI.onExportSettingsToClipboard(async () => {
 			try {
-				const b64 = await this.ws.export();
-				const handle = await window.showSaveFilePicker({
-					id: "wikishield_app-settings",
-					suggestedName: `wikishield-settings-${new Date().toISOString()}.wssave`,
-					types: [
-						{
-							description: "WikiShield Settings File",
-							accept: {
-								"text/plain": [ ".wssave" ]
-							}
-						}
-					]
-				});
-				if (!handle)
-					return;
-				const writable = await handle.createWritable();
-				await writable.write(b64);
-				await writable.close();
-				this.ws.gui.dialog.toast("Settings Exported", "The settings have been exported to the selected file.", "success");
-			} catch (error) {
-				if (error.name === "AbortError")
-					return;
-				console.error(error);
-				this.ws.gui.dialog.toast("Export Failed", "The settings could not be exported to the selected file.", "error");
-			}
-		});
-		window.electronAPI.onExportSettingsToClipboard(async (event, ...args) => {
-			try {
-				const b64 = await this.ws.export();
-				await window.electronAPI.copyToClipboard(b64);
+				await electronAPI.copyToClipboard(await this.ws.export());
 				this.ws.gui.dialog.toast("Settings Exported", "The settings have been copied to the clipboard.", "success");
 			} catch (error) {
 				console.error(error);
@@ -145,7 +84,7 @@ export class Settings {
 	}
 
 	get active() {
-		return document.querySelector("#settings-container").classList.contains("show");
+		return document.querySelector("#settings-container > .settings > .settings-right > div:not(.hidden)");
 	}
 
 	controller(event) {
@@ -273,7 +212,8 @@ export class Settings {
 	}
 
 	start() {
-		window.electronAPI.onOpenSettings(this.open.bind(this));
+		electronAPI.onOpenSettings(this.open.bind(this));
+		electronAPI.onOpenChangelog(() => void(this.open()) ?? this.changelog());
 
 		document.querySelector("#settings-container").addEventListener("click", e => {
 			if (e.target.id === "settings-container")
@@ -287,6 +227,7 @@ export class Settings {
 
 		document.querySelector("#settings-queue-button").addEventListener("click", this.queue.bind(this));
 		document.querySelector("#settings-zen-button").addEventListener("click", this.zen.bind(this));
+		document.querySelector("#settings-accessibility-button").addEventListener("click", this.accessibility.bind(this));
 
 		document.querySelector("#settings-AI-button").addEventListener("click", this.AI.bind(this));
 		document.querySelector("#settings-auto-reporting-button").addEventListener("click", this.autoReporting.bind(this));
@@ -301,13 +242,22 @@ export class Settings {
 		document.querySelector("#settings-highlight-tags-button").addEventListener("click", this.highlight.bind(this, "tag"));
 
 		document.querySelector("#settings-statistics-button").addEventListener("click", this.statistics.bind(this));
-
 		document.querySelector("#settings-save-button").addEventListener("click", this.save.bind(this));
+
+		document.querySelector("#settings-changelog-button").addEventListener("click", this.changelog.bind(this));
+		// document.querySelector("#settings-about-button").addEventListener("click", this.about.bind(this));
 
 		{
 			const $edits = document.querySelector("#settings-maximum-edit-count");
 			$edits.value = this.ws.store.settings.queue.max_edits;
-			$edits.addEventListener("change", e => this.ws.store.settings.queue.max_edits = +e.target.value);
+			$edits.addEventListener("change", e => {
+				const max = +e.target.value;
+				this.ws.store.settings.queue.max_edits = max;
+
+				for (const [ user, count ] of this.ws.queue.bypass.entries())
+					if (count <= max)
+						this.ws.queue.bypass.delete(user);
+			});
 
 			const $size = document.querySelector("#settings-maximum-queue-size");
 			$size.value = this.ws.store.settings.queue.max_size;
@@ -322,19 +272,23 @@ export class Settings {
 			$watchlist.addEventListener("change", e => this.ws.store.settings.expiry.watchlist = e.target.value);
 
 			const $ns = document.querySelector("#settings-namespaces-container");
-			$ns.innerHTML = namespaces.map(ns => {
+			$ns.innerHTML = "";
+			namespaces.forEach(ns => {
 				const $item = document.createElement("div");
+				$item.className = "namespace-item";
+				$item.dataset.namespaceId = ns.id;
+
 				$item.innerHTML = `
-					<div class="namespace-item" data-namespace-id="${ns.id}">
-						<label class="checkbox-box">
-							<input type="checkbox" autoComplete="off" checked="${this.ws.store.settings.namespaces.includes(ns.id)}">
-							<div class="checkmark"></div>
-						</label>
-						<span class="namespace-name">${ns.name}</span>
-					</div>
+					<label class="checkbox-box">
+						<input type="checkbox" autoComplete="off">
+						<div class="checkmark"></div>
+					</label>
+					<span class="namespace-name">${ns.name}</span>
 				`;
 
-				$item.querySelector("input[type=checkbox]").addEventListener("change", e => {
+				const $checkbox = $item.querySelector("input[type=checkbox]")
+				$checkbox.checked = this.ws.store.settings.namespaces.includes(ns.id);
+				$checkbox.addEventListener("change", e => {
 					if (e.target.checked) {
 						if (!this.ws.store.settings.namespaces.includes(ns.id))
 							this.ws.store.settings.namespaces.push(ns.id);
@@ -345,8 +299,8 @@ export class Settings {
 					}
 				});
 
-				return $item.innerHTML;
-			}).join("");
+				$ns.appendChild($item);
+			});
 		}
 
 		{
@@ -397,13 +351,14 @@ export class Settings {
 			});
 
 			const build = {
-				sound: ($el, path, title, desc) => {
+				sound: ($el, path, title, desc, preview) => {
 					const key = [ "master", ...path ].join(".");
 
 					const $volume = document.createElement("volume-control");
 					$volume.setAttribute("title", title);
 					$volume.setAttribute("description", desc);
-					$volume.setPreview(this.ws.audio, path);
+					if (preview)
+						$volume.setPreview(this.ws.audio, path);
 					$volume.value = this.ws.store.settings.audio.volume[key];
 					$volume.addEventListener("change", () => {
 						const current = this.ws.store.settings.audio.volume[key];
@@ -412,74 +367,6 @@ export class Settings {
 							this.ws.audio.onvolumechanged();
 					});
 					$el.appendChild($volume);
-				},
-				playlist: ($el, path, title, desc, tracks) => {
-					const key = [ "master", ...path ].join(".");
-					const $section = this.collapsible(
-						$el,
-						collapsed => collapsed ?
-							title :
-							`${title} (${new Text("%n track").get(tracks.length)}, total ${formatTime(tracks.reduce((a, b) => a + b.length, 0) * 1000)})`,
-						desc,
-						true
-					);
-
-					const $volume = document.createElement("volume-control");
-					$volume.setAttribute("title", "Playlist Volume");
-					$volume.value = this.ws.store.settings.audio.volume[key];
-					$volume.addEventListener("change", () => {
-						const current = this.ws.store.settings.audio.volume[key];
-						this.ws.store.settings.audio.volume[key] = $volume.value;
-						if (current !== $volume.value)
-							this.ws.audio.onvolumechanged();
-					});
-					$section.appendChild($volume);
-
-					const $tracklist = document.createElement("div");
-					$tracklist.className = "settings-content tracklist";
-					$section.appendChild($tracklist);
-
-					tracks.forEach((track, index) => {
-						const $track = document.createElement("div");
-						$track.className = "track";
-						$track.innerHTML = `
-							<div class="thumbnail">
-								<img src="${track.thumbnail}" alt="Thumbnail for ${track.title}">
-							</div>
-							<div class="info">
-								<div class="title">${track.title}</div>
-								<div class="artist">${track.artist}</div>
-								<div class="length">${formatTime(track.length * 1000)}</div>
-							</div>
-							<button class="preview-button" title="Play Preview"><i class="fa fa-play"></i></button>
-						`;
-						$tracklist.appendChild($track);
-
-						const $preview = $track.querySelector(".preview-button");
-						$preview.addEventListener("click", () => {
-							if ($preview.classList.contains("playing"))
-								return;
-
-							$preview.classList.add("playing");
-							const $icon = $preview.querySelector("i");
-							if ($icon)
-								$icon.className = "fa fa-stop";
-
-							const controller = new AbortController();
-							$preview.onclick = () => controller.abort();
-
-							this.ws.audio.stopPreviews();
-							this.ws.audio.playSound([ ...path, index ], controller.signal, true)
-								.finally(() => {
-									$preview.onclick = null;
-									$preview.classList.remove("playing");
-									if ($icon)
-										$icon.className = "fa fa-play";
-								});
-						});
-					});
-
-					return $tracklist;
 				},
 				category: ($el, path, title, desc) => {
 					const key = [ "master", ...path ].join(".");
@@ -508,10 +395,7 @@ export class Settings {
 				for (const [ key, value ] of Object.entries(obj)) {
 					switch (value.type) {
 						case "sound": {
-							build.sound($el, [ ...path, key ], value.title, value.description);
-						} break;
-						case "playlist": {
-							build.playlist($el, [ ...path, key ], value.title, value.description, value.tracks);
+							build.sound($el, [ ...path, key ], value.title, value.description, value.preview ?? true);
 						} break;
 						case "category": {
 							loop(value.properties, [ ...path, key ], build.category($el, [ ...path, key ], value.title, value.description));
@@ -534,6 +418,13 @@ export class Settings {
 		}
 
 		{
+			const $tools = document.querySelector("#settings-dynamic-bottom-menus");
+			$tools.value = this.ws.store.UI.hide_tools;
+			$tools.addEventListener("change", e => {
+				this.ws.store.UI.hide_tools = $tools.value;
+				this.ws.gui.updateHiddenItems();
+			});
+
 			const $queue = document.querySelector("#settings-queues");
 			Queue.types
 				.map(type => ({ type, data: this.ws.store.settings.queue[type] }))
@@ -545,7 +436,8 @@ export class Settings {
 						recent: "Recent changes",
 						pending: "Pending changes",
 						users: "User creations",
-						watchlist: "Watchlist"
+						watchlist: "Watchlist",
+						abuselog: "Abuse log"
 					})[queue.type] ?? queue.type);
 					$item.enabled = queue.data.enabled;
 
@@ -661,6 +553,35 @@ export class Settings {
 		}
 
 		{
+			/* const $colorblind = document.querySelector("#settings-colorblind-mode");
+			$colorblind.value = this.ws.store.settings.accessibility.colorblind;
+			$colorblind.addEventListener("change", e => {
+				this.ws.store.settings.accessibility.colorblind = $colorblind.value;
+				this.ws.gui.updateAccessibility();
+			}); */
+			const $dyslexia = document.querySelector("#settings-dyslexia-font");
+			$dyslexia.value = this.ws.store.settings.accessibility.dyslexia;
+			$dyslexia.addEventListener("change", e => {
+				this.ws.store.settings.accessibility.dyslexia = $dyslexia.value;
+				this.ws.gui.updateAccessibility();
+			});
+
+			/* const $contrast = document.querySelector("#settings-high-contrast-mode");
+			$contrast.value = this.ws.store.settings.accessibility.high_contrast;
+			$contrast.addEventListener("change", e => {
+				this.ws.store.settings.accessibility.high_contrast = $contrast.value;
+				this.ws.gui.updateAccessibility();
+			}); */
+
+			const $motion = document.querySelector("#settings-reduce-motion");
+			$motion.value = this.ws.store.settings.accessibility.reduce_motion;
+			$motion.addEventListener("change", e => {
+				this.ws.store.settings.accessibility.reduce_motion = $motion.value;
+				this.ws.gui.updateAccessibility();
+			});
+		}
+
+		{
 			const $AI = document.querySelector("#settings-AI-toggle");
 			$AI.value = this.ws.store.settings.AI.enabled;
 			$AI.addEventListener("change", e => {
@@ -707,7 +628,8 @@ export class Settings {
 				$container.classList.add("testing");
 				$container.classList.remove("connected", "failed");
 
-				$status.innerHTML = "Testing connection<span class='loading-dots'></span></div>";
+				$status.classList.add("animate-loading-dots");
+				$status.textContent = "Testing connection";
 
 				let temp;
 				switch (this.ws.store.settings.AI.provider) {
@@ -729,6 +651,7 @@ export class Settings {
 					$status.innerHTML = "<span class='fa fa-times-circle'></span> Failed to connect.<br><small>Make sure Ollama is running with CORS enabled (see instructions below)</small>";
 				}
 
+				$status.classList.remove("animate-loading-dots");
 				$test.disabled = false;
 			});
 
@@ -742,8 +665,8 @@ export class Settings {
 				const $status = document.querySelector("#settings-ollama-models-status");
 				const $container = $status.parentElement;
 
-				$status.innerHTML = "Searching<span class='loading-dots'></span></div>";
-				$container.classList.add("searching");
+				$status.textContent = "Searching";
+				$container.classList.add("searching", "animate-loading-dots");
 				$container.classList.remove("none", "error");
 
 				this.ws.AI?.cancel.all(true);
@@ -758,13 +681,13 @@ export class Settings {
 
 					const models = (temp instanceof AI && await temp.models()) || [ ];
 					if (models.length > 0) {
-						$container.classList.remove("searching", "none", "error");
+						$container.classList.remove("searching", "none", "error", "animate-loading-dots");
 						$status.innerHTML = `<span class="fa fa-check-circle"></span> Found ${models.length} ${new Text("model").get(models.length)}.`;
 					} else {
 						$container.classList.add("none");
-						$container.classList.remove("searching", "error");
+						$container.classList.remove("searching", "error", "animate-loading-dots");
 
-						$status.innerHTML = "No models found.";
+						$status.textContent = "No models found.";
 
 						$models.innerHTML = "";
 						models.forEach(model => {
@@ -840,7 +763,7 @@ export class Settings {
 					}
 				} catch (error) {
 					$container.classList.add("error");
-					$container.classList.remove("searching", "none");
+					$container.classList.remove("searching", "none", "animate-loading-dots");
 
 					$status.innerHTML = "<span class='fa fa-times-circle'></span> Error fetching models.";
 				}
@@ -920,7 +843,7 @@ export class Settings {
 			$export.addEventListener("click", async e => {
 				try {
 					const b64 = this.ws.export();
-					window.electronAPI.copyToClipboard(b64);
+					electronAPI.copyToClipboard(b64);
 
 					$status.classList.remove("hidden", "error", "info");
 					$status.classList.add("success");
@@ -1125,6 +1048,7 @@ export class Settings {
 		});
 	}
 	close() {
+		this.deselect();
 		this.ws.audio.stopPreviews();
 
 		document.querySelector("#settings-container").classList.remove("show");
@@ -1173,7 +1097,7 @@ export class Settings {
 					return parent;
 
 				for (const act of parent.actions)
-					if (act.name === "if") {
+					if (act.name === "if" || act.name === "if not") {
 						const found = findParentAction(action, act);
 						if (found)
 							return found;
@@ -1187,12 +1111,12 @@ export class Settings {
 				$item.className = "control-action";
 				$action.appendChild($item);
 
-				if (action.name === "if") {
+				if (action.name === "if" || action.name === "if not") {
 					$item.innerHTML = `
 						<div class="control-action-title">
 							<div class="control-action-title-left">
 								<span class="fas fa-circle-question"></span>
-								If <select></select> then:
+								${action.name === "if" ? "If" : "If not"} <select></select> <span class="params"></span> then:
 							</div>
 							<div class="control-action-title-right">
 								<span class="fas fa-chevron-up move-action-up"></span>
@@ -1204,17 +1128,147 @@ export class Settings {
 
 					const $select = $item.querySelector("select");
 					Object.entries(conditions).forEach(([ key, condition ]) => {
-						if ("description" in condition)
-							$select.innerHTML += `<option value="${key}">${condition.description}</option>`;
+						if ("title" in condition)
+							$select.innerHTML += `<option value="${key}">${condition.title}</option>`;
 						else
 							$select.innerHTML += `<option value="${key}">${key}</option>`;
 					});
-					$select.value = action.condition ?? Object.keys(conditions)[0];
+
+					const condition = action.condition ?? { name: Object.keys(conditions)[0], params: { } };
+					condition.name ??= Object.keys(conditions)[0];
+					condition.params ??= { };
+
+					$select.value = condition.name;
 
 					$select.addEventListener("change", e => {
-						action.condition = $select.value;
+						condition.name = $select.value;
 						callback();
 					});
+
+					const dependencyMap = new Map();
+					for (const param of sortDependencies(conditions[condition.name].parameters?.() || [])) {
+						const $param = document.createElement("div");
+						$param.className = "condition-parameter";
+						$item.querySelector(".params").appendChild($param);
+
+						const dependencies = { };
+						for (const dependent of param.dependencies ?? [])
+							dependencies[dependent] = condition.params[dependent];
+
+						const _default = typeof param.default === "function" ? param.default(dependencies) : param.default;
+
+						let callback = null;
+						switch (param.type) {
+							case "choice": {
+								const $select = document.createElement("select");
+								$select.dataset.paramid = param.id;
+								$param.appendChild($select);
+
+								const options = typeof param.options === "function" ? param.options(dependencies) : param.options;
+								for (const option of options ?? []) {
+									const $option = document.createElement("option");
+									$option.value = option;
+									$option.textContent = option;
+									$select.appendChild($option);
+								}
+
+								if ("default" in param) {
+									$select.value = _default;
+									condition.params[param.id] = _default;
+								}
+
+								callback = () => {
+									const dependencies = { };
+									for (const dependent of param.dependencies ?? [])
+										dependencies[dependent] = condition.params[dependent];
+
+									const value = $select.value;
+
+									const options = typeof param.options === "function" ? param.options(dependencies) : param.options;
+									$select.innerHTML = "";
+									for (const option of options ?? []) {
+										const $option = document.createElement("option");
+										$option.value = option;
+										$option.textContent = option;
+										$select.appendChild($option);
+									}
+
+									if (options.includes(value))
+										$select.value = value;
+									else {
+										const _default = typeof param.default === "function" ? param.default(dependencies) : param.default;
+										$select.value = _default;
+										condition.params[param.id] = _default;
+									}
+								};
+
+								$select.addEventListener("change", () => {
+									condition.params[param.id] = $select.value;
+									for (const cb of dependencyMap.get(param.id) || [])
+										cb();
+								});
+							} break;
+							case "text": {
+								const $input = document.createElement("input");
+								$input.type = "text";
+								$input.dataset.paramid = param.id;
+								$param.appendChild($input);
+
+								if ("default" in param) {
+									$input.value = _default;
+									condition.params[param.id] = _default;
+								}
+
+								$input.addEventListener("change", () => {
+									condition.params[param.id] = $input.value;
+									for (const cb of dependencyMap.get(param.id) || [])
+										cb();
+								});
+							} break;
+							case "boolean": {
+								const $input = document.createElement("input");
+								$input.type = "checkbox";
+								$input.dataset.paramid = param.id;
+								$param.appendChild($input);
+
+								if ("default" in param) {
+									$input.checked = _default;
+									condition.params[param.id] = _default;
+								}
+
+								$input.addEventListener("change", () => {
+									condition.params[param.id] = $input.checked;
+									for (const cb of dependencyMap.get(param.id) || [])
+										cb();
+								});
+							} break;
+							case "number": {
+								const $input = document.createElement("input");
+								$input.type = "number";
+								$input.dataset.paramid = param.id;
+								if ("min" in param) $input.min = param.min;
+								if ("max" in param) $input.max = param.max;
+								$param.appendChild($input);
+
+								if ("default" in param) {
+									$input.value = _default;
+									condition.params[param.id] = _default;
+								}
+								$input.addEventListener("change", () => {
+									condition.params[param.id] = parseFloat($input.value);
+									for (const cb of dependencyMap.get(param.id) || [])
+										cb();
+								});
+							} break;
+						}
+
+						if (typeof callback === "function")
+							for (const dependent of param.dependencies ?? []) {
+								if (!dependencyMap.has(dependent))
+									dependencyMap.set(dependent, [ ]);
+								dependencyMap.get(dependent).push(callback);
+							}
+					}
 
 					for (const subaction of action.actions)
 						createActionItem($item, subaction, script, callback);
@@ -1224,7 +1278,7 @@ export class Settings {
 						<div class="control-action-title">
 							<div class="control-action-title-left">
 								<span class="${"icon" in event ? event.icon : "fas fa-bolt"}"></span>
-								${"description" in event ? event.description : action.name}
+								${"title" in event ? event.title : action.name}
 							</div>
 							<div class="control-action-title-right">
 								<span class="fas fa-chevron-up move-action-up"></span>
@@ -1372,7 +1426,7 @@ export class Settings {
 						parent.actions.splice(index, 1);
 					} else {
 						const temp = parent.actions[index - 1];
-						if (temp.name === "if") {
+						if (temp.name === "if" || temp.name === "if not") {
 							temp.actions.push(action);
 							parent.actions.splice(index, 1);
 						} else {
@@ -1397,7 +1451,7 @@ export class Settings {
 						parent.actions.splice(index, 1);
 					} else {
 						const temp = parent.actions[index + 1];
-						if (temp.name === "if") {
+						if (temp.name === "if" || temp.name === "if not") {
 							temp.actions.unshift(action);
 							parent.actions.splice(index, 1);
 						} else {
@@ -1479,8 +1533,8 @@ export class Settings {
 					document.querySelectorAll(".key-select").forEach($el => $el.remove());
 
 					const $keySelect = document.createElement("div");
-					$keySelect.className = "key-select";
-					$keySelect.innerHTML = "Press a key<span class='loading-dots'></span>";
+					$keySelect.className = "key-select animate-loading-dots";
+					$keySelect.textContent = "Press a key";
 					$keys.insertBefore($keySelect, $addKey);
 
 					const remove = () => {
@@ -1509,7 +1563,7 @@ export class Settings {
 							buildScriptInterface($script, script);
 							duplicates();
 						} else
-							$keySelect.innerHTML = key || "Press a key<span class='loading-dots'></span>";
+							$keySelect.textContent = key || "Press a key";
 					};
 				});
 
@@ -1553,10 +1607,11 @@ export class Settings {
 						`;
 
 						const $select = $addAction.querySelector("select");
-						$select.innerHTML += `option value="if">If Condition</option>`;
-						Object.entires(events).forEach(([ key, event ]) => {
-							if ("descrtiption" in event)
-								$select.innerHTML += `<option value="${key}">${event.description}</option>`;
+						$select.innerHTML += `<option value="if">If Condition</option>`;
+						$select.innerHTML += `<option value="if not">If Not Condition</option>`;
+						Object.entries(events).forEach(([ key, event ]) => {
+							if ("title" in event)
+								$select.innerHTML += `<option value="${key}">${event.title}</option>`;
 							else
 								$select.innerHTML += `<option value="${key}">${key}</option>`;
 						});
@@ -1567,11 +1622,11 @@ export class Settings {
 						});
 						$addAction.querySelector(".create-button").addEventListener("click", () => {
 							this.ws.audio.playSound([ "ui", "click" ]);
-							if ($select.value === "if" || $select.value in events) {
+							if ($select.value === "if" || $select.value === "if not" || $select.value in events) {
 								const action = { name: $select.value, params: { } };
-								if ($select.value === "if") {
-									action.params.condition = "";
-									action.params.actions = [];
+								if ($select.value === "if" || $select.value === "if not") {
+									action.condition = { name: Object.keys(conditions)[0] };
+									action.actions = [];
 								}
 
 								script.actions.push(action);
@@ -1608,6 +1663,12 @@ export class Settings {
 
 		document.querySelector("#settings-zen-button").classList.add("selected");
 		document.querySelector("#settings-container > .settings > .settings-right > .zen").classList.remove("hidden");
+	}
+	accessibility() {
+		this.deselect();
+
+		document.querySelector("#settings-accessibility-button").classList.add("selected");
+		document.querySelector("#settings-container > .settings > .settings-right > .accessibility").classList.remove("hidden");
 	}
 
 	AI() {
@@ -1810,7 +1871,7 @@ export class Settings {
 		{
 			const $reset = document.querySelector("#reset-statistics-button");
 			$reset.addEventListener("click", async () => {
-				if (await this.ws.gui.dialog.confirm("Reset statistics", "Are you sure you want to reset all statistics? This action cannot be undone.", null, true)) {
+				if (await this.ws.gui.dialog.confirm("Reset statistics", "Are you sure you want to reset all statistics? This action cannot be undone.", undefined, true)) {
 					this.ws.store.statistics = { };
 					this.ws.storage.load(this.ws.store);
 					this.ws.time.load = performance.now();
@@ -1872,6 +1933,14 @@ export class Settings {
 		}
 
 		{
+			const $abuselog = document.querySelector("#stats-abuselog-changes-reviewed");
+			$abuselog.textContent = (stats.abuselogs_reviewed.total || 0).toLocaleString();
+
+			const $percentage = document.querySelector("#stats-abuselog-changes-percentage");
+			$percentage.textContent = (stats.abuselogs_reviewed.total / stats.edits_reviewed.total * 100 || 0).toFixed(2);
+		}
+
+		{
 			const $reverts = document.querySelector("#stats-reverts-made");
 			$reverts.textContent = (stats.reverts_made.total || 0).toLocaleString();
 
@@ -1889,6 +1958,9 @@ export class Settings {
 
 			const $watchlist = document.querySelector("#stats-watchlist-reverts-percentage");
 			$watchlist.textContent = (stats.reverts_made.from_watchlist / stats.reverts_made.total * 100 || 0).toFixed(2);
+
+			const $abuselog = document.querySelector("#stats-abuselog-reverts-percentage");
+			$abuselog.textContent = (stats.reverts_made.from_abuselogs / stats.reverts_made.total * 100 || 0).toFixed(2);
 
 			const $other = document.querySelector("#stats-other-reverts-percentage");
 			$other.textContent = (stats.reverts_made.from_loaded_edits / stats.reverts_made.total * 100 || 0).toFixed(2);
@@ -2014,5 +2086,16 @@ export class Settings {
 		document.querySelector("#settings-container > .settings > .settings-right > .save").classList.remove("hidden");
 
 		document.querySelector("#settings-save-status").classList.add("hidden");
+	}
+
+	changelog() {
+		this.deselect();
+
+		document.querySelector("#settings-changelog-button").classList.add("selected");
+		document.querySelector("#settings-container > .settings > .settings-right > .changelog").classList.remove("hidden");
+
+		const $changelog = document.querySelector("#settings-container > .settings > .settings-right > .changelog > div > .changelog-content");
+		$changelog.innerHTML = "<em class='animate-loading-dots'>Loading changelog</em>";
+		WikiShield.config.changelog.HTML.then(html => $changelog.innerHTML = html);
 	}
 }

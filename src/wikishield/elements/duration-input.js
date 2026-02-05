@@ -1,4 +1,4 @@
-import { expiryRegex } from '../utils/helpers.js';
+import { expiryRegex } from '../utilities/helpers.js';
 
 class DurationInput extends HTMLElement {
     constructor() {
@@ -144,4 +144,4 @@ class DurationInput extends HTMLElement {
         }
     }
 }
-window.customElements.define('duration-input', DurationInput);
+customElements.define('duration-input', DurationInput);

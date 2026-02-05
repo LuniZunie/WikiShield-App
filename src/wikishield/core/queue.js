@@ -1,13 +1,15 @@
-import { Memory, Stack } from "../utils/memory.js";
+import { Memory, Stack } from "../../../global/memory/script.esm.js";
 
 export class Queue {
-	static refresh = 1000;
-	static types = [ "recent", "pending", "watchlist", "users" ];
+	static refresh = 2000;
+	static types = [ "recent", "pending", "watchlist", "abuselog", "users" ];
 	static groups = {
 		recent: "edit",
 		pending: "edit",
 		watchlist: "edit",
 		edit: "edit",
+
+		abuselog: "abuselog",
 
 		users: "logevent"
 	};
@@ -45,18 +47,38 @@ export class Queue {
 			]
 		}));
 
+		this.cache = {
+			simple: new Memory({ size: 2500 }),
+			full: new Memory({ size: 500 })
+		};
+
 		this.current = this.queues[Queue.types[0]];
 
 		this.pending = new Map();
-		this.watchlist = { };
-		this.talks = { };
+		this.watchlist = new Memory({ size: 10000 });
+		this.talks = new Memory({ size: 1000 });
+		this.warnings = new Memory({ size: 10000, timeout: 24 * 60 * 60 * 1000 }); // 1 day
 		this.noWelcome = new Memory({ timeout: 60 * 60 * 1000 }); // 1 hour
 
 		this.playedSound = {
 			mention: new Memory({ timeout: 60 * 1000 })
 		};
 
+		this.bypass = new Memory({ timeout: 60 * 60 * 1000, size: 10000 }); // 1 hour
+
 		this.backoff = 2000;
+
+		this.ws.api.feeds(
+			{ ns: "*", since: ws.util.utcString(new Date(Date.now() - 60 * 1000)) }, // recent
+			{ ns: "*", full: true }, // pending
+			{ ns: "*", since: ws.util.utcString(new Date(Date.now() - 60 * 1000)) }, // users
+			{ ns: "*", since: ws.util.utcString(new Date(Date.now() - 60 * 1000)) }, // watchlist
+			{ ns: "*", since: ws.util.utcString(new Date(Date.now() - 60 * 1000)) }  // abuselog
+		).then(feeds => {
+			console.log(feeds);
+		}).catch(error => {
+			console.error("Initial feed fetch failed:", error);
+		});
 	}
 
 	switch(type) {
@@ -66,7 +88,7 @@ export class Queue {
 			this.queues.pending.queue = this.queues.pending.queue.filter(item => this.pending.has(item.id));
 
 		this.current = this.queues[type];
-		if (!this.current.queue.some(item => item === this.current.item))
+		if (!this.current.queue.some(item => item.id === this.current.item?.id))
 			this.current.item = this.current.queue[0] || null;
 
 		this.ws.gui.renderQueue();
@@ -78,15 +100,16 @@ export class Queue {
 
 	async fetch(type) {
 		if (!this.ws.store.settings.queue[type].enabled)
-			return window.setTimeout(() => this.fetch(type), Queue.refresh);
+			return setTimeout(() => this.fetch(type), Queue.refresh);
 
 		try {
 			const whitelist = this.ws.store.whitelist;
 
 			let ns = "*";
 			switch (type) {
-				case "recent": {
-					// ns = this.ws.store.settings.namespaces.join("|");
+				case "recent":
+				case "abuselog": {
+					ns = this.ws.store.settings.namespaces.join("|");
 				} break;
 				case "pending": {
 					const pending = await this.ws.api.queue(type, ns, undefined, true);
@@ -102,7 +125,7 @@ export class Queue {
 			const lastId = this.queues[type].last.id;
 
 			let q = await this.ws.api.queue(type, ns, timestamp || undefined, false) ?? [ ];
-			if (q[0])
+			if (q[0]?.timestamp)
 				this.queues[type].last.timestamp = this.ws.util.utcString(new Date(q[0].timestamp));
 
 			switch (Queue.groups[type]) {
@@ -112,6 +135,9 @@ export class Queue {
 						q = q.filter(item => fn(item) && !whitelist.pages.has(item.title));
 					else
 						q = q.filter(fn);
+				} break;
+				case "abuselog": {
+					q = q.filter(item => item.id > lastId);
 				} break;
 				case "logevent": {
 					q = q.filter(item => item.logid > lastId);
@@ -199,21 +225,26 @@ export class Queue {
 			if (q.length === 0) {
 				if (changed)
 					this.ws.gui.renderQueue(this.queues[type].queue, this.current.edit, type);
-				return window.setTimeout(() => this.fetch(type), Queue.refresh);
+				return setTimeout(() => this.fetch(type), Queue.refresh);
 			}
 
 			switch (Queue.groups[type]) {
 				case "edit": {
 					this.queues[type].last.id = Math.max(...q.map(item => item.revid));
 
-					q = q.filter(item => !whitelist.users.has(item.user) && !item.tags?.some(tag => whitelist.tags.has(tag)));
+					const highlight = this.ws.store.highlight;
+					const hasHighlight = item => highlight.users.has(item.user) ||
+												 highlight.pages.has(item.title) ||
+												 item.tags?.some(tag => highlight.tags.has(tag));
+
+					q = q.filter(item => !whitelist.users.has(item.user) && !item.tags?.some(tag => whitelist.tags.has(tag)) && (!this.bypass.has(item.user) || hasHighlight(item)));
 
 					// parallel
 					let [
 						editCounts,
 						ores
 					] = await Promise.allSettled([
-						type === "recent" ? this.ws.api.getEditCounts(q.map(item => item.user)) : Promise.resolve([ ]),
+						type === "recent" ? this.ws.api.getEditCounts(q.map(item => item.user).filter(user => !this.bypass.has(user))) : Promise.resolve([ ]),
 						this.ws.api.getORES(q.map(item => item.revid))
 					]);
 
@@ -231,33 +262,30 @@ export class Queue {
 					else
 						ores = { };
 
-					const highlight = this.ws.store.highlight;
-
 					const repeats = this.queues[type].repeats;
-					const hasHighlight = item => highlight.users.has(item.user) ||
-												 highlight.pages.has(item.title) ||
-												 item.tags?.some(tag => highlight.tags.has(tag));
-
 					const filtered = [ ];
 					if (type === "recent") {
 						const minORES = this.ws.store.settings.queue.min_ores;
 						const max = this.ws.store.settings.queue.max_edits;
 						q.forEach(item => {
-							if (isNaN(ores[item.revid]) && repeats[item.revid] < 3) {
+							if (isNaN(ores[item.revid]) && (repeats[item.revid] || 0) < 3) {
 								repeats[item.revid] = (repeats[item.revid] || 0) + 1;
-								return this.queues[type].halted.push(item);
+								return this.queues[type].hold.push(item);
 							}
 
 							delete repeats[item.revid];
 
-							if (editCounts[item.user] <= max && ((ores[item.revid] || 0) >= minORES || hasHighlight(item)))
+							const edits = editCounts[item.user] ?? this.bypass.get(item.user) ?? 0;
+							if (edits > max)
+								this.bypass.set(item.user, edits);
+							else if ((ores[item.revid] || 0) >= minORES || hasHighlight(item))
 								filtered.push(item);
 						});
 					} else
 						q.forEach(item => {
-							if (isNaN(ores[item.revid]) && repeats[item.revid] < 3) {
+							if (isNaN(ores[item.revid]) && (repeats[item.revid] || 0) < 3) {
 								repeats[item.revid] = (repeats[item.revid] || 0) + 1;
-								return this.queues[type].halted.push(item);
+								return this.queues[type].hold.push(item);
 							}
 
 							delete repeats[item.revid];
@@ -285,9 +313,33 @@ export class Queue {
 
 					await this.add(type, filtered);
 				} break;
+				case "abuselog": {
+					const noEditCounts = q.filter(item => item.editcount === null);
+
+					let editCounts = { };
+					if (noEditCounts.length > 0)
+						editCounts = await this.ws.api.getEditCounts(noEditCounts.map(item => item.user));
+
+					const maxEdits = this.ws.store.settings.queue.max_edits;
+
+					let max = 0;
+					const filtered = [ ];
+					q.forEach(item => {
+						if (((item.editcount ?? editCounts[item.user]) || 0) > maxEdits)
+							return;
+
+						if (item.id > max)
+							max = item.id;
+						filtered.push(item);
+					});
+
+					this.queues[type].last.id = max;
+
+					await this.add(type, filtered);
+				} break;
 			}
 
-			if (type !== "pending")
+			if (type !== "pending" && type !== "users")
 				await this.outdated(type);
 
 			this.backoff = Queue.refresh;
@@ -296,53 +348,80 @@ export class Queue {
 			this.backoff = Math.min(this.backoff * 2, 120000);
 		}
 
-		window.setTimeout(() => this.fetch(type), this.backoff);
+		setTimeout(() => this.fetch(type), this.backoff);
 	}
-
 	async outdated(type) {
 		if (this.queues[type].queue.length === 0)
 			return;
 
-		const titles = [ ...new Set(this.queues[type].queue.map(item => item.page.title)) ];
-		if (titles.length === 0)
-			return;
-
-		const remove = new Set();
+		const remove = [ ];
 		switch (type) {
-			case "pending": {
-				for (const item of this.queues[type].queue)
-					if (!this.pending.has(item.id))
-						remove.add(item);
-			} break;
-			default: {
-				const latests = await this.ws.api.getLatestIDs(titles);
+			case "flagged": {
 				for (const item of this.queues[type].queue) {
 					if (item === this.current.item)
 						continue;
 
-					const latest = latests[item.page.title];
-					if (latest > item.revid)
-						remove.add(item);
+					if (!this.pending.has(item.id))
+						remove.push(item);
 				}
+
+				if (remove.length > 0)
+					for (const item of remove) {
+						const i = this.queues[type].queue.indexOf(item);
+						if (i > -1) {
+							this.queues[type].queue.splice(i, 1);
+							this.ws.gui.removeQueueItem(type, item.id);
+						}
+					}
 			} break;
-		}
+			default: {
+				let queue = this.queues[type].queue;
+				if (type === "abuselog")
+					queue = queue.filter(item => item.revid);
 
-		if (remove.size > 0) {
-			for (const item of remove) {
-				const i = this.queues[type].queue.indexOf(item);
-				if (i > -1) {
-					this.queues[type].queue.splice(i, 1);
-					this.ws.gui.removeQueueItem(type, item.id);
+				const pages = [ ...new Set(queue.map(item => item.page.title)) ];
+				if (pages.length === 0)
+					return;
+
+				const latests = await this.ws.api.getLatestIds(pages);
+				for (const item of queue) {
+					let revid = item.id;
+					if (type === "abuselog") {
+						if (item.revid)
+							revid = item.revid;
+						else
+							continue;
+					}
+
+					const latest = latests[item.page.title];
+					if (latest && latest > revid)
+						remove.push([ item.id, revid ]);
 				}
-			}
 
-			this.ws.gui.renderQueue(this.queues[type].queue, this.queues[type].item, type);
+				if (remove.length > 0)
+					for (const [ id, revid ] of remove)
+						[ "recent", "watchlist", "abuselog" ].forEach(t => {
+							const prop = t === "abuselog" ? "revid" : "id";
+							if (revid === this.queues[t].item?.[prop])
+								return;
+
+							const i = this.queues[t].queue.findIndex(qItem => qItem[prop] === revid);
+							if (i > -1) {
+								this.queues[t].queue.splice(i, 1);
+								this.ws.gui.removeQueueItem(t, id);
+							}
+						});
+			}
 		}
+
+		if (remove.length > 0)
+			this.ws.gui.renderQueue(this.queues[type].queue, this.queues[type].item, type);
 	}
 
 	async add(type, items) {
-		const prop = { "edit": "revid", "logevent": "logid" }[Queue.groups[type]];
+		const prop = { "edit": "revid", "logevent": "logid", "abuselog": "id" }[Queue.groups[type]];
 		items = items.filter(item => !this.queues[type].memory.has(item[prop]));
+		items.forEach(item => this.queues[type].memory.add(item[prop]));
 
 		const len = items.length;
 		if (len === 0)
@@ -358,7 +437,6 @@ export class Queue {
 					const data = parsed[i];
 
 					this.queues[type].queue.push(data);
-					this.queues[type].memory.add(item.revid);
 
 					if (type === "recent" && data.ores >= threshold)
 						play.ores = true;
@@ -375,7 +453,19 @@ export class Queue {
 					const data = parsed[i];
 
 					this.queues[type].queue.push(data);
-					this.queues[type].memory.add(item.revid);
+
+					if (data.mentions.has && !this.playedSound.mention.has(data.id)) {
+						this.playedSound.mention.add(data.id);
+						play.mention = true;
+					}
+				}
+			} break;
+			case "abuselog": {
+				for (let i = 0; i < len; i++) {
+					const item = items[i];
+					const data = parsed[i];
+
+					this.queues[type].queue.push(data);
 
 					if (data.mentions.has && !this.playedSound.mention.has(data.id)) {
 						this.playedSound.mention.add(data.id);
@@ -453,11 +543,52 @@ export class Queue {
 					const bScore = mentions && b.mentions.has;
 
 					if (aScore === bScore)
-						return b.id - a.id;
+						return a.id - b.id;
+					return bScore - aScore;
+				});
+			} break;
+			case "abuselog": {
+				sorted = sorted.sort((a, b) => {
+					if (a.history && b.history)
+						return a.history - b.history;
+					else if (a.history)
+						return -1;
+					else if (b.history)
+						return 1;
+
+					let aScore = 0;
+					if (highlight.users.has(a.user.name))
+						aScore += 100;
+					if (highlight.pages.has(a.page.title))
+						aScore += 75;
+
+					if (mentions && a.mentions.has)
+						aScore += 200;
+
+					let bScore = 0;
+					if (highlight.users.has(b.user.name))
+						bScore += 100;
+					if (highlight.pages.has(b.page.title))
+						bScore += 75;
+
+					if (mentions && b.mentions.has)
+						bScore += 200;
+
+					if (aScore === bScore)
+						return a.id - b.id;
 					return bScore - aScore;
 				});
 			} break;
 		}
+
+		// it's doubling up somewhere and idk why but this should fix it
+		const existing = new Set(this.queues[type].item?.id ? [ this.queues[type].item.id ] : [ ]);
+		sorted = sorted.filter(item => {
+			if (existing.has(item.id))
+				return false;
+			existing.add(item.id);
+			return true;
+		});
 
 		if (i >= 0)
 			sorted.splice(i, 0, this.queues[type].item);
@@ -466,9 +597,11 @@ export class Queue {
 		if (!this.queues[type].item)
 			this.queues[type].item = this.queues[type].queue[0];
 	}
-	async generate(type, items, simple) {
+	async generate(type, items, simple, options = { }) {
 		if (items.length === 0)
 			return [ ];
+
+		const bypass = options?.bypass ?? false;
 
 		const ws = this.ws;
 		const username = ws.api.username;
@@ -476,6 +609,17 @@ export class Queue {
 		const result = [ ];
 		switch (Queue.groups[type]) {
 			case "edit": {
+				items = items.filter(item => {
+					if (simple) {
+						if (this.cache.full.has(item.revid))
+							return void(result.push(this.cache.full.get(item.revid))) ?? false;
+						else if (this.cache.simple.has(item.revid))
+							return void(result.push(this.cache.simple.get(item.revid))) ?? false;
+					} else if (this.cache.full.has(item.revid))
+						return void(result.push(this.cache.full.get(item.revid))) ?? false;
+					return true;
+				});
+
 				items = items.map(item => {
 					let prior = null;
 					if (item.pending)
@@ -485,7 +629,7 @@ export class Queue {
 					return { item, prior };
 				});
 
-				const parsed = await ws.api.parseEdits(items, simple);
+				const parsed = await ws.api.parseEdits(items, simple, bypass);
 				for (const temp of parsed) {
 					const { item, prior, data } = temp;
 
@@ -501,7 +645,12 @@ export class Queue {
 						}
 					}
 
-					this.watchlist[item.title] = data.page.watched;
+					this.watchlist.set(item.title, data.page.watched);
+
+					const levels = [ "0", "1", "2", "3", "4", "4im" ];
+					const warning = this.getWarningLevel(data.user.talk || "");
+                	if (levels.indexOf(warning) > levels.indexOf(this.warnings.get(item.user) || "0"))
+                    	this.warnings.set(item.user, warning);
 
 					const object = {
 						display: {
@@ -566,7 +715,7 @@ export class Queue {
 
 							history: data.page.history,
 							get watched() {
-								return ws.queue.watchlist[item.title] ?? data.page.watched;
+								return ws.queue.watchlist.get(item.title) ?? data.page.watched;
 							},
 
 							metadata: data.page.metadata,
@@ -589,7 +738,7 @@ export class Queue {
 							blocks: data.user.blocks,
 
 							get talk() {
-								return ws.queue.talks[item.user] ?? data.user.talk;
+								return ws.queue.talks.get(item.user) ?? data.user.talk;
 							}
 						},
 						mentions: {
@@ -609,13 +758,13 @@ export class Queue {
 						minor: item.minor || false,
 
 						diff: data.edit.diff,
-						sizediff: (item.newlen ? item.newlen - item.oldlen : item.sizediff) || 0,
+						sizediff: ("sizediff" in item ? item.sizediff : item.newlen - item.oldlen) || 0,
 
 						ores: data.edit.ores,
 						tags: item.tags || [ ],
 
 						reverts: data.page.reverts,
-						consecutive: simple ? undefined : ws.api.getConsecutiveEdits(item.title, item.revid, item.user),
+						consecutive: simple ? undefined : ws.api.getConsecutiveEdits(item.title, item.revid, item.user, bypass),
 
 						propagating: false,
 						reviewed: false,
@@ -623,6 +772,7 @@ export class Queue {
 
 						pending: item.pending || false,
 
+						group: Queue.groups[type],
 						type: type,
 
 						simple: simple,
@@ -634,7 +784,7 @@ export class Queue {
 								.then(analysis => object.AI.edit = analysis)
 								.catch(error => object.AI.edit = { error: error.message })
 								.finally(() => {
-									if (this.current.item === object)
+									if (object.id === this.current.item?.id)
 										ws.gui.updateAIAnalysisDisplay(object.AI.edit);
 								});
 
@@ -649,11 +799,18 @@ export class Queue {
 					}
 
 					result.push(object);
+					if (simple)
+						this.cache.simple.set(item.revid, object);
+					else {
+						this.cache.full.set(item.revid, object);
+						if (this.cache.simple.has(item.revid))
+							this.cache.simple.delete(item.revid);
+					}
 				}
 			} break;
-			case "logevent": { // TODO, tags?
-				const parsed = await ws.api.parseUsers(items.map(item => item.title.replace(/^(User|User talk):/, "")), simple);
-				const performers = await ws.api.parseUsers(items.map(item => item.user), simple);
+			case "logevent": {
+				const parsed = await ws.api.parseUsers(items.map(item => item.title.replace(/^(User|User talk):/, "")), simple, bypass);
+				const performers = await ws.api.parseUsers(items.map(item => item.user), simple, bypass);
 
 				for (let i = 0; i < items.length; i++) {
 					const item = items[i];
@@ -669,6 +826,15 @@ export class Queue {
 						if (item.comment)
 							mentions.comment = ws.util.match(username, item.comment);
 					}
+
+					const levels = [ "0", "1", "2", "3", "4", "4im" ];
+					const warning = this.getWarningLevel(data.user.talk || "");
+                	if (levels.indexOf(warning) > levels.indexOf(this.warnings.get(user) || "0"))
+                    	this.warnings.set(user, warning);
+
+					const performerWarning = this.getWarningLevel(performer.user.talk || "");
+                	if (levels.indexOf(warning) > levels.indexOf(this.warnings.get(item.user) || "0"))
+                    	this.warnings.set(item.user, warning);
 
 					const object = {
 						display: {
@@ -733,7 +899,7 @@ export class Queue {
 						},
 						page: {
 							namespace: item.ns,
-							title: item.title,
+							title: item.title
 						},
 						user: {
 							name: user,
@@ -750,7 +916,9 @@ export class Queue {
 							blocked: data.user.blocked,
 							blocks: data.user.blocks,
 
-							talk: data.user.talk,
+							get talk() {
+								return ws.queue.talks.get(user) ?? data.user.talk;
+							}
 						},
 						performer: {
 							name: item.user,
@@ -767,7 +935,9 @@ export class Queue {
 							blocked: performer.user.blocked,
 							blocks: performer.user.blocks,
 
-							talk: performer.user.talk,
+							get talk() {
+								return ws.queue.talks.get(item.user) ?? performer.user.talk;
+							}
 						},
 						mentions: {
 							has: Object.values(mentions).some(v => v),
@@ -786,12 +956,182 @@ export class Queue {
 						reviewed: false,
 						history: false,
 
+						group: Queue.groups[type],
 						type: type,
 
 						simple: simple,
 						origin: item,
 					};
 					if (!simple && ws.AI) {
+						if (!object.user.anon && !ws.store.whitelist.users.has(object.user.name) && ws.store.settings.AI.username_analysis.enabled)
+							ws.AI.analyze.username(object)
+								.then(analysis => {
+									object.AI.username = analysis;
+									if (analysis.flag)
+										this.promptUAA(object, analysis);
+								})
+								.catch(error => object.AI.username = { error: error.message });
+					}
+
+					result.push(object);
+				}
+			} break;
+			case "abuselog": {
+				const parsed = await ws.api.parseAbuselogs(items, simple, bypass);
+				for (const temp of parsed) {
+					const { item, data } = temp;
+
+					const mentions = { comment: false, diff: false };
+					if (username) {
+						if (item.comment)
+							mentions.comment = ws.util.match(username, item.comment);
+						if (data.edit.diff) {
+							const $temp = document.createElement("div");
+							$temp.innerHTML = data.edit.diff;
+							if ($temp.textContent)
+								mentions.diff = ws.util.match(username, $temp.textContent);
+						}
+					}
+
+					this.watchlist.set(item.title, data.page.watched);
+
+					const levels = [ "0", "1", "2", "3", "4", "4im" ];
+					const warning = this.getWarningLevel(data.user.talk || "");
+                	if (levels.indexOf(warning) > levels.indexOf(this.warnings.get(item.user) || "0"))
+                    	this.warnings.set(item.user, warning);
+
+					const object = {
+						display: {
+							get title() {
+								const $title = document.createElement("div");
+								$title.className = "page-title";
+								$title.classList.toggle("queue-highlight", ws.store.highlight.pages.has(item.title));
+
+								const $icon = document.createElement("span");
+								$icon.className = "fa fa-file-alt queue-item-icon";
+								$title.appendChild($icon);
+
+								const $text = document.createElement("a");
+								$text.href = ws.util.pageLink(item.title);
+								$text.dataset.tooltip = item.title;
+								$text.dataset.multipleHrefs = `page-abuse;title=${encodeURIComponent(item.title)}&id=${item.id}`;
+								$text.textContent = ws.util.truncate(item.title, 50);
+								$title.appendChild($text);
+
+								return $title.outerHTML;
+							},
+							get username() {
+								const $user = document.createElement("div");
+								$user.className = "username";
+								$user.classList.toggle("queue-highlight", ws.store.highlight.users.has(item.user));
+								$user.classList.toggle("queue-user-empty-talk", data.user.talk === undefined);
+
+								const $icon = document.createElement("span");
+								$icon.className = "fa fa-user queue-user-icon";
+								$user.appendChild($icon);
+
+								const $text = document.createElement("a");
+								$text.classList.toggle("user-blocked", data.user.blocked);
+								$text.href = ws.util.pageLink(`User:${item.user}`);
+								$text.dataset.tooltip = item.user;
+								$text.dataset.multipleHrefs = `user;name=${encodeURIComponent(item.user)}`;
+								$text.textContent = ws.util.truncate(item.user, 30);
+								$user.appendChild($text);
+
+								return $user.outerHTML;
+							},
+							get filters() {
+								const $filters = document.createElement("div");
+								$filters.className = "tags";
+
+								const filters = item.entries.map(entry => ({ id: entry?.filter_id || "-1", filter: entry?.filter }));
+								filters.sort((a, b) => +a.id - +b.id);
+								filters.forEach(filter => {
+									const $filter = document.createElement("span");
+									$filter.className = "tag";
+									$filter.dataset.tooltip = filter.filter;
+									$filter.textContent = ws.util.truncate(filter.id, 10);
+									$filters.appendChild($filter);
+								});
+
+								return $filters.outerHTML;
+							}
+						},
+						page: {
+							namespace: item.ns,
+							title: item.title,
+
+							history: data.page.history,
+							get watched() {
+								return ws.queue.watchlist.get(item.title) ?? data.page.watched;
+							},
+
+							metadata: data.page.metadata,
+							categories: data.page.categories,
+							protection: data.page.protection,
+						},
+						user: {
+							name: item.user,
+							ip: ws.util.isIPAddress(item.user),
+							temp: ws.util.isTempAccount(item.user),
+							anon: ws.util.isIPAddress(item.user) || ws.util.isTempAccount(item.user),
+
+							edits: Math.max(data.user.edits, data.user.contributions?.length || 0),
+							contributions: data.user.contributions,
+
+							warning: this.getWarningLevel(data.user.talk || ""),
+							warnings: this.getWarningHistory(data.user.talk || ""),
+
+							blocked: data.user.blocked,
+							blocks: data.user.blocks,
+
+							get talk() {
+								return ws.queue.talks.get(item.user) ?? data.user.talk;
+							}
+						},
+						mentions: {
+							has: Object.values(mentions).some(v => v),
+							...mentions
+						},
+						AI: { // will be populated asynchronously
+							edit: null,
+							username: null
+						},
+
+						id: item.id,
+						revid: item.revid,
+
+						timestamp: item.timestamp,
+						comment: item.comment,
+						minor: false,
+
+						diff: data.edit.diff,
+						sizediff: item.diff?.size,
+
+						filters: item.entries.map(entry => ({ id: entry?.filter_id || "-1", filter: entry?.filter })) || [ ],
+
+						reverts: data.page.reverts,
+
+						propagating: false,
+						reviewed: false,
+						history: false,
+
+						group: Queue.groups[type],
+						type: type,
+
+						simple: simple,
+						origin: item,
+					};
+					if (!simple && ws.AI) {
+						if (ws.store.settings.AI.edit_analysis.enabled && data.edit.diff) // only analyze if diff exists
+							ws.AI.analyze.edit(object)
+								.then(analysis => object.AI.edit = analysis)
+								.catch(error => object.AI.edit = { error: error.message })
+								.finally(() => {
+									if (object.id === this.current.item?.id)
+										ws.gui.updateAIAnalysisDisplay(object.AI.edit);
+								});
+
 						if (!object.user.anon && !ws.store.whitelist.users.has(object.user.name) && ws.store.settings.AI.username_analysis.enabled)
 							ws.AI.analyze.username(object)
 								.then(analysis => {
@@ -814,7 +1154,7 @@ export class Queue {
 		if (this.current.queue.length === 0)
 			return;
 
-		const i = this.current.queue.findIndex(item => item === this.current.item);
+		const i = this.current.queue.findIndex(item => item.id === this.current.item?.id);
 		if (i === -1) {
 			this.current.item = this.current.queue[0];
 			return this.ws.gui.renderQueue();
@@ -826,6 +1166,17 @@ export class Queue {
 		}
 
 		const leaving = this.current.item;
+		const group = Queue.groups[leaving.type];
+		if (!leaving.reviewed && (group === "edit" || (group === "abuselog" && leaving.revid))) {
+			const id = leaving.type === "abuselog" ? leaving.revid : leaving.id;
+			[ "recent", "watchlist", "abuselog" ].filter(t => t !== leaving.type).forEach(t => {
+				if (t === "abuselog")
+					this.queues[t].queue = this.queues[t].queue.filter(item => item.revid !== id);
+				else
+					this.queues[t].queue = this.queues[t].queue.filter(item => item.id !== id);
+			});
+		}
+
 		leaving.reviewed = true;
 		if (leaving && this.ws.AI)
 			this.ws.AI.cancel.edit(leaving.id);
@@ -850,7 +1201,7 @@ export class Queue {
 	}
 
 	previous() {
-		const i = this.current.queue.findIndex(item => item === this.current.item);
+		const i = this.current.queue.findIndex(item => item.id === this.current.item?.id);
 		if (this.current.type === "pending") {
 			this.current.item = this.current.queue[Math.max(i - 1, 0)];
 			return this.ws.gui.renderQueue();
@@ -867,6 +1218,7 @@ export class Queue {
 		}
 
 		this.current.item = this.current.queue[i - 1];
+
 		this.ws.gui.renderQueue();
 	}
 
@@ -877,8 +1229,10 @@ export class Queue {
 		this.queues[type].item = null;
 		this.queues[type].queue = [ ];
 
-		if (this.current.type === type)
+		if (this.current.type === type) {
+			this.ws.gui.newCurrentItem(null);
 			this.ws.gui.clearQueueItems();
+		}
 	}
 
 	async promptWelcome(item) {
@@ -897,7 +1251,7 @@ export class Queue {
 			const title = `User talk:${item.user.name}`;
 			const exists = await this.ws.api.pagesExist([ title ]);
 			if (exists[title] !== undefined)
-				return this.talks[item.user.name] = exists[title];
+				return void(this.talks.set(item.user.name, exists[title])) ?? exists[title];
 
 			await this.ws.gui.settings.waitForClose();
 			const confirmed = await this.ws.gui.dialog.confirm(
@@ -910,14 +1264,16 @@ export class Queue {
 			this.noWelcome.add(item.user.name);
 			if (confirmed)
 				this.ws.execute({
-					name: "welcome",
-					params: {
-						template: "Auto"
-					}
+					actions: [
+						{
+							name: "welcome-user",
+							params: {
+								template: "Auto"
+							}
+						}
+					]
 				}, void 0, void 0, item);
-		} catch (error) {
-			console.error("Error during auto-welcome check:", error);
-		}
+		} catch (error) { console.error("Error during auto-welcome check:", error); }
 	}
 	async promptUAA(item, analysis) {
 		if (item.user.anon)
@@ -948,15 +1304,19 @@ export class Queue {
 			const reason = await this.ws.gui.dialog.UAA(item.user.name);
 			if (reason)
 				this.ws.execute({
-					name: "reportUAA",
-					params: {
-						reportMessage: reason
-					}
+					actions: [
+						{
+							name: "report-user-to-uaa",
+							params: {
+								reason: reason
+							}
+						}
+					]
 				}, void 0, void 0, item);
 		}
 	}
 
-	async propagate(item) {
+	async propagate(item, bypass) {
 		if (item.propagating)
 			return await item.propagating;
 
@@ -964,7 +1324,7 @@ export class Queue {
 			let resolve;
 			item.propagating = new Promise(res => resolve = res);
 
-			const [ loaded ] = await this.generate(item.type, [ item.origin ], false);
+			const [ loaded ] = await this.generate(item.type, [ item.origin ], false, { bypass });
 			Object.assign(item, loaded);
 
 			resolve();
@@ -972,14 +1332,12 @@ export class Queue {
 		}
 	}
 
-	async loadFromItem(item) {
-		await this.propagate(item);
-
+	loadFromItem(item) {
 		const type = this.current.type;
-		if (Queue.areSameGroup(type, "edit") && type !== "pending") {
+		if (Queue.areSameGroup(type, "edit") && !(type === "pending" && item.type === "edit")) {
 			this.queues[type].queue = this.queues[type].queue.filter(i => i.id !== item.id);
 
-			const i = this.queues[type].queue.findIndex(i => i === this.current.item);
+			const i = this.queues[type].queue.findIndex(i => i.id === this.current.item?.id);
 			if (i > -1)
 				this.queues[type].queue[i] = item;
 		}
@@ -989,40 +1347,64 @@ export class Queue {
 	}
 	async loadFromRevision(title, revid) {
 		try {
-			let type = this.current.type;
+			this.ws.gui.updateDiffDisplay("loading");
 
-			const $diff = document.querySelector("#diff-container");
-			$diff.innerHTML = "<div>Loading revision<span class='loading-dots'></span></div>";
+			let item;
+			if (this.cache.full.has(revid))
+				item = this.cache.full.get(revid);
+			else {
+				let object;
+				if (this.cache.simple.has(revid)) {
+					const simple = this.cache.simple.get(revid);
+					object = {
+						revid: simple.id,
+						parentid: simple.prior,
 
-			const rev = await this.ws.api.getRevision(title, revid);
-			if (!rev)
-				throw new Error("Revision not found");
+						ns: simple.page.namespace,
+						title: simple.page.title,
+						user: simple.user.name,
 
-			const object = {
-				revid: rev.revid,
-				parentid: rev.parentid,
+						timestamp: simple.timestamp,
+						comment: simple.comment,
+						tags: simple.origin.tags,
 
-				ns: rev.ns,
-				title: title,
-				user: rev.user,
+						sizediff: simple.sizediff,
 
-				timestamp: rev.timestamp,
-				comment: rev.comment,
-				tags: rev.tags,
+						minor: simple.minor,
+					};
+				} else {
+					const rev = await this.ws.api.getRevision(title, revid, true);
+					if (!rev)
+						throw new Error("Revision not found");
 
-				size: rev.size,
-				oldlen: rev.oldlen || 0,
-				newlen: rev.size,
+					object = {
+						revid: rev.revid,
+						parentid: rev.parentid,
 
-				minor: rev.minor,
-			};
+						ns: rev.ns,
+						title: title,
+						user: rev.user,
 
-			const [ item ] = await this.generate(type, [ object ], false);
-			type = this.current.type;
-			if (Queue.areSameGroup(type, "edit") && type !== "pending") {
+						timestamp: rev.timestamp,
+						comment: rev.comment,
+						tags: rev.tags,
+
+						size: rev.size,
+						oldlen: rev.oldlen || 0,
+						newlen: rev.size,
+
+						minor: rev.minor,
+					};
+				}
+
+				[ item ] = await this.generate("edit", [ object ], false, { bypass: true });
+			}
+
+			const type = this.current.type;
+			if (Queue.areSameGroup(type, "edit") && type !== "pending" && type !== "abuselog") {
 				this.queues[type].queue = this.queues[type].queue.filter(i => i.id !== item.id);
 
-				const i = this.queues[type].queue.findIndex(i => i === this.current.item);
+				const i = this.queues[type].queue.findIndex(i => i.id === this.current.item?.id);
 				if (i > -1)
 					this.queues[type].queue[i] = item;
 			}
@@ -1076,12 +1458,13 @@ export class Queue {
 					if (timestamp)
 						timestamp = timestamp.replace(/<[^>]*>/g, '');
 
-					{
+					if (timestamp) {
 						const [ , time, day, monthName, year ] = timestamp.match(/(\d{2}:\d{2}), (\d{1,2}) ([A-Za-z]+) (\d{4})/);
 
 						const i = [ "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December" ].indexOf(monthName);
 						timestamp = new Date(Date.UTC(year, i, day, ...time.split(":"))).toUTCString();
-					}
+					} else
+						timestamp = null;
 
 					let username = null;
 					const userLinkMatch = content.match(/\[\[User(?:[ _]talk)?:([^\]|]+)/i);

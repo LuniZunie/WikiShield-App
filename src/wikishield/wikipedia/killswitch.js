@@ -1,5 +1,3 @@
-import { API } from "./api.js";
-
 export class Killswitch {
     static #page = "User:LuniZunie/killswitch.js";
 
@@ -20,8 +18,7 @@ export class Killswitch {
     };
 
     constructor(ws) {
-        this.#api = new API(ws, ws.server === "test.wikipedia.org" ? "test.wikipedia.org" : "en.wikipedia.org");
-        this.#api.login();
+        this.#api = ws.api;
     }
 
     on(event, callback, options = { }) {
@@ -46,9 +43,7 @@ export class Killswitch {
 
     async check() {
         try {
-            await this.#api.login();
-
-            const content = (await this.#api.getPagesContent([ Killswitch.#page ]))?.[Killswitch.#page] ?? "";
+            const content = (await this.#api.getPagesContent([ Killswitch.#page ], true, "en.wikipedia.org"))?.[Killswitch.#page] ?? "";
             const data = JSON.parse(content)?.WikiShield;
             if (!data)
                 throw new Error("No killswitch found");
@@ -74,8 +69,8 @@ export class Killswitch {
 
     monitor(interval = 10 * 1000) {
         if (this.#interval)
-            window.clearInterval(this.#interval);
-        this.#interval = window.setInterval(() => this.check(), +interval);
+            clearInterval(this.#interval);
+        this.#interval = setInterval(() => this.check(), +interval);
         return this;
     }
 }

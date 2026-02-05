@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WikiShield - Translation</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../common/style.css">
+    <link rel="stylesheet" href="style.css">
+
+    <script defer src="script.js"></script>
+</head>
+<body>
+    <div id="translation-container">
+        <div id="translation-content">
+            <div class="translation-header">
+                <div class="header-icon">
+                    <i class="fas fa-language"></i>
+                </div>
+                <h1>Translation</h1>
+                <p id="header-subtitle"></p>
+            </div>
+
+            <div id="loader">
+                <i class="fas fa-spinner fa-spin"></i>
+            </div>
+            <div id="content">
+                <div id="texts-container">
+                    <div class="text-block">
+                        <h2>Translated Text <span id="target-name" class="lang">Target Language</span></h2>
+                        <div id="translated-text" class="text-content">
+                            <!-- Translated text will be inserted here -->
+                        </div>
+                    </div>
+                    <div class="text-block">
+                        <h2>Original Text <span id="language-name" class="lang">Language</span></h2>
+                        <div id="original-text" class="text-content">
+                            <!-- Original text will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="close-container">
+        <button type="button" id="close" title="Close (Esc)">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+</body>
+</html>

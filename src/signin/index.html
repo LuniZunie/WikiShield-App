@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WikiShield - Sign In</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../common/style.css">
+    <link rel="stylesheet" href="style.css">
+
+    <script defer src="script.js"></script>
+</head>
+<body>
+    <div id="signin-container">
+        <div id="signin-content">
+            <div class="signin-header">
+                <div class="header-icon">
+                    <i class="fas fa-user-circle"></i>
+                </div>
+                <h1>WikiShield</h1>
+                <p class="header-subtitle">Select an account to sign in with, or attach a new one.</p>
+            </div>
+
+            <div id="accounts-container" class="accounts-list">
+                <!-- Accounts will be dynamically loaded here -->
+            </div>
+
+            <div class="signin-footer">
+                <button type="button" id="add-account">
+                    <i class="fas fa-plus"></i>
+                    <span>Add Account</span>
+                </button>
+                <div id="status-message"></div>
+            </div>
+        </div>
+    </div>
+    <div id="close-container">
+        <button type="button" id="close" title="Close (Esc)">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+</body>
+</html>

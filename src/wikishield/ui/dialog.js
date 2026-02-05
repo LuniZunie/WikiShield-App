@@ -11,9 +11,9 @@ export class Dialog {
 
         this.popups = [ ];
 
-        window.addEventListener("focus", () => {
+        addEventListener("focus", () => {
             if (this.popups.length > 0) {
-                this.popups.forEach(popup => popup.close());
+                this.popups.forEach(popupId => electronAPI.closePopup(popupId));
                 this.popups = [];
 
                 requestAnimationFrame(() => {
@@ -22,6 +22,18 @@ export class Dialog {
                 });
             }
         });
+
+        electronAPI.onPopupClosed(popupId => {
+            const index = this.popups.indexOf(popupId);
+            if (index !== -1)
+                this.popups.splice(index, 1);
+
+            if (this.popups.length === 0)
+                requestAnimationFrame(() => {
+                    if (this.popups.length === 0)
+                        document.querySelector("#popup-blocker")?.remove();
+                });
+        });
     }
 
     controller(event) {
@@ -29,7 +41,6 @@ export class Dialog {
     }
 
     check() {
-        this.popups = this.popups.filter(popup => !popup.closed);
         if (this.popups.length === 0)
             return requestAnimationFrame(() => {
                 if (this.popups.length === 0)
@@ -96,14 +107,12 @@ export class Dialog {
 
 		document.body.querySelector("#app").appendChild($toast);
 
-		window.setTimeout(() => {
+		setTimeout(() => {
 			this.ws.audio.playSound([ "notification", "toast" ]);
 			$toast.classList.add("show");
 		}, 10);
         if (duration > 0)
-            window.setTimeout(() => {
-                this.#hideToast($toast);
-            }, duration);
+            setTimeout(() => this.#hideToast($toast), duration);
 
 		return true;
 	}
@@ -113,7 +122,7 @@ export class Dialog {
             return;
 
         $toast.classList.add("hidden");
-        window.setTimeout(() => {
+        setTimeout(() => {
             if ($toast.parentElement)
                 $toast.remove();
         }, 300);
@@ -143,10 +152,8 @@ export class Dialog {
 
     #enqueue(fn, child = false) {
         return new Promise((resolve, reject) => {
-            if (child && this.dialogs.active) {
-                fn().then(resolve).catch(reject);
-                return;
-            }
+            if (child && this.dialogs.active)
+                return void(fn().then(resolve).catch(reject));
 
             this.dialogs.queue.push({ fn, child, resolve, reject });
             this.#process();
@@ -208,34 +215,33 @@ export class Dialog {
                 $overlay.classList.add("closing");
                 $modal.classList.add("closing");
 
-                window.setTimeout(() => {
+                setTimeout(() => {
                     $overlay.remove();
                     resolve(result);
                 }, 200);
             };
 
-            const keyHandler = e => {
-				if (e.key === "Enter") {
-					e.preventDefault();
-					e.stopPropagation();
+            const keyHandler = event => {
+				if (event.key === "Enter") {
+					event.preventDefault();
+					event.stopPropagation();
 
 					closeModal(input.value);
 
 					return false;
-				} else if (e.key === "Escape") {
-					e.preventDefault();
-					e.stopPropagation();
+				} else if (event.key === "Escape") {
+					event.preventDefault();
+					event.stopPropagation();
 
 					closeModal(null);
 
 					return false;
-				} else if (e.key !== "Tab") {
-					if (document.activeElement.tagName === "INPUT") {
+				} else if (event.key !== "Tab") {
+					if (event.target.tagName === "INPUT")
 						return;
-					}
 
-					e.preventDefault();
-					e.stopPropagation();
+					event.preventDefault();
+					event.stopPropagation();
 
 					return false;
 				}
@@ -263,27 +269,26 @@ export class Dialog {
                 $overlay.classList.add("closing");
                 $modal.classList.add("closing");
 
-                window.setTimeout(() => {
+                setTimeout(() => {
                     $overlay.remove();
                     resolve(result);
                 }, 200);
             };
 
-            const keyHandler = e => {
-				if (e.key === "Escape") {
-					e.preventDefault();
-					e.stopPropagation();
+            const keyHandler = event => {
+				if (event.key === "Escape") {
+					event.preventDefault();
+					event.stopPropagation();
 
 					closeModal(null);
 
 					return false;
-				} else if (e.key !== "Tab") {
-					if (document.activeElement.tagName === "INPUT") {
+				} else if (event.key !== "Tab") {
+					if (event.target.tagName === "INPUT")
 						return;
-					}
 
-					e.preventDefault();
-					e.stopPropagation();
+					event.preventDefault();
+					event.stopPropagation();
 
 					return false;
 				}
@@ -323,9 +328,7 @@ export class Dialog {
                 const $button = document.createElement("button");
                 $button.classList.add("confirmation-modal-button", "confirmation-modal-button-reason");
                 $button.textContent = text;
-                $button.addEventListener("click", () => {
-                    closeModal(text);
-                });
+                $button.addEventListener("click", () => closeModal(text));
                 $footer.appendChild($button);
             });
 
@@ -333,13 +336,11 @@ export class Dialog {
             $cancel.classList.add("confirmation-modal-button", "confirmation-modal-button-cancel");
             $cancel.style.setProperty("--background", "211, 51, 51");
             $cancel.textContent = "Cancel";
-            $cancel.addEventListener("click", () => {
-                closeModal(null);
-            });
+            $cancel.addEventListener("click", () => closeModal(null));
             $footer.appendChild($cancel);
 
-            $overlay.addEventListener("click", e => {
-                if (e.target === $overlay)
+            $overlay.addEventListener("click", event => {
+                if (event.target === $overlay)
                     closeModal(null);
             });
         });
@@ -356,27 +357,26 @@ export class Dialog {
                 $overlay.classList.add("closing");
                 $modal.classList.add("closing");
 
-                window.setTimeout(() => {
+                setTimeout(() => {
                     $overlay.remove();
                     resolve(result);
                 }, 200);
             };
 
-            const keyHandler = e => {
-				if (e.key === "Escape") {
-					e.preventDefault();
-					e.stopPropagation();
+            const keyHandler = event => {
+				if (event.key === "Escape") {
+					event.preventDefault();
+					event.stopPropagation();
 
 					closeModal(null);
 
 					return false;
-				} else if (e.key !== "Tab") {
-					if (document.activeElement.tagName === "INPUT") {
+				} else if (event.key !== "Tab") {
+					if (event.target.tagName === "INPUT")
 						return;
-					}
 
-					e.preventDefault();
-					e.stopPropagation();
+					event.preventDefault();
+					event.stopPropagation();
 
 					return false;
 				}
@@ -421,21 +421,19 @@ export class Dialog {
                     $overlay.classList.add("closing");
                     $modal.classList.add("closing");
 
-                    window.setTimeout(async () => {
+                    setTimeout(async () => {
                         $overlay.remove();
 
                         const reason = await this.UAA(username, true);
-                        if (reason) {
+                        if (reason)
                             this.ws.execute({
                                 name: "reportToUAA",
                                 params: {
                                     reportMessage: reason,
                                 }
                             }, undefined, undefined, { user: { name: username } }); // fake edit object
-                        } else {
-                            const confirmed = await this.confirm(title, message, username, false, true);
-                            resolve(confirmed);
-                        }
+                        else
+                            resolve(await this.confirm(title, message, username, false, true));
                     }, 200);
                 });
             }
@@ -447,18 +445,14 @@ export class Dialog {
             const $no = document.createElement("button");
             $no.classList.add("confirmation-modal-button", "confirmation-modal-button-no");
             $no.textContent = "No";
-            $no.addEventListener("click", () => {
-                closeModal(false);
-            });
+            $no.addEventListener("click", () => closeModal(false));
             $right.appendChild($no);
 
             const $yes = document.createElement("button");
             $yes.classList.add("confirmation-modal-button", "confirmation-modal-button-yes");
             $yes.style.setProperty("--background", "51, 102, 204");
             $yes.textContent = "Yes";
-            $yes.addEventListener("click", () => {
-                closeModal(true);
-            });
+            $yes.addEventListener("click", () => closeModal(true));
             $right.appendChild($yes);
 
             $overlay.addEventListener("click", e => {

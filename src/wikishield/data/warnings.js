@@ -433,8 +433,24 @@ export const warnings = {
 
 				queueType: [ "edit" ],
 
-				title: "Not English",
+				title: "English variant",
 				icon: "fas fa-globe",
+				description: "Content added in a different English variant than the rest of the article.",
+
+				summary: "different English variant",
+				auto: "notice",
+
+				templates: [
+					{ name: "notice", template: "subst:uw-engvar" }
+				]
+			},
+			{
+				reportable: false,
+
+				queueType: [ "edit" ],
+
+				title: "Not English",
+				icon: "fas fa-language",
 				description: "Content added in a language other than English.",
 
 				summary: "non-English",
@@ -667,7 +683,7 @@ export const warnings = {
 
 				queueType: [ "edit" ],
 
-				title: "COI",
+				title: "COI Edit",
 				icon: "fas fa-user-tie",
 				description: "Editing with a conflict of interest.",
 
@@ -685,7 +701,7 @@ export const warnings = {
 
 				queueType: [ "logevent" ],
 
-				title: "COI",
+				title: "COI Log",
 				icon: "fas fa-user-tie",
 				description: "Apparent conflict of interest.",
 
@@ -698,6 +714,36 @@ export const warnings = {
 			}
 		]
 	},
+	"Abuse Log": {
+		title: "Abuse Log",
+		icon: "fas fa-shield-virus",
+		description: "Warnings for triggering edit filters.",
+
+		warnings: [
+			{
+				reportable: true,
+
+				queueType: [ "abuselog" ],
+
+				title: "Attempt",
+				icon: "fas fa-vial",
+				description: "Triggering an edit filter.",
+
+				auto: defaultAuto,
+				templates: [
+					{ name: "1", template: "uw-attempt1" },
+					{ name: "2", template: "uw-attempt2" },
+					{ name: "3", template: "uw-attempt3" },
+					{ name: "4", template: "uw-attempt4" },
+					{ name: "4im", template: "uw-attempt4im" }
+				],
+
+				show(edit) {
+					return !Boolean(edit?.revid);
+				}
+			}
+		]
+	},
 	"Edit Summary": {
 		title: "Edit Summary",
 		icon: "fas fa-pen-alt",
@@ -705,9 +751,28 @@ export const warnings = {
 
 		warnings: [
 			{
+				reportable: false,
+
+				queueType: [ "edit" ],
+
+				title: "No edit summary",
+				icon: "fas fa-pen-nib",
+				description: "Making an edit without providing an edit summary.",
+
+				summary: "no [[WP:ES|edit summary]] provided",
+
+				auto(edit) {
+					return edit?.user?.edits < 500 ? "newcomer" : "experienced";
+				},
+				templates: [
+					{ name: "newcomer", template: "subst:uw-es" },
+					{ name: "experienced", template: "subst:uw-es2" }
+				],
+			},
+			{
 				reportable: true,
 
-				queueType: [ "edit", "logevent" ],
+				queueType: [ "edit", "logevent", "abuselog" ],
 
 				title: "Inappropriate edit summary",
 				icon: "fas fa-pen-alt",
@@ -727,7 +792,7 @@ export const warnings = {
 			{
 				reportable: true,
 
-				queueType: [ "edit", "logevent" ],
+				queueType: [ "edit", "logevent", "abuselog" ],
 
 				title: "Misleading edit summary",
 				icon: "fas fa-mask",
@@ -747,10 +812,10 @@ export const warnings = {
 			{
 				reportable: false,
 
-				queueType: [ "edit" ],
+				queueType: [ "edit", "abuselog" ],
 
 				title: "Minor edit abuse",
-				icon: "fas fa-m",
+				icon: "fas fa-minus",
 				description: "Non-minor edit marked as minor",
 
 				summary: "improper use of [[WP:ME|minor edit]] checkbox",

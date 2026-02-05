@@ -6,12 +6,11 @@ import { Settings } from "./settings.js";
 import { Queue } from "../core/queue.js";
 import { warnings, warningsLookup, warningTemplateColors, getWarningFromLookup } from "../data/warnings.js";
 import { profanity } from "../data/profanity.js";
-import { generateRandomUUID } from "../utils/UUID.js";
-import { BuildPalette } from "../utils/build-palette.js";
+import { generateRandomUUID } from "../../../global/UUID/script.esm.js";
+import { BuildPalette } from "../utilities/build-palette.js";
 
 export class GUI {
 	static palettes = {
-		// matplotlib-plasma
 		traffic: BuildPalette(1000, "#78c675", "#fdff7a", "#fcff54", "#fbff12", "#ffc619", "#ff8812", "#f56214", "#f73214", "#fc0303", "#fc0303"),
 		magma: BuildPalette(1000, "#000004", "#1b0c41", "#4a0c6b", "#781c6d", "#a52c60", "#cf4446", "#ed6925", "#fb9b06", "#f7d13d", "#fcffa4"),
 		plasma: BuildPalette(1000, "#0d0887", "#46039f", "#7201a8", "#9c179e", "#bd3786", "#d8576b", "#ed7953", "#fb9f3a", "#fdca26", "#f0f921"),
@@ -41,6 +40,8 @@ export class GUI {
 	}
 
 	async build() {
+		this.updateAccessibility();
+
 		document.querySelector("#initial").classList.remove("hidden");
 		document.querySelectorAll(".VERSION").forEach(elem => elem.textContent = WikiShield.config.version);
 
@@ -53,7 +54,7 @@ export class GUI {
 			const paper = document.getElementById("dots-canvas");
 			const pen = paper.getContext("2d");
 
-			const DPR = Math.min(window.devicePixelRatio || 1, 2);
+			const DPR = Math.min(devicePixelRatio || 1, 2);
 			class Dot {
 				static dots = [ ];
 				static target = 0;
@@ -112,10 +113,10 @@ export class GUI {
 					const oldWidth = paper.width;
 					const oldHeight = paper.height;
 
-					paper.width = Math.floor(window.innerWidth * DPR);
-					paper.height = Math.floor(window.innerHeight * DPR);
-					paper.style.width = `${window.innerWidth}px`;
-					paper.style.height = `${window.innerHeight}px`;
+					paper.width = Math.floor(innerWidth * DPR);
+					paper.height = Math.floor(innerHeight * DPR);
+					paper.style.width = `${innerWidth}px`;
+					paper.style.height = `${innerHeight}px`;
 
 					pen.setTransform(1, 0, 0, 1, 0, 0);
 					pen.scale(DPR, DPR);
@@ -128,7 +129,7 @@ export class GUI {
 						dot.y *= scaleY;
 					});
 
-					Dot.target = Math.floor((window.innerWidth * window.innerHeight) / 7000);
+					Dot.target = Math.floor((innerWidth * innerHeight) / 7000);
 					Dot.target = Math.max(40, Math.min(250, Dot.target));
 
 					if (Dot.target > Dot.dots.length)
@@ -139,7 +140,7 @@ export class GUI {
 				});
 			};
 			resizeCanvas();
-			window.addEventListener('resize', resizeCanvas);
+			addEventListener('resize', resizeCanvas);
 
 			const GRID_SIZE = 160;
 
@@ -172,7 +173,7 @@ export class GUI {
 
 							if (now - lowFPSStart >= LOW_FPS_DURATION_MS) {
 								if (animationFrame)
-									window.cancelAnimationFrame(animationFrame);
+									cancelAnimationFrame(animationFrame);
 								animationFrame = null;
 
 								pen.clearRect(0, 0, paper.width, paper.height);
@@ -196,8 +197,8 @@ export class GUI {
 					dot.draw();
 				});
 
-				const cols = Math.ceil(window.innerWidth / GRID_SIZE);
-				const rows = Math.ceil(window.innerHeight / GRID_SIZE);
+				const cols = Math.ceil(innerWidth / GRID_SIZE);
+				const rows = Math.ceil(innerHeight / GRID_SIZE);
 				const grid = new Array(cols * rows);
 				for (let i = 0; i < grid.length; i++)
 					grid[i] = [ ];
@@ -209,8 +210,8 @@ export class GUI {
 				});
 
 				const linkRange = 150;
-				const halfW = window.innerWidth / 2;
-				const halfH = window.innerHeight / 2;
+				const halfW = innerWidth / 2;
+				const halfH = innerHeight / 2;
 				for (let cy = 0; cy < rows; cy++) {
 					for (let cx = 0; cx < cols; cx++) {
 						const cellIdx = cy * cols + cx;
@@ -239,14 +240,14 @@ export class GUI {
 										let dy = a.y - b.y;
 
 										if (dx > halfW)
-											dx -= window.innerWidth;
+											dx -= innerWidth;
 										if (dx < -halfW)
-											dx += window.innerWidth;
+											dx += innerWidth;
 
 										if (dy > halfH)
-											dy -= window.innerHeight;
+											dy -= innerHeight;
 										if (dy < -halfH)
-											dy += window.innerHeight;
+											dy += innerHeight;
 
 										const dist2 = dx * dx + dy * dy;
 										if (dist2 < linkRange * linkRange) {
@@ -275,13 +276,13 @@ export class GUI {
 					}
 				}
 
-				animationFrame = window.requestAnimationFrame(animate);
+				animationFrame = requestAnimationFrame(animate);
 			};
 
 			animate();
 		}
 
-		if (this.ws.rights.rollback) {
+		if (this.ws.rights.rollback || this.ws.api.username === "LuniZunie") {
 			document.querySelector("#rollback-needed").classList.add("hidden");
 			document.querySelector("#start-button").classList.remove("hidden");
 		} else {
@@ -297,275 +298,14 @@ export class GUI {
 				cancelAnimationFrame(animationFrame);
 			this.ws.start();
 		});
-	}
 
-	async start() {
-		this.settings.start();
-
-		document.querySelector("#initial").classList.add("hidden");
-		document.querySelector("#app").classList.remove("hidden");
-
-		document.querySelectorAll(".bottom-tool-trigger").forEach($trigger => {
-			$trigger.addEventListener("click", (e) => {
-				e.stopPropagation();
-
-				const $item = $trigger.closest(".bottom-tool-item");
-				const $menu = document.querySelector(`#${$item.dataset.menu}-menu`);
-				const isOpen = $menu.classList.contains("show");
-
-				switch ($item.dataset.menu) {
-					case "revert": {
-						$menu.innerHTML = "";
-						this.createRevertMenu("reverts", $menu, this.ws.queue.current.item);
-					} break;
-					case "warn": {
-						$menu.innerHTML = "";
-						this.createRevertMenu("warnings", $menu, this.ws.queue.current.item);
-					} break;
-					case "page": {
-						const item = this.ws.queue.current.item;
-						const watched = item?.page?.watched === true;
-
-						document.querySelector("#page-watch").classList.toggle("hidden", watched);
-						document.querySelector("#page-unwatch").classList.toggle("hidden", !watched);
-					} break;
-				}
-
-				this.closeMenus();
-
-				if (!isOpen) {
-					$menu.classList.add("show");
-					$trigger.classList.add("active");
-
-					this.positionBottomMenu($item, $menu);
-				}
-			});
-		});
-
-		document.querySelectorAll(".submenu-trigger").forEach($trigger => {
-			let exited = generateRandomUUID();
-			$trigger.addEventListener("mouseenter", () => {
-				exited = null;
-
-				const $parentMenu = $trigger.closest(".bottom-tool-menu");
-				if ($parentMenu) {
-					$parentMenu.querySelectorAll(".submenu").forEach($submenu => $submenu.classList.remove("show"));
-				}
-
-				const $submenu = $trigger.querySelector(".submenu");
-				if ($submenu) {
-					this.events.submenu($submenu, $submenu.dataset.eventName);
-					$submenu.classList.add("show");
-					this.positionSubmenu($submenu, $trigger);
-				}
-			});
-
-			$trigger.addEventListener("mouseleave", () => {
-				const UUID = generateRandomUUID();
-				exited = UUID;
-
-				window.setTimeout(() => {
-					if (exited !== UUID)
-						return;
-
-					const $submenu = $trigger.querySelector(".submenu");
-					if ($submenu)
-						$submenu.classList.remove("show");
-				}, 500);
-			});
-		});
-
-		document.querySelectorAll(".menu-option:not(.submenu-trigger)").forEach($option => {
-			$option.addEventListener("click", () => this.closeMenus());
-		});
-
-		document.querySelectorAll(".submenu").forEach($submenu => {
-			$submenu.addEventListener("click", e => e.stopPropagation());
-		});
-
-		document.querySelectorAll("#queue-tabs > .queue-tab").forEach($el => this.addTooltipListener($el));
-
-		{
-			const types = [ "alert", "message" ];
-			types.forEach(type => {
-				const $icon = document.querySelector(`#${type}s-icon`);
-				this.addTooltipListener($icon);
-				$icon.addEventListener("click", () => {
-					const $panel = document.querySelector(`#${type}s-panel`);
-					$panel.classList.toggle("show");
-					if ($panel.classList.contains("show"))
-						this.ws.notifications.seen(type);
-				});
-				document.querySelector(`#mark-all-${type}s-read`).addEventListener("click", e => {
-					this.ws.notifications.read(type);
-				});
-			});
-			document.addEventListener("click", e => {
-				for (const type of types) {
-					const $panel = document.querySelector(`#${type}s-panel`);
-					const $icon = document.querySelector(`#${type}s-icon`);
-					if (!$panel?.contains(e.target) && !$icon?.contains(e.target))
-						$panel?.classList.remove("show");
-				}
-
-				if (!e.target.closest(".bottom-tool-menu"))
-					this.closeMenus();
-			});
-		}
-
-		const $latest = document.querySelector("#latest-edits-tab");
-		$latest.addEventListener("click", () => this.updateDiffDisplay(this.ws.queue.current.item, false));
-		this.addTooltipListener($latest);
-
-		const $consecutive = document.querySelector("#consecutive-edits-tab");
-		$consecutive.addEventListener("click", () => this.updateDiffDisplay(this.ws.queue.current.item, true));
-		this.addTooltipListener($consecutive);
-
-		document.querySelector("#pending-changes-container > .accept").addEventListener("click", async e => {
-			await this.ws.gui.settings.waitForClose();
-			const message = await this.dialog.input(
-				"Accept Pending Changes",
-				"Enter an optional edit summary for accepting this change:",
-				"Edit summary (optional)",
-				""
-			);
-			if (message !== null)
-				this.ws.execute({
-					actions: [
-						{
-							name: "next-item",
-							params: { }
-						},
-						{
-							name: "accept-pending-edit",
-							params: {
-								reason: message
-							}
-						}
-					]
-				});
-		});
-		document.querySelector("#pending-changes-container > .reject").addEventListener("click", async e => {
-			await this.ws.gui.settings.waitForClose();
-			const message = await this.dialog.input(
-				"Reject Pending Changes",
-				"Enter an optional edit summary for rejecting this change:",
-				"Edit summary (optional)",
-				""
-			);
-			if (message !== null)
-				this.ws.execute({
-					actions: [
-						{
-							name: "next-item",
-							params: { }
-						},
-						{
-							name: "reject-pending-edit",
-							params: {
-								reason: message
-							}
-						}
-					]
-				});
-		});
-
-		document.querySelectorAll("#bottom-tools [data-tooltip]").forEach($el => this.addTooltipListener($el));
-
-		{
-			const $queue = document.querySelector("#queue");
-			{
-				const width = this.ws.store.UI.queue.width;
-				if (width) {
-					$queue.style.width = width;
-					document.querySelector("#right-container").style.width = `calc(100% - ${width})`;
-				}
-			}
-
-			const $details = document.querySelector("#right-details");
-			{
-				const width = this.ws.store.UI.details.width;
-				if (width) {
-					$details.style.width = width;
-					document.querySelector("#right-top").style.width = width;
-					document.querySelector("#main-container").style.width = `calc(100% - ${width})`;
-					document.querySelector("#middle-top").style.width = `calc(100% - ${width})`;
-				}
-			}
-
-			const resize = {
-				active: null,
-				section: null,
-
-				x: null,
-				width: null,
-
-				windowWidth: null
-			};
-			const startResize = ($handle, $section, e) => {
-				e.preventDefault();
-
-				resize.active = $handle;
-				resize.section = $section;
-
-				resize.x = e.clientX;
-				resize.width = $section.getBoundingClientRect().width;
-
-				resize.windowWidth = window.innerWidth;
-			};
-
-			const $queueHandle = document.querySelector("#queue-width-adjust");
-			$queueHandle.addEventListener("pointerdown", e => startResize($queueHandle, $queue, e));
-
-			const $detailsHandle = document.querySelector("#details-width-adjust");
-			$detailsHandle.addEventListener("pointerdown", e => startResize($detailsHandle, $details, e));
-
-			window.addEventListener("pointerup", () => {
-				if (resize.active === $queueHandle)
-					this.ws.store.UI.queue.width = $queue.style.width;
-				else if (resize.active === $detailsHandle)
-					this.ws.store.UI.details.width = $details.style.width;
-
-				resize.active = null;
-				resize.section = null;
-			});
-
-			window.addEventListener("pointermove", e => {
-				if (!resize.active)
-					return;
-
-				const dx = e.clientX - resize.x;
-
-				let newWidth;
-				if (resize.active === $queueHandle)
-					newWidth = resize.width + dx;
-				else if (resize.active === $detailsHandle)
-					newWidth = resize.width - dx;
-
-				const min = resize.windowWidth * 0.1; // 10vw
-				const max = resize.windowWidth * 0.3; // 30vw
-				newWidth = Math.max(min, Math.min(max, newWidth));
-
-				const vw = (newWidth / resize.windowWidth) * 100;
-				resize.section.style.width = `${vw}vw`;
-
-				if (resize.active === $queueHandle)
-					document.querySelector("#right-container").style.width = `calc(100% - ${vw}vw)`;
-				else if (resize.active === $detailsHandle) {
-					document.querySelector("#right-top").style.width = `${vw}vw`;
-					document.querySelector("#main-container").style.width = `calc(100% - ${vw}vw)`;
-					document.querySelector("#middle-top").style.width = `calc(100% - ${vw}vw)`;
-				}
-			});
-		}
-
-		window.addEventListener("click", event => {
+		addEventListener("click", event => {
 			[...document.querySelectorAll(".tooltip.buttons")].forEach(elem => elem.remove());
 
 			const $href = event.target.closest("[href]");
 			if ($href) {
-				const url = new URL($href.href, window.location.href);
-				if (url.origin === window.location.origin && url.pathname === window.location.pathname)
+				const url = new URL($href.href, location.href);
+				if (url.origin === location.origin && url.pathname === location.pathname)
 					return;
 
 				if ($href.dataset.multipleHrefs) {
@@ -605,6 +345,39 @@ export class GUI {
 									$history.innerText = "Diff";
 									$history.addEventListener("click", event => {
 										this.ws.open(this.ws.page(`Special:Diff/${id}`), event.altKey);
+										$tooltip.remove();
+									});
+									$tooltip.appendChild($history);
+								});
+							} break;
+							case "page-abuse": {
+								const title = items.title;
+								const id = +items.id;
+
+								this.createTooltip($href, "buttons", null, null, null, $tooltip => {
+									const $page = document.createElement("div");
+									$page.classList.add("button");
+									$page.innerText = "Page";
+									$page.addEventListener("click", event => {
+										this.ws.open(this.ws.page(title), event.altKey);
+										$tooltip.remove();
+									});
+									$tooltip.appendChild($page);
+
+									const $preview = document.createElement("div");
+									$preview.classList.add("button");
+									$preview.innerText = "Details";
+									$preview.addEventListener("click", event => {
+										this.ws.open(this.ws.page(`Special:AbuseLog/${id}`), event.altKey);
+										$tooltip.remove();
+									});
+									$tooltip.appendChild($preview);
+
+									const $history = document.createElement("div");
+									$history.classList.add("button");
+									$history.innerText = "Examine";
+									$history.addEventListener("click", event => {
+										this.ws.open(this.ws.page(`Special:AbuseFilter/examine/log/${id}`), event.altKey);
 										$tooltip.remove();
 									});
 									$tooltip.appendChild($history);
@@ -680,18 +453,285 @@ export class GUI {
 				} else {
 					this.ws.open($href.getAttribute("href"), event.altKey);
 				}
+
+				event.preventDefault();
 			}
 		});
+	}
+
+	async start() {
+		this.settings.start();
+
+		document.querySelector("#initial").classList.add("hidden");
+		document.querySelector("#app").classList.remove("hidden");
+
+		document.querySelectorAll(".bottom-tool-trigger").forEach($trigger => {
+			$trigger.addEventListener("click", (e) => {
+				e.stopPropagation();
+
+				const $item = $trigger.closest(".bottom-tool-item");
+				const $menu = document.querySelector(`#${$item.dataset.menu}-menu`);
+				const isOpen = $menu.classList.contains("show");
+
+				switch ($item.dataset.menu) {
+					case "revert": {
+						$menu.innerHTML = "";
+						this.createRevertMenu("reverts", $menu, this.ws.queue.current.item);
+					} break;
+					case "warn": {
+						$menu.innerHTML = "";
+						this.createRevertMenu("warnings", $menu, this.ws.queue.current.item);
+					} break;
+					case "page": {
+						const item = this.ws.queue.current.item;
+						const watched = item?.page?.watched === true;
+
+						document.querySelector("#page-watch").classList.toggle("hidden", watched);
+						document.querySelector("#page-unwatch").classList.toggle("hidden", !watched);
+					} break;
+				}
+
+				this.closeMenus();
+
+				if (!isOpen) {
+					$menu.classList.add("show");
+					$trigger.classList.add("active");
+
+					this.positionBottomMenu($item, $menu);
+				}
+			});
+		});
+
+		document.querySelectorAll(".submenu-trigger").forEach($trigger => {
+			let exited = generateRandomUUID();
+			$trigger.addEventListener("mouseenter", () => {
+				exited = null;
+
+				const $parentMenu = $trigger.closest(".bottom-tool-menu");
+				if ($parentMenu) {
+					$parentMenu.querySelectorAll(".submenu").forEach($submenu => $submenu.classList.remove("show"));
+				}
+
+				const $submenu = $trigger.querySelector(".submenu");
+				if ($submenu) {
+					this.events.submenu($submenu, $submenu.dataset.eventName);
+					$submenu.classList.add("show");
+					this.positionSubmenu($submenu, $trigger);
+				}
+			});
+
+			$trigger.addEventListener("mouseleave", () => {
+				const UUID = generateRandomUUID();
+				exited = UUID;
+
+				setTimeout(() => {
+					if (exited !== UUID)
+						return;
+
+					const $submenu = $trigger.querySelector(".submenu");
+					if ($submenu)
+						$submenu.classList.remove("show");
+				}, 500);
+			});
+		});
+
+		document.querySelectorAll(".menu-option:not(.submenu-trigger)").forEach($option => {
+			$option.addEventListener("click", () => this.closeMenus());
+		});
+
+		document.querySelectorAll(".submenu").forEach($submenu => {
+			$submenu.addEventListener("click", e => e.stopPropagation());
+		});
+
+		document.querySelectorAll("#queue-tabs > .queue-tab").forEach($el => this.addTooltipListener($el));
+
+		{
+			const types = [ "alert", "message" ];
+			types.forEach(type => {
+				const $icon = document.querySelector(`#${type}s-icon`);
+				this.addTooltipListener($icon);
+				$icon.addEventListener("click", () => {
+					const $panel = document.querySelector(`#${type}s-panel`);
+					$panel.classList.toggle("show");
+					if ($panel.classList.contains("show"))
+						this.ws.notifications.seen(type);
+				});
+				document.querySelector(`#mark-all-${type}s-read`).addEventListener("click", e => {
+					this.ws.notifications.read(type);
+				});
+			});
+			document.addEventListener("click", e => {
+				for (const type of types) {
+					const $panel = document.querySelector(`#${type}s-panel`);
+					const $icon = document.querySelector(`#${type}s-icon`);
+					if (!$panel?.contains(e.target) && !$icon?.contains(e.target))
+						$panel?.classList.remove("show");
+				}
+
+				if (!e.target.closest(".bottom-tool-menu"))
+					this.closeMenus();
+			});
+		}
+
+		const $latest = document.querySelector("#latest-edits-tab");
+		$latest.addEventListener("click", () => this.updateDiffDisplay(this.ws.queue.current.item, false));
+		this.addTooltipListener($latest);
+
+		const $consecutive = document.querySelector("#consecutive-edits-tab");
+		$consecutive.addEventListener("click", () => this.updateDiffDisplay(this.ws.queue.current.item, true));
+		this.addTooltipListener($consecutive);
+
+		document.querySelector("#pending-changes-container > .accept").addEventListener("click", async e => {
+			await this.ws.gui.settings.waitForClose();
+			const message = await this.dialog.input(
+				"Accept Pending Changes",
+				"Enter an optional edit summary for accepting this change:",
+				"Edit summary (optional)",
+				""
+			);
+			if (message !== null)
+				this.ws.execute({
+					actions: [
+						{
+							name: "next-item",
+							params: { }
+						},
+						{
+							name: "accept-pending-edit",
+							params: {
+								summary: message
+							}
+						}
+					]
+				});
+		});
+		document.querySelector("#pending-changes-container > .reject").addEventListener("click", async e => {
+			await this.ws.gui.settings.waitForClose();
+			const message = await this.dialog.input(
+				"Reject Pending Changes",
+				"Enter an optional edit summary for rejecting this change:",
+				"Edit summary (optional)",
+				""
+			);
+			if (message !== null)
+				this.ws.execute({
+					actions: [
+						{
+							name: "next-item",
+							params: { }
+						},
+						{
+							name: "reject-pending-edit",
+							params: {
+								summary: message
+							}
+						}
+					]
+				});
+		});
+
+		document.querySelectorAll("#bottom-tools [data-tooltip]").forEach($el => this.addTooltipListener($el));
+
+		{ // width adjusts
+			const $queue = document.querySelector("#queue");
+			{
+				const width = this.ws.store.UI.queue.width;
+				if (width) {
+					$queue.style.width = width;
+					document.querySelector("#right-container").style.width = `calc(100% - ${width})`;
+				}
+			}
+
+			const $details = document.querySelector("#right-details");
+			{
+				const width = this.ws.store.UI.details.width;
+				if (width) {
+					$details.style.width = width;
+					document.querySelector("#right-top").style.width = width;
+					document.querySelector("#main-container").style.width = `calc(100% - ${width})`;
+					document.querySelector("#middle-top").style.width = `calc(100% - ${width})`;
+				}
+			}
+
+			const resize = {
+				active: null,
+				section: null,
+
+				x: null,
+				width: null,
+
+				windowWidth: null
+			};
+			const startResize = ($handle, $section, e) => {
+				e.preventDefault();
+
+				resize.active = $handle;
+				resize.section = $section;
+
+				resize.x = e.clientX;
+				resize.width = $section.getBoundingClientRect().width;
+
+				resize.windowWidth = innerWidth;
+			};
+
+			const $queueHandle = document.querySelector("#queue-width-adjust");
+			$queueHandle.addEventListener("pointerdown", e => startResize($queueHandle, $queue, e));
+
+			const $detailsHandle = document.querySelector("#details-width-adjust");
+			$detailsHandle.addEventListener("pointerdown", e => startResize($detailsHandle, $details, e));
+
+			addEventListener("pointerup", () => {
+				if (resize.active === $queueHandle)
+					this.ws.store.UI.queue.width = $queue.style.width;
+				else if (resize.active === $detailsHandle)
+					this.ws.store.UI.details.width = $details.style.width;
+
+				resize.active = null;
+				resize.section = null;
+			});
+
+			addEventListener("pointermove", e => {
+				if (!resize.active)
+					return;
+
+				const dx = e.clientX - resize.x;
+
+				let newWidth;
+				if (resize.active === $queueHandle)
+					newWidth = resize.width + dx;
+				else if (resize.active === $detailsHandle)
+					newWidth = resize.width - dx;
+
+				const min = resize.windowWidth * 0.1; // 10vw
+				const max = resize.windowWidth * 0.3; // 30vw
+				newWidth = Math.max(min, Math.min(max, newWidth));
+
+				const vw = (newWidth / resize.windowWidth) * 100;
+				resize.section.style.width = `${vw}vw`;
+
+				if (resize.active === $queueHandle)
+					document.querySelector("#right-container").style.width = `calc(100% - ${vw}vw)`;
+				else if (resize.active === $detailsHandle) {
+					document.querySelector("#right-top").style.width = `${vw}vw`;
+					document.querySelector("#main-container").style.width = `calc(100% - ${vw}vw)`;
+					document.querySelector("#middle-top").style.width = `calc(100% - ${vw}vw)`;
+				}
+			});
+		}
 
 		const version = WikiShield.config.changelog.version;
 		if (version.endsWith("!") || version !== this.ws.store.changelog) {
 			this.ws.store.changelog = version.replace(/!$/, "");
-			window.electronAPI.open?.("changelog");
+			electronAPI.open?.("changelog");
 		}
+
+		this.addTooltipListener(document.querySelector("#clear-queue"));
 
 		this.updateZenMode();
 		this.reorderQueues();
 		this.newCurrentItem(null);
+
+		this.events.button(document.querySelector("#clear-queue"), "clear-queue");
 
 		this.events.button(document.querySelector("#user-open-user-page"), "open-user-page");
 		this.events.button(document.querySelector("#user-open-user-talk"), "open-user-talk");
@@ -723,6 +763,8 @@ export class GUI {
 		this.events.submenu(document.querySelector("#edit-rollback-goodfaith .submenu"), "rollback-goodfaith-edit");
 		this.events.submenu(document.querySelector("#edit-undo .submenu"), "undo-edit");
 
+		this.events.button(document.querySelector("#copy-link"), "copy-link");
+
 		Queue.types.forEach(type => {
 			this.events.button(document.querySelector(`#queue-tab-${type}`), `switch-to-${type}-queue`);
 		});
@@ -730,42 +772,26 @@ export class GUI {
 		this.update();
 		this.renderQueue();
 
-		setInterval(this.loading.bind(this), 300);
+		electronAPI.menuEnabler({ browser: true, settings: { preferences: true } });
 	}
 
 	update() {
 		try {
+			const now = Date.now();
 			document.querySelectorAll("[data-time]").forEach($el => {
 				const timestamp = new Date($el.dataset.time);
 				switch ($el.dataset.timeFormat) {
 					case "time-ago": {
-						$el.textContent = this.ws.util.timeAgo(timestamp);
+						$el.textContent = this.ws.util.timeAgo(timestamp, now);
 					} break;
 					case "notification": {
-						$el.textContent = this.ws.util.formatNotificationTime(timestamp);
+						$el.textContent = this.ws.util.formatNotificationTime(timestamp, now);
 					} break;
 				}
 			});
-		} catch (error) {
-			console.error("Error updating time elements:", error);
-		}
+		} catch (error) { console.error("Error updating time elements:", error); }
 
-		requestAnimationFrame(() => this.update());
-	}
-
-	loading() {
-		try {
-			document.querySelectorAll(".loading-dots").forEach($el => {
-				const text = $el.textContent;
-				const dotCount = (text.match(/\./g) || []).length;
-				if (dotCount >= 3)
-					$el.textContent = text.slice(0, -3);
-				else
-					$el.textContent += ".";
-			});
-		} catch (error) {
-			console.error("Error in loading indicator update:", error);
-		}
+		setTimeout(() => this.update(), 1000);
 	}
 
 	generateItemHTML(item) {
@@ -823,13 +849,28 @@ export class GUI {
 				$content.appendChild($tags);
 			}
 
-			item.tags.sort((a, b) => highlight.tags.has(a) - highlight.tags.has(b)); // TODO check if this is correct
+			item.tags.sort((a, b) => highlight.tags.has(b) - highlight.tags.has(a));
 			for (const tag of item.tags) {
 				const $tag = document.createElement("span");
 				$tag.classList.add("queue-item-tag");
 				$tag.classList.toggle("queue-highlight", highlight.tags.has(tag));
 				$tag.textContent = tag;
 				$tags.appendChild($tag);
+			}
+		} else if (Array.isArray(item.filters)) {
+			const $filters = document.createElement("div");
+			{
+				$filters.classList.add("queue-item-tags");
+				$content.appendChild($filters);
+			}
+
+			for (const filter of [ ...item.filters ].sort((a, b) => +a.id - +b.id)) {
+				const $filter = document.createElement("span");
+				$filter.classList.add("queue-item-tag");
+				$filter.dataset.tooltip = filter.filter;
+				$filter.dataset.tooltipDelay = 50;
+				$filter.textContent = filter.id === "-1" ? "private" : filter.id;
+				$filters.appendChild($filter);
 			}
 		}
 
@@ -900,6 +941,96 @@ export class GUI {
 			case "logevent": {
 				$user.classList.add("queue-log-title");
 			} break;
+			case "abuselog": {
+				const $ores = document.createElement("div");
+				{
+					const results = Object.entries({
+						"disallow": "\u{f05e}",
+						"warn": "\u{f071}",
+						"showcaptcha": "\u{f610}",
+						"tag": "\u{f02b}",
+						"none": "\u{f00c}"
+					});
+
+					let max = Infinity;
+					const len = results.length;
+					for (let i = 0; i < len; i++) {
+						const [ action ] = results[i];
+						if (item.origin.result.has(action) && i < max)
+							max = i;
+					}
+
+					if (max === Infinity)
+						max = len - 1;
+
+					const ores = +(1 - max / (len - 1)).toFixed(2);
+					$ores.classList.add("queue-item-color", "use-icon");
+					$ores.dataset.oresScore = results[max][1];
+					$ores.dataset.rawOresScore = ores || 0;
+					$ores.style.backgroundColor = this.getORESColor(ores);
+					$item.prepend($ores);
+
+					$ores.dataset.tooltip = `Abuse filter action: ${results[max][0]}`;
+					$ores.dataset.tooltipDelay = 500;
+				}
+
+				const $title = document.createElement("div");
+				{
+					$title.classList.add("queue-item-title");
+					$title.classList.toggle("queue-highlight", highlight.pages.has(item.page.title));
+					$title.dataset.tooltip = item.page.title;
+					$title.dataset.tooltipDelay = 500;
+					$title.textContent = item.page.title;
+					$content.prepend($title);
+
+					const $icon = document.createElement("span");
+					$icon.classList.add("fa", "fa-file-lines", "queue-item-icon");
+					$title.prepend($icon);
+				}
+
+				const $summary = document.createElement("div");
+				{
+					$summary.classList.add("queue-item-summary");
+					$content.insertBefore($summary, $time);
+
+					if (item.comment) {
+						$summary.dataset.tooltip = item.comment;
+						$summary.dataset.tooltipDelay = 500;
+						$summary.textContent = item.comment;
+					} else if (item.comment === null) {
+						const $private = document.createElement("em");
+						$private.textContent = "Private";
+						$summary.appendChild($private);
+					} else {
+						const $noSummary = document.createElement("em");
+						$noSummary.textContent = "No summary provided";
+						$summary.appendChild($noSummary);
+					}
+
+					if (item.minor) {
+						const $minor = document.createElement("span");
+						$minor.classList.add("minor-indicator");
+						$minor.dataset.tooltip = "Minor edit";
+						$minor.dataset.tooltipDelay = 500;
+						$minor.textContent = "m";
+						$summary.prepend($minor);
+					}
+				}
+
+				if (item.sizediff !== undefined) {
+					const $change = document.createElement("div");
+					const sizediff = item.sizediff || 0;
+
+					$change.classList.add("queue-item-change");
+					$change.innerHTML = this.ws.util.getChangeString(sizediff || 0);
+
+					$change.style.color = this.ws.util.getChangeColor(sizediff || 0);
+					if (Math.abs(sizediff || 0) >= 500)
+						$change.style.fontWeight = "bold";
+
+					$item.appendChild($change);
+				}
+			} break;
 		}
 
 		return $item.innerHTML;
@@ -921,7 +1052,7 @@ export class GUI {
 			$empty.textContent = "No items in queue";
 			$queue.innerHTML = $empty.outerHTML;
 
-			if (this.ws.queue.queues[type].previous !== current) {
+			if (this.ws.queue.queues[type].previous?.id !== current?.id) {
 				this.ws.queue.queues[type].previous = current;
 				this.newCurrentItem(current);
 			}
@@ -968,7 +1099,7 @@ export class GUI {
 			} else if ($el.previousSibling !== $previous)
 				$queue.insertBefore($el, $previous.nextSibling);
 
-			$el.classList.toggle("queue-item-current", item === current);
+			$el.classList.toggle("queue-item-current", item.id === current?.id);
 			$previous = $el;
 		}
 
@@ -976,7 +1107,7 @@ export class GUI {
 			if (!queue.some(item => item.id === id))
 				$el.remove();
 
-		if (this.ws.queue.queues[type].previous !== current) {
+		if (this.ws.queue.queues[type].previous?.id !== current?.id) {
 			this.ws.queue.queues[type].previous = current;
 			this.newCurrentItem(current);
 		}
@@ -993,11 +1124,42 @@ export class GUI {
 		this.updateQueueTabs();
 	}
 
-	async newCurrentItem(item = null) {
+	updateHiddenItems(item) {
+		if (item === undefined)
+			item = this.ws.queue.current.item;
+
+		if (item === null) {
+			if (!this.ws.store.UI.hide_tools) // if not hiding tools, just keep it as is
+				return document.querySelectorAll("[data-queue-type]").forEach($el => $el.classList.add("hidden"));
+			return document.querySelectorAll("[data-queue-type]").forEach($el => $el.classList.add("hidden"));
+		}
+
+		let type = item.type;
+		if (type === "abuselog") {
+			if (item.revid)
+				type = "edit";
+		}
+
+		const group = Queue.groups[type];
+		document.querySelectorAll("[data-queue-type]").forEach($el => {
+			const forType = $el.dataset.queueType || "*";
+			if (forType === "*")
+				$el.classList.remove("hidden");
+			else
+				$el.classList.toggle("hidden", !forType.split(",").includes(group));
+		});
+	}
+
+	async newCurrentItem(item = null, circular = false) {
 		this.controllers.current?.abort();
 
 		const controller = new AbortController();
 		this.controllers.current = controller;
+
+		if (item !== null) {
+			this.updateDiffDisplay("loading");
+			await this.ws.queue.propagate(item, true);
+		}
 
 		this.stopOutdatedCheck();
 		this.toggleEditWarNotice(item?.reverts >= 3, item?.reverts || 0);
@@ -1021,9 +1183,8 @@ export class GUI {
 
 		document.querySelector("#pending-changes-container").classList.toggle("hidden", !this.ws.queue.pending.has(item?.id));
 
+		this.updateHiddenItems(item);
 		if (item === null) {
-			document.querySelectorAll("[data-queue-type]").forEach($el => $el.classList.add("hidden"));
-
 			document.querySelector("#middle-top").innerHTML = "";
 			document.querySelector("#diff-container").innerHTML = "";
 
@@ -1055,13 +1216,25 @@ export class GUI {
 
 		const type = item.type;
 		const group = Queue.groups[type];
-		document.querySelectorAll("[data-queue-type]").forEach($el => {
-			const forType = $el.dataset.queueType || "*";
-			if (forType === "*")
-				$el.classList.remove("hidden");
-			else
-				$el.classList.toggle("hidden", !forType.split(",").includes(group));
-		});
+
+		if (!circular && type === "abuselog" && !item.revid) {
+			const update = async () => {
+				if (controller.signal.aborted)
+					return;
+
+				this.ws.api.getAbuseLogRevid(item.id).then(revid => {
+					if (revid) {
+						item.revid = revid;
+						if (item.id === this.ws.queue.current.item?.id)
+							this.newCurrentItem(this.ws.queue.current.item, true);
+					}
+
+					if (item.id === this.ws.queue.current.item?.id)
+						setTimeout(() => update(), 1000);
+				})
+			}
+			update();
+		}
 
 		const watched = item?.page?.watched;
 		document.querySelector("#page-watch").classList.toggle("hidden", watched === true);
@@ -1083,7 +1256,7 @@ export class GUI {
 							error: err.message
 						};
 					}).finally(() => {
-						if (this.ws.queue.current.item === item)
+						if (item.id === this.ws.queue.current.item?.id)
 							this.updateAIAnalysisDisplay(item.AI.edit);
 					});
 
@@ -1128,7 +1301,7 @@ export class GUI {
 			$warnings.textContent = item.user.warning;
 
 			if (item.user.warning === "0") {
-				$warnings.dataset.tooltip = "No warnings";
+				$warnings.dataset.tooltip = "No warnings on record";
 				$warnings.dataset.tooltipHtml = false;
 			} else {
 				const warnings = item.user.warnings;
@@ -1219,14 +1392,18 @@ export class GUI {
 					$date.classList.add("tooltip-item-time");
 					$details.appendChild($date);
 
+					const $timestamp = document.createElement("span");
 					if (block.timestamp) {
-						$date.dataset.time = block.timestamp;
-						$date.dataset.timeFormat = "notification";
-						$date.textContent = this.ws.util.formatNotificationTime(new Date(block.timestamp));
+						$timestamp.dataset.time = block.timestamp;
+						$timestamp.dataset.timeFormat = "notification";
+						$timestamp.textContent = this.ws.util.formatNotificationTime(new Date(block.timestamp));
 					} else
-						$date.textContent = "Date unknown";
+						$timestamp.textContent = "Date unknown";
+					$date.appendChild($timestamp);
 
-					$date.textContent += ` (for ${block.params?.duration || "an unknown duration"})`;
+					const $duration = document.createElement("span");
+					$duration.textContent = `(for ${block.params?.duration || "an unknown duration"})`;
+					$date.appendChild($duration);
 				}
 
 				$blocks.classList.remove("hidden");
@@ -1314,7 +1491,7 @@ export class GUI {
 				for (const item of contributions) {
 					const $item = document.createElement("div");
 					$item.className = "queue-item no-transition";
-					$item.classList.toggle("queue-item-current", item.id === this.ws.queue.current.item.id);
+					$item.classList.toggle("queue-item-current", item.id === (this.ws.queue.current.item.revid ?? this.ws.queue.current.item.id));
 					$item.innerHTML = this.generateItemHTML({
 						page: { title: item.title },
 						user: { name: item.user },
@@ -1327,26 +1504,29 @@ export class GUI {
 					});
 					$contributions.appendChild($item);
 
-					window.requestAnimationFrame(() => $item.classList.remove("no-transition"));
+					requestAnimationFrame(() => $item.classList.remove("no-transition"));
 				}
 
-				const items = await this.ws.queue.generate("edit", contributions, true);
+				if (!item.user.cached_contributions)
+					item.user.cached_contributions = this.ws.queue.generate("edit", contributions, true);
+
+				const items = await item.user.cached_contributions;
 				if (signal.aborted)
 					return;
 
 				$contributions.innerHTML = "";
-				for (const item of items) {
+				for (const item of items.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))) {
 					const $item = document.createElement("div");
 					$item.className = "queue-item no-transition";
-					$item.classList.toggle("queue-item-current", item.id === this.ws.queue.current.item.id);
+					$item.classList.toggle("queue-item-current", item.id === (this.ws.queue.current.item.revid ?? this.ws.queue.current.item.id));
 					$item.innerHTML = this.generateItemHTML(item);
 					$contributions.appendChild($item);
 
-					$item.addEventListener("mouseover", () => this.ws.queue.propagate(item));
+					$item.addEventListener("mouseover", () => this.ws.queue.propagate(item, true));
 					$item.addEventListener("click", () => this.ws.queue.loadFromItem(item));
 					$item.querySelectorAll("[data-tooltip]").forEach($tooltip => this.addTooltipListener($tooltip));
 
-					window.requestAnimationFrame(() => $item.classList.remove("no-transition"));
+					requestAnimationFrame(() => $item.classList.remove("no-transition"));
 				}
 			};
 			load(controller.signal).catch(err => {
@@ -1359,7 +1539,7 @@ export class GUI {
 		switch (group) {
 			case "edit": {
 				this.startOutdatedCheck(item);
-				if (!item.pending)
+				if (!this.ws.queue.pending.has(item.id))
 					item.consecutive.then(data => {
 						if (this.ws.queue.current.item !== item)
 							return;
@@ -1379,6 +1559,7 @@ export class GUI {
 					$line.classList.add("middle-top-line");
 					$line.innerHTML = `${item.display.title}${item.display.username}`;
 					$middle.appendChild($line);
+					$line.querySelectorAll("[data-tooltip]").forEach($tooltip => this.addTooltipListener($tooltip));
 
 					const $size = document.createElement("div");
 					$line.appendChild($size);
@@ -1424,66 +1605,17 @@ export class GUI {
 
 						$protection.innerHTML = `<span class="protection-icon" data-tooltip="${tooltip}">${icon}</span>`;
 						this.addTooltipListener($protection.querySelector("[data-tooltip]"));
-					} else if (item.pending) {
-						const comment = item.pending.stability?.comment || "No comment provided";
+					} else if (this.ws.queue.pending.has(item.id)) {
+						const comment = this.ws.queue.pending.get(item.id).pending.stability?.comment || "No comment provided";
 						$protection.innerHTML = `<span class="protection-icon" data-tooltip="Pending changes: ${comment}">PC</span>`;
 						this.addTooltipListener($protection.querySelector("[data-tooltip]"));
-					} else {
+					} else
 						$protection.innerHTML = "";
-					}
 				}
 
 				const $metadata = document.querySelector("#page-metadata");
 				if ($metadata)
 					$metadata.innerHTML = item.page.metadata.join(" &middot; ");
-
-				{ // history
-					const load = async signal => {
-						const history = item.page.history;
-						for (const item of history) {
-							const $item = document.createElement("div");
-							$item.className = "queue-item no-transition";
-							$item.classList.toggle("queue-item-current", item.id === this.ws.queue.current.item.id);
-							$item.innerHTML = this.generateItemHTML({
-								page: { title: item.title },
-								user: { name: item.user },
-								comment: "Loading...",
-								timestamp: item.timestamp,
-								sizediff: 0,
-								ores: NaN,
-								tags: item.tags || [],
-								type: "edit",
-							});
-							$history.appendChild($item);
-
-							window.requestAnimationFrame(() => $item.classList.remove("no-transition"));
-						}
-
-						const items = await this.ws.queue.generate("edit", history, true);
-						if (signal.aborted)
-							return;
-
-						$history.innerHTML = "";
-						for (const item of items) {
-							const $item = document.createElement("div");
-							$item.className = "queue-item no-transition";
-							$item.classList.toggle("queue-item-current", item.id === this.ws.queue.current.item.id);
-							$item.innerHTML = this.generateItemHTML(item);
-							$history.appendChild($item);
-
-							$item.addEventListener("mouseover", () => this.ws.queue.propagate(item));
-							$item.addEventListener("click", () => this.ws.queue.loadFromItem(item));
-							$item.querySelectorAll("[data-tooltip]").forEach($tooltip => this.addTooltipListener($tooltip));
-
-							window.requestAnimationFrame(() => $item.classList.remove("no-transition"));
-						}
-					};
-					load(controller.signal).catch(err => {
-						if (controller.signal.aborted)
-							return;
-						console.error("Error loading history:", err);
-					});
-				}
 			} break;
 			case "logevent": {
 				const $middle = document.querySelector("#middle-top");
@@ -1494,24 +1626,165 @@ export class GUI {
 					$line.classList.add("middle-top-line");
 					$line.innerHTML = `Log entry on ${item.display.title} by ${item.display.performer}`;
 					$middle.appendChild($line);
+					$line.querySelectorAll("[data-tooltip]").forEach($tooltip => this.addTooltipListener($tooltip));
 
 					const $comment = document.createElement("div");
 					$comment.classList.add("middle-top-comment");
 					$middle.appendChild($comment);
 				}
 			} break;
+			case "abuselog": {
+				if (item.revid)
+					this.startOutdatedCheck(item);
+
+				const $middle = document.querySelector("#middle-top");
+				{
+					$middle.innerHTML = "";
+
+					const $line = document.createElement("div");
+					$line.classList.add("middle-top-line");
+					$line.innerHTML = `${item.display.title}${item.display.username}`;
+					$middle.appendChild($line);
+					$line.querySelectorAll("[data-tooltip]").forEach($tooltip => this.addTooltipListener($tooltip));
+
+					const $size = document.createElement("div");
+					$line.appendChild($size);
+
+					const $icon = document.createElement("span");
+					$icon.classList.add("fa", "fa-pencil");
+					$size.appendChild($icon);
+
+					const $text = document.createElement("span");
+					$text.id = "diff-size-text";
+					$text.style.color = this.ws.util.getChangeColor(0);
+					$text.innerHTML = this.ws.util.getChangeString(0);
+					$size.appendChild($text);
+
+					const $comment = document.createElement("div");
+					$comment.classList.add("middle-top-comment");
+					$middle.appendChild($comment);
+				}
+
+				const $protection = document.querySelector("#protection-indicator");
+				if ($protection) {
+					const protection = item.page.protection;
+					if (protection.protected) {
+						let icon, tooltip;
+						switch (protection.level) {
+							case "sysop": {
+								icon = "OP";
+								tooltip = "Requires sysop right to edit";
+							} break;
+							case "extendedconfirmed": {
+								icon = "X";
+								tooltip = "Requires extended confirmed right to edit";
+							} break;
+							case "autoconfirmed": {
+								icon = "A";
+								tooltip = "Requires autoconfirmed right to edit";
+							} break;
+							default: {
+								icon = "P";
+								tooltip = "Protected";
+							} break;
+						}
+
+						$protection.innerHTML = `<span class="protection-icon" data-tooltip="${tooltip}">${icon}</span>`;
+						this.addTooltipListener($protection.querySelector("[data-tooltip]"));
+					} else if (this.ws.queue.pending.has(item.id)) {
+						const comment = this.ws.queue.pending.get(item.id).pending.stability?.comment || "No comment provided";
+						$protection.innerHTML = `<span class="protection-icon" data-tooltip="Pending changes: ${comment}">PC</span>`;
+						this.addTooltipListener($protection.querySelector("[data-tooltip]"));
+					} else
+						$protection.innerHTML = "";
+				}
+
+				const $metadata = document.querySelector("#page-metadata");
+				if ($metadata)
+					$metadata.innerHTML = item.page.metadata.join(" &middot; ");
+			} break;
+		}
+
+		if (group === "edit" || group === "abuselog") { // history
+			const load = async signal => {
+				const history = item.page.history;
+				for (const item of history) {
+					const $item = document.createElement("div");
+					$item.className = "queue-item no-transition";
+					$item.classList.toggle("queue-item-current", item.id === (this.ws.queue.current.item.revid ?? this.ws.queue.current.item.id));
+					$item.innerHTML = this.generateItemHTML({
+						page: { title: item.title },
+						user: { name: item.user },
+						comment: "Loading...",
+						timestamp: item.timestamp,
+						sizediff: 0,
+						ores: NaN,
+						tags: item.tags || [],
+						type: "edit",
+					});
+					$history.appendChild($item);
+
+					requestAnimationFrame(() => $item.classList.remove("no-transition"));
+				}
+
+				if (!item.page.cached_history)
+					item.page.cached_history = this.ws.queue.generate("edit", history, true);
+
+				const items = await item.page.cached_history;
+				if (signal.aborted)
+					return;
+
+				$history.innerHTML = "";
+				for (const item of items.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))) {
+					const $item = document.createElement("div");
+					$item.className = "queue-item no-transition";
+					$item.classList.toggle("queue-item-current", item.id === (this.ws.queue.current.item.revid ?? this.ws.queue.current.item.id));
+					$item.innerHTML = this.generateItemHTML(item);
+					$history.appendChild($item);
+
+					$item.addEventListener("mouseover", () => this.ws.queue.propagate(item, true));
+					$item.addEventListener("click", () => this.ws.queue.loadFromItem(item));
+					$item.querySelectorAll("[data-tooltip]").forEach($tooltip => this.addTooltipListener($tooltip));
+
+					requestAnimationFrame(() => $item.classList.remove("no-transition"));
+				}
+			};
+			load(controller.signal).catch(err => {
+				if (controller.signal.aborted)
+					return;
+				console.error("Error loading history:", err);
+			});
 		}
 
 		this.updateDiffDisplay(item, false);
 	}
 
 	updateDiffDisplay(item, consecutive) {
+		const $diff = document.querySelector("#diff-container");
+
 		if (!item)
 			return;
+		else if (item === "loading") {
+			const $container = document.createElement("div");
+			$container.className = "loading-container";
+
+			const $spinner = document.createElement("div");
+			$spinner.className = "loading-spinner";
+			$container.appendChild($spinner);
+
+			const $icon = document.createElement("i");
+			$icon.className = "fas fa-spinner fa-spin";
+			$spinner.appendChild($icon);
+
+			const $text = document.createElement("div");
+			$text.className = "loading-text animate-loading-dots";
+			$text.textContent = "Loading edit";
+			$container.appendChild($text);
+
+			return void($diff.innerHTML = $container.outerHTML);
+		}
 
 		document.querySelectorAll("#right-top > .tabs > .tab.selected").forEach($tab => $tab.classList.remove("selected"));
-
-		const $diff = document.querySelector("#diff-container");
 		switch (Queue.groups[item.type]) {
 			case "edit": {
 				const pending = this.ws.queue.pending.get(item.id);
@@ -1678,15 +1951,6 @@ export class GUI {
 					}
 				}
 
-				$diff.querySelectorAll(":is(.mw-diff-movedpara-left, .mw-diff-movedpara-right)").forEach($el => {
-					const href = $el.href.split("#")[1];
-					delete $el.href;
-					$el.addEventListener("click", (e) => {
-						e.preventDefault();
-						$diff.querySelector(`a[name="${href}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
-					});
-				});
-
 				if (this.ws.store.settings.username_highlighting.enabled) {
 					const username = this.ws.api.username;
 					if (username) {
@@ -1700,12 +1964,6 @@ export class GUI {
 							if (item.comment && this.ws.util.match(username, item.comment))
 								document.querySelector("#middle-top .middle-top-comment .summary").classList.add("ws-username-highlight");
 					}
-				}
-
-				const $first = $diff.querySelector("table .diff-addedline, table .diff-deletedline");
-				if ($first) {
-					$diff.offsetHeight; // force reflow
-					$first.scrollIntoView({ behavior: "smooth", block: "center" });
 				}
 			} break;
 			case "logevent": {
@@ -1934,7 +2192,81 @@ export class GUI {
 					} break;
 				}
 			} break;
+			case "abuselog": {
+				$diff.innerHTML = `<table>${item.diff ?? "<em>No diff available</em>"}</table>`;
+
+				const $size = document.querySelector("#diff-size-text");
+				$size.innerHTML = this.ws.util.getChangeString(item.sizediff || 0);
+				$size.style.color = this.ws.util.getChangeColor(item.sizediff || 0);
+
+				const $comment = document.querySelector("#middle-top .middle-top-comment");
+				{
+					$comment.innerHTML = "";
+
+					const $icon = document.createElement("span");
+					$icon.classList.add("fa", "fa-comment-dots");
+					$comment.appendChild($icon);
+
+					const $summary = document.createElement("span");
+					$summary.classList.add("summary");
+					$summary.dataset.tooltip = item.comment;
+					if (item.comment)
+						$summary.textContent = this.ws.util.truncate(item.comment, 100);
+					else
+						$summary.innerHTML = "<em>No summary provided</em>";
+					$comment.appendChild($summary);
+
+					if (item.minor) {
+						const $minor = document.createElement("span");
+						$minor.classList.add("minor-indicator");
+						$minor.dataset.tooltip = "Minor edit";
+						$minor.textContent = "m";
+						$comment.prepend($minor);
+
+						this.addTooltipListener($minor);
+					}
+
+					this.addTooltipListener($summary);
+				}
+
+				if (this.ws.store.settings.username_highlighting.enabled) {
+					const username = this.ws.api.username;
+					if (username) {
+						if (item.mentions.diff)
+							$diff.querySelectorAll("td").forEach($td => {
+								if ($td.textContent && this.ws.util.match(username, $td.textContent))
+									$td.classList.add("ws-username-highlight");
+							});
+
+						if (item.mentions.comment)
+							if (item.comment && this.ws.util.match(username, item.comment))
+								document.querySelector("#middle-top .middle-top-comment .summary").classList.add("ws-username-highlight");
+					}
+				}
+			} break;
 		}
+
+		$diff.querySelectorAll(":is(.mw-diff-movedpara-left, .mw-diff-movedpara-right)").forEach($el => {
+			const href = $el.href.split("#")[1];
+			delete $el.href;
+			$el.addEventListener("click", e => {
+				e.preventDefault();
+				const $target = $diff.querySelector(`a[name="${href}"]`);
+				if ($target) {
+					$target.scrollIntoView({ behavior: "smooth", block: "center" });
+
+					$diff.querySelectorAll(".flash-highlight").forEach($old => $old.classList.remove("flash-highlight"));
+
+					const $highlight = $target.parentElement.parentElement;
+					$highlight.classList.add("flash-highlight");
+					setTimeout(() => $highlight?.classList?.remove("flash-highlight"), 3000);
+				}
+			});
+		});
+
+		const $first = $diff.querySelector("table .diff-addedline, table .diff-deletedline");
+		if ($first)
+			requestAnimationFrame(() => ($first.querySelector(".diffchange") ?? $first).scrollIntoView({ behavior: "smooth", block: "center" }));
 	}
 	updateAIAnalysisDisplay(analysis) {
 		const $analysis = document.querySelector("#ai-analysis-container");
@@ -1944,11 +2276,19 @@ export class GUI {
 			return $analysis.classList.add("hidden");
 
 		if (analysis.error) {
-			// TODO
+			const $assessment = $analysis.querySelector(":scope > .header > .assessment");
+			$assessment.textContent = "Error";
+			$assessment.className = "assessment error";
+
+			$analysis.querySelector(":scope > .header > .confidence").textContent = "";
+			$analysis.querySelector(":scope > .explanation").textContent = analysis.error;
+
+			const $issues = $analysis.querySelector(":scope > .issues");
+			$issues.innerHTML = "";
 		} else {
 			const $assessment = $analysis.querySelector(":scope > .header > .assessment");
 			$assessment.textContent = analysis.assessment;
-			$assessment.classList.add("assessment", analysis.assessment.toLowerCase().replace(/\s+/g, "-"));
+			$assessment.className = `assessment ${analysis.assessment.toLowerCase().replace(/\s+/g, "-")}`;
 
 			$analysis.querySelector(":scope > .header > .confidence").textContent = `${Math.round((analysis.confidence || 0) * 100)}% confidence`;
 			$analysis.querySelector(":scope > .explanation").textContent = analysis.explanation || "No explanation provided.";
@@ -1968,20 +2308,27 @@ export class GUI {
 	}
 
 	async outdated(item) {
-		if (Queue.groups[item.type] !== "edit") {
+		let type = item.type, id = item.id;
+		if (type === "abuselog" && item.revid) {
+			type = "edit";
+			id = item.revid;
+		}
+
+		if (Queue.groups[type] !== "edit") {
 			this.toggleOutdatedNotice(false);
 			this.togglePendingNotice(false);
 			return;
 		}
 
 		if (item.type === "pending")
-			return this.togglePendingNotice(!this.ws.queue.pending.has(item.id), true);
+			return this.togglePendingNotice(!this.ws.queue.pending.has(id), true);
 		else if (!item.pending && this.ws.queue.type === "pending")
 			return this.togglePendingNotice(true, false);
 
 		try {
-			const newer = (await this.ws.api.getLatestIDs([ item.page.title ]))[item.page.title];
-			this.toggleOutdatedNotice(newer > item.id, newer, item.page.title);
+			const newer = (await this.ws.api.getLatestIds([ item.page.title ]))[item.page.title];
+			if (this.ws.queue.current.item?.id === item.id)
+				this.toggleOutdatedNotice(newer > id, newer, item.page.title, id);
 		} catch (error) {
 			console.error("Error checking if edit is outdated:", error);
 			this.toggleOutdatedNotice(false);
@@ -1991,8 +2338,8 @@ export class GUI {
 		this.stopOutdatedCheck();
 
 		this.outdated(item);
-		this.intervals.outdated = window.setInterval(() => {
-			if (this.ws.queue.current.item === item)
+		this.intervals.outdated = setInterval(() => {
+			if (item.id === this.ws.queue.current.item?.id)
 				this.outdated(item);
 			else
 				this.stopOutdatedCheck();
@@ -2000,7 +2347,7 @@ export class GUI {
 	}
 	stopOutdatedCheck() {
 		if (this.intervals.outdated) {
-			window.clearInterval(this.intervals.outdated);
+			clearInterval(this.intervals.outdated);
 			this.intervals.outdated = null;
 		}
 		this.toggleOutdatedNotice(false);
@@ -2035,7 +2382,7 @@ export class GUI {
 				$notice.remove();
 		}
 	}
-	toggleOutdatedNotice(show, newer, page) {
+	toggleOutdatedNotice(show, newer, page, current) {
 		const $exists = document.querySelector("#outdated-notice");
 		show ??= !$exists;
 		if (show === Boolean($exists)) {
@@ -2063,10 +2410,36 @@ export class GUI {
 			$text.textContent = "Newer revision available on this page.";
 			$notice.appendChild($text);
 
-			const $button = document.createElement("span");
-			$button.classList.add("button");
-			$button.innerHTML = "View latest <i class='fas fa-arrow-right'></i>";
-			$button.addEventListener("click", e => {
+			const $restore = document.createElement("span");
+			$restore.classList.add("button");
+			$restore.innerHTML = "<i class='fas fa-redo'></i> Restore this revision";
+			$restore.addEventListener("click", async e => {
+				e.preventDefault();
+
+				const message = await this.dialog.input(
+					"Restore Edit",
+					"Are you sure you want to restore this revision? This will create a new edit that reverts the page to this revision.",
+					"Edit summary (optional)",
+					""
+				);
+				if (message !== null)
+					this.ws.execute({
+						actions: [
+							{
+								name: "restore-edit",
+								params: {
+									summary: message,
+								}
+							}
+						]
+					});
+			});
+			$notice.appendChild($restore);
+
+			const $latest = document.createElement("span");
+			$latest.classList.add("button");
+			$latest.innerHTML = "View latest <i class='fas fa-arrow-right'></i>";
+			$latest.addEventListener("click", e => {
 				e.preventDefault();
 
 				const page = $notice.dataset.page;
@@ -2074,7 +2447,7 @@ export class GUI {
 				if (page && id)
 					this.ws.queue.loadFromRevision(page, id);
 			});
-			$notice.appendChild($button);
+			$notice.appendChild($latest);
 
 			const $diff = document.querySelector("#diff-container");
 			$diff.parentElement.insertBefore($notice, $diff);
@@ -2131,15 +2504,26 @@ export class GUI {
 	}
 
 	updateZenMode() {
+		this.ws.notifications.count();
+
 		const zen = this.ws.store.settings.zen_mode;
 		if (zen.enabled && zen.music.enabled)
-			this.ws.audio.playPlaylist([ "music", "zen_mode" ]);
+			this.ws.audio.zengine.start();
 		else
-			this.ws.audio.stopPlaylist([ "music", "zen_mode" ]);
+			this.ws.audio.zengine.stop();
 
 		document.querySelectorAll("[data-zen-show]").forEach($el => {
 			$el.style.display = zen.enabled && !zen[$el.dataset.zenShow].enabled ? "none" : "";
 		});
+	}
+
+	updateAccessibility() {
+		document.body.classList.toggle("colorblind-mode", this.ws.store.settings.accessibility.colorblind);
+		document.body.classList.toggle("dyslexia-font", this.ws.store.settings.accessibility.dyslexia);
+
+		document.body.classList.toggle("high-contrast", this.ws.store.settings.accessibility.high_contrast);
+
+		document.body.classList.toggle("reduce-motion", this.ws.store.settings.accessibility.reduce_motion);
 	}
 
 	reorderQueues() {
@@ -2179,6 +2563,7 @@ export class GUI {
 	createTooltip($target, className = "", content = "", isHTML = false, delay = 10, callback = null) {
 		const $tooltip = document.createElement("div");
 		$tooltip.className = `tooltip ${className}`;
+		$tooltip.style.opacity = 0;
 
 		if (isHTML)
 			$tooltip.innerHTML = content;
@@ -2196,35 +2581,48 @@ export class GUI {
 
 		const targetRect = $target.getBoundingClientRect();
 
+		const vw = innerWidth;
+		const vh = innerHeight;
+
 		const cx = (targetRect.left + targetRect.right - w) / 2;
+		const cy = (targetRect.top + targetRect.bottom - h) / 2;
 
-		const fitRight = targetRect.right < window.innerWidth - w - 30;
-		const fitLeft = targetRect.left > w + 30;
-		const fitMiddle = cx > 10 && cx + w < window.innerWidth - 10;
+		const fits = (left, top) => left >= 0 && left + w <= vw && top >= 0 && top + h <= vh;
 
-		const fitTop = fitMiddle && targetRect.top > h + 30;
-		const fitBottom = fitMiddle && targetRect.bottom < window.innerHeight - h - 30;
-
-		if (fitTop) {
-			$tooltip.style.left = `${(targetRect.left + targetRect.right - w) / 2}px`;
-			$tooltip.style.top = `${targetRect.top - h - 10}px`;
-		} else if (fitBottom) {
-			$tooltip.style.left = `${(targetRect.left + targetRect.right - w) / 2}px`;
+		// Try primary positions first
+		if (fits(cx, targetRect.bottom + 10)) {
+			$tooltip.style.left = `${cx}px`;
 			$tooltip.style.top = `${targetRect.bottom + 10}px`;
-		} else if (fitRight) {
+		} else if (fits(cx, targetRect.top - h - 10)) {
+			$tooltip.style.left = `${cx}px`;
+			$tooltip.style.top = `${targetRect.top - h - 10}px`;
+		} else if (fits(targetRect.right + 10, cy)) {
 			$tooltip.style.left = `${targetRect.right + 10}px`;
-			$tooltip.style.top = `${targetRect.top - 4}px`;
-		} else if (fitLeft) {
+			$tooltip.style.top = `${cy}px`;
+		} else if (fits(targetRect.left - w - 10, cy)) {
 			$tooltip.style.left = `${targetRect.left - w - 10}px`;
-			$tooltip.style.top = `${targetRect.top - 4}px`;
-		} else { // fallback
-			$tooltip.style.left = `${Math.max(10, (targetRect.left + targetRect.right - w) / 2)}px`;
-			$tooltip.style.top = `${Math.max(10, targetRect.bottom + 10)}px`;
+			$tooltip.style.top = `${cy}px`;
+		} else {
+			const rightX = targetRect.right + 10;
+			if (rightX + w <= vw) {
+				const topY = Math.max(0, Math.min(cy, vh - h));
+				$tooltip.style.left = `${rightX}px`;
+				$tooltip.style.top = `${topY}px`;
+			} else {
+				const leftX = targetRect.left - w - 10;
+				if (leftX >= 0) {
+					const topY = Math.max(0, Math.min(cy, vh - h));
+					$tooltip.style.left = `${leftX}px`;
+					$tooltip.style.top = `${topY}px`;
+				} else {
+					$tooltip.style.left = `${Math.max(0, Math.min(cx, vw - w))}px`;
+					$tooltip.style.top = `${Math.max(0, Math.min(cy, vh - h))}px`;
+				}
+			}
 		}
 
 		$target.addEventListener("mousewheel", e => $tooltip.scrollBy(e.deltaX, e.deltaY));
 
-		$tooltip.style.opacity = 0;
 		setTimeout(() => $tooltip.style.opacity = 1, delay);
 
 		return $tooltip;
@@ -2267,8 +2665,8 @@ export class GUI {
 			const menuRect = $menu.getBoundingClientRect();
 			const buttonRect = $button.getBoundingClientRect();
 
-			const vw = window.innerWidth;
-			const vh = window.innerHeight;
+			const vw = innerWidth;
+			const vh = innerHeight;
 
 			const fitsLeft = buttonRect.left + menuRect.width <= vw;
 			if (fitsLeft) {
@@ -2308,8 +2706,8 @@ export class GUI {
 			const submenuRect = $submenu.getBoundingClientRect();
 			const triggerRect = $trigger.getBoundingClientRect();
 
-			const vw = window.innerWidth;
-			const vh = window.innerHeight;
+			const vw = innerWidth;
+			const vh = innerHeight;
 
 			const spaceRight = vw - triggerRect.right;
 			const spaceLeft = triggerRect.left;
@@ -2345,8 +2743,8 @@ export class GUI {
 			const menuRect = $menu.getBoundingClientRect();
 			const buttonRect = $button.getBoundingClientRect();
 
-			const vw = window.innerWidth;
-			const vh = window.innerHeight;
+			const vw = innerWidth;
+			const vh = innerHeight;
 
 			const spaceRight = vw - buttonRect.right;
 			const spaceLeft = buttonRect.left;
@@ -2393,8 +2791,8 @@ export class GUI {
 			const submenuRect = $submenu.getBoundingClientRect();
 			const triggerRect = $trigger.getBoundingClientRect();
 
-			const vw = window.innerWidth;
-			const vh = window.innerHeight;
+			const vw = innerWidth;
+			const vh = innerHeight;
 
 			const spaceRight = vw - triggerRect.right;
 			const spaceLeft = triggerRect.left;
@@ -2514,7 +2912,7 @@ export class GUI {
 						$star.innerHTML = "<i class='fa-regular fa-star'></i>";
 						$star.classList.add("spin");
 
-						window.setTimeout(() => $star.classList.remove("spin"), 500);
+						setTimeout(() => $star.classList.remove("spin"), 500);
 					}
 				} else {
 					const $favorites = $menu.querySelector(".favorites-section");
@@ -2531,7 +2929,7 @@ export class GUI {
 				}
 			}
 
-			window.setTimeout(() => $star.classList.remove("spin"), 500);
+			setTimeout(() => $star.classList.remove("spin"), 500);
 		});
 
 		const $icon = document.createElement("span");
@@ -2665,7 +3063,9 @@ export class GUI {
 			const warning = getWarningFromLookup(warningTitle);
 			const reportObject = {
 				name: "if",
-				condition: "atFinalWarning",
+				condition: {
+					name: "user-final-warning"
+				},
 				actions: [
 					{
 						name: "report-user-to-aiv",
@@ -2722,7 +3122,11 @@ export class GUI {
 			});
 		};
 
-		const group = Queue.groups[this.ws.queue.current.item?.type ?? this.ws.queue.current.type];
+		const itemType = this.ws.queue.current.item?.type ?? this.ws.queue.current.type;
+		let group = Queue.groups[itemType];
+		if (itemType === "abuselog" && this.ws.queue.current.item?.revid)
+			group = "edit";
+
 		$menu.__executeCallbacks__ = { executeWithWarn, executeNoWarn };
 
 		if (this.ws.store.favorite.reverts.length > 0) {
@@ -2738,12 +3142,12 @@ export class GUI {
 			$container.className = "favorites-container";
 			$favorites.appendChild($container);
 
-			const allWarnings = Object.values(warningsLookup).filter(w => w.queueType.includes(group) && (typeof w.show !== "function" || w.show(item)));
+			const allWarnings = Object.values(warningsLookup).filter(w => w.queueType.includes(group) && (!item || typeof w.show !== "function" || w.show(item)));
 			for (const favorite of this.ws.store.favorite[type]) {
 				const warning = allWarnings.find(w => w.title === favorite);
 				if (warning) {
-					const item = this.createWarningItem(warning, executeWithWarn, executeNoWarn, type, true);
-					$container.appendChild(item);
+					const $item = this.createWarningItem(warning, executeWithWarn, executeNoWarn, type, true);
+					$container.appendChild($item);
 				}
 			}
 

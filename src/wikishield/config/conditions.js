@@ -1,108 +1,285 @@
+import { Queue } from "../core/queue.js";
+
 export const conditions = {
-	"operatorNonAdmin": {
-		desc: "You are not an admin",
-		check: (ws) => !ws.rights.block
+	"true": {
+		title: "True",
+		check: (ws, item, params) => true
 	},
-	"operatorAdmin": {
-		desc: "You are an admin",
-		check: (ws) => ws.rights.block
+	"false": {
+		title: "False",
+		check: (ws, item, params) => false
 	},
-	"userIsHighlighted": {
-		desc: "User is highlighted",
-		check: (ws, edit) => ws.store.highlight.users.has(edit.user.name)
+
+	"account-admin": {
+		title: "You are an admin",
+		check: (ws, item, params) => ws.groups.sysop === true
 	},
-    "pageIsWatchlisted": {
-        desc: "Page is on watchlist",
-        check: (ws, edit) => {
-            return edit.page.watched;
-        }
-    },
-    "pageIsNotWatchlisted": {
-        desc: "Page is not on watchlist",
-        check: (ws, edit) => {
-            return !edit.page.watched;
-        }
-    },
-	"pageIsHighlighted": {
-		desc: "Page is highlighted",
-		check: (ws, edit) => ws.store.highlight.pages.has(edit.page.title)
+
+	"user-registered": {
+		title: "Selected user is registered",
+		check: (ws, item, params) => item.user.anon === false
 	},
-	"userIsWhitelisted": {
-		desc: "User is whitelisted",
-		check: (ws, edit) => ws.store.whitelist.users.has(edit.user.name)
+	"user-ip": {
+		title: "Selected user is an IP address",
+		check: (ws, item, params) => item.user.ip === true
 	},
-	"pageIsWhitelisted": {
-		desc: "Page is whitelisted",
-		check: (ws, edit) => ws.store.whitelist.pages.has(edit.page.title)
+	"user-temp": {
+		title: "Selected user is a temporary account",
+		check: (ws, item, params) => item.user.temp === true
 	},
-	"userIsAnon": {
-		desc: "User is anonymous (temporary account)",
-		check: (ws, edit) => mw.util.isTemporaryUser(edit.user.name) || mw.util.isIPAddress(edit.user.name)
+	"user-empty-talk": {
+		title: "Selected user's talk page is empty",
+		check: (ws, item, params) => item.user.talk === undefined
 	},
-    "userIsIP": {
-        desc: "User is an IP address",
-        check: (ws, edit) => mw.util.isIPAddress(edit.user.name)
-    },
-    "userIsTemp": {
-        desc: "User is a temporary account",
-        check: (ws, edit) => mw.util.isTemporaryUser(edit.user.name)
-    },
-	"userIsRegistered": {
-		desc: "User is registered (not temporary account)",
-		check: (ws, edit) => !(mw.util.isTemporaryUser(edit.user.name) || mw.util.isIPAddress(edit.user.name))
+	"user-blocked": {
+		title: "Selected user is blocked",
+		check: (ws, item, params) => item.user.blocked === true
 	},
-	"userHasEmptyTalkPage": {
-		desc: "User has an empty talk page",
-		check: (ws, edit) => edit.user.talk === undefined
+	"user-edit-count": {
+		title: "Selected user's edit count is",
+		parameters: (ws, item) => [
+			{
+				id: "condition",
+				title: "Condition",
+
+				"type": "choice",
+				"options": [
+					"<",
+					"≤",
+					"=",
+					"≥",
+					">",
+				],
+				"default": "=",
+			},
+			{
+				id: "count",
+				title: "Edit count",
+
+				"type": "number",
+				"default": 0,
+			},
+		],
+		check: (ws, item, params) => {
+			const count = item.user.editcount === -1 ? Infinity : item.user.editcount || 0;
+			const target = Number(params.count);
+			switch (params.condition) {
+				case "<": return count < target;
+				case "≤": return count <= target;
+				case "=": return count === target;
+				case "≥": return count >= target;
+				case ">": return count > target;
+				default: return false;
+			}
+		},
 	},
-	"editIsMinor": {
-		desc: "Edit is marked as minor",
-		check: (ws, edit) => edit.minor
+	"user-final-warning": {
+		title: "Selected user at final warning level",
+		check: (ws, item, params) => item.user.warning === "4" || item.user.warning === "4im"
 	},
-	"editIsMajor": {
-		desc: "Edit is not marked as minor",
-		check: (ws, edit) => !edit.minor
-	},
-	"editSizeNegative": {
-		desc: "Edit removes content (negative bytes)",
-		check: (ws, edit) => (edit.sizediff || 0) < 0
-	},
-	"editSizePositive": {
-		desc: "Edit adds content (positive bytes)",
-		check: (ws, edit) => (edit.sizediff || 0) > 0
-	},
-	"editSizeLarge": {
-		desc: "Edit is large (>1000 bytes change)",
-		check: (ws, edit) => Math.abs(edit.sizediff || 0) > 1000
-	},
-	"userEditCountLow": {
-		desc: "User has less than 10 edits",
-		check: (ws, edit) => edit.user.editCount < 10 && edit.user.editCount >= 0
-	},
-	"userEditCountHigh": {
-		desc: "User has 100 or more edits",
-		check: (ws, edit) => edit.user.editCount >= 100
-	},
-	"atFinalWarning": {
-		desc: "User already has a final warning (before any new warnings)",
-		check: (ws, edit) => {
-			const original = edit.user.warning.toString() || "0";
-			const result = ["4", "4im"].includes(original);
-			return result;
+	"user-has-warnings": {
+		title: "Selected user has no warnings",
+		check: (ws, item, params) => {
+			return item.user.warning !== "0";
 		}
 	},
-	"userHasWarnings": {
-		desc: "User has received warnings (level 1+)",
-		check: (ws, edit) => {
-			const level = edit.user.warning?.toString() || "0";
-			return !["0", ""].includes(level);
+
+	"edit-pending": {
+		title: "Edit is pending",
+		check: (ws, item, params) => ws.queue.pending.has(item?.id)
+	},
+	"edit-minor": {
+		title: "Edit is marked as minor",
+		check: (ws, item, params) => item.minor === true
+	},
+	"edit-size": {
+		title: "Edit size is",
+		parameters: (ws, item) => [
+			{
+				id: "condition",
+				title: "Condition",
+
+				"type": "choice",
+				"options": [
+					"<",
+					"≤",
+					"=",
+					"≥",
+					">",
+				],
+				"default": "=",
+			},
+			{
+				id: "size",
+				title: "Size",
+
+				"type": "number",
+				"default": 0,
+			},
+		],
+		check: (ws, item, params) => {
+			const size = item.sizediff || 0;
+			const target = Number(params.size);
+			switch (params.condition) {
+				case "<": return size < target;
+				case "≤": return size <= target;
+				case "=": return size === target;
+				case "≥": return size >= target;
+				case ">": return size > target;
+				default: return false;
+			}
+		},
+	},
+	"abs-edit-size": {
+		title: "Absolute edit size is",
+		parameters: (ws, item) => [
+			{
+				id: "condition",
+				title: "Condition",
+
+				"type": "choice",
+				"options": [
+					"<",
+					"≤",
+					"=",
+					"≥",
+					">",
+				],
+				"default": "=",
+			},
+			{
+				id: "size",
+				title: "Size",
+
+				"type": "number",
+				"min": 0,
+				"default": 0,
+			},
+		],
+		check: (ws, item, params) => {
+			const size = Math.abs(item.sizediff || 0);
+			const target = Number(params.size);
+			switch (params.condition) {
+				case "<": return size < target;
+				case "≤": return size <= target;
+				case "=": return size === target;
+				case "≥": return size >= target;
+				case ">": return size > target;
+				default: return false;
+			}
+		},
+	},
+	"edit-ores-score": {
+		title: "Edit ORES score is",
+		parameters: (ws, item) => [
+			{
+				id: "condition",
+				title: "Condition",
+
+				"type": "choice",
+				"options": [
+					"<",
+					"≤",
+					"=",
+					"≥",
+					">",
+				],
+				"default": "=",
+			},
+			{
+				id: "score",
+				title: "Score",
+
+				"type": "number",
+				"min": 0,
+				"max": 1,
+				"default": 0,
+			},
+		],
+		check: (ws, item, params) => {
+			const score = item.ores_score || 0;
+			const target = Number(params.score);
+			switch (params.condition) {
+				case "<": return score < target;
+				case "≤": return score <= target;
+				case "=": return score === target;
+				case "≥": return score >= target;
+				case ">": return score > target;
+				default: return false;
+			}
+		},
+	},
+
+	"user-highlighted": {
+		title: "Selected user is highlighted",
+		check: (ws, item, params) => ws.store.highlight.users.has(item.user.name)
+	},
+	"user-whitelisted": {
+		title: "Selected user is whitelisted",
+		check: (ws, item, params) => ws.store.whitelist.users.has(item.user.name)
+	},
+
+	"page-highlighted": {
+		title: "Selected page is highlighted",
+		check: (ws, item, params) => ws.store.highlight.pages.has(item.page.title)
+	},
+	"page-whitelisted": {
+		title: "Selected page is whitelisted",
+		check: (ws, item, params) => ws.store.whitelist.pages.has(item.page.title)
+	},
+	"page-watched": {
+		title: "Selected page is watched",
+		check: (ws, item, params) => item.page.watched === true
+	},
+
+	"tag-highlighted": {
+		title: "Selected edit has a highlighted tag",
+		check: (ws, item, params) => {
+			for (const tag of item.tags) {
+				if (ws.store.highlight.tags.has(tag))
+					return true;
+			}
+			return false;
 		}
 	},
-	"userNoWarnings": {
-		desc: "User has no warnings (level 0)",
-		check: (ws, edit) => {
-			const level = edit.user.warning?.toString() || "0";
-			return ["0", ""].includes(level);
+	"tag-whitelisted": {
+		title: "Selected edit has a whitelisted tag",
+		check: (ws, item, params) => {
+			for (const tag of item.tags) {
+				if (ws.store.whitelist.tags.has(tag))
+					return true;
+			}
+			return false;
 		}
-	}
+	},
+
+	"item-selected": {
+		title: "An item is selected",
+		check: (ws, item, params) => item !== null
+	},
+	"edit-selected": {
+		title: "An edit is selected",
+		check: (ws, item, params) => Queue.groups[item?.type] === "edit"
+	},
+	"logevent-selected": {
+		title: "A logentry is selected",
+		check: (ws, item, params) => Queue.groups[item?.type] === "logevent"
+	},
+
+	"in-recent-queue": {
+		title: "In recent changes queue",
+		check: (ws, item, params) => ws.queue.current.type === "recent"
+	},
+	"in-pending-queue": {
+		title: "In pending changes queue",
+		check: (ws, item, params) => ws.queue.current.type === "pending"
+	},
+	"in-user-queue": {
+		title: "In user creations queue",
+		check: (ws, item, params) => ws.queue.current.type === "users"
+	},
+	"in-watchlist-queue": {
+		title: "In watchlist queue",
+		check: (ws, item, params) => ws.queue.current.type === "watchlist"
+	},
 };
