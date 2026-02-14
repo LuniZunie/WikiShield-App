@@ -1,11 +1,12 @@
 const { contextBridge, ipcRenderer } = require("electron/renderer");
 
-contextBridge.exposeInMainWorld("electronAPI", {
+contextBridge.exposeInMainWorld("electron", {
     ready: () => ipcRenderer.send("signin-ready"),
     onFocusWindow: callback => ipcRenderer.on("signin-focus-window", callback),
     onBlurWindow: callback => ipcRenderer.on("signin-blur-window", callback),
 
     getAccounts: () => ipcRenderer.invoke("get-accounts"),
+    setRememberAccounts: remember => ipcRenderer.send("set-remember-accounts", remember),
 
     signin: username => ipcRenderer.send("signin", username),
     deleteAccount: username => ipcRenderer.send("delete-account", username),

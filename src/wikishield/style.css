@@ -1356,27 +1356,56 @@ body {
                             & > .button {
                                 cursor: pointer;
 
+                                display: inline-flex;
+                                align-items: center;
+                                gap: 8px;
+
+                                border: 1px solid;
+                                border-radius: 8px;
+                                padding: 6px 14px;
+
+                                font-size: .85em;
                                 font-weight: 600;
                                 white-space: nowrap;
                                 text-decoration: none;
 
-                                transition: color .2s ease;
+                                transition: color .2s ease,
+                                            border-color .2s ease,
+                                            background .2s ease,
+                                            box-shadow .2s ease,
+                                            transform .15s ease;
 
                                 /* Theme dependent */
-                                color: rgba(153, 102, 0, 1);
+                                color: rgba(102, 77, 3, 1);
+                                border-color: rgba(255, 193, 7, .35);
+                                box-shadow: 0 2px 8px rgba(0, 0, 0, .1);
+
+                                background: rgba(255, 235, 159, .45);
+                                -webkit-backdrop-filter: blur(8px);
+                                        backdrop-filter: blur(8px);
 
                                 & > i {
-                                    font-size: 16px;
+                                    font-size: 14px;
 
-                                    transition: transform 0.3s ease;
+                                    transition: transform .3s ease;
                                 }
 
                                 &:hover {
+                                    transform: translateY(-1px);
+
                                     /* Theme dependent */
-                                    color: rgba(204, 136, 0, 1);
+                                    color: rgba(80, 60, 0, 1);
+                                    border-color: rgba(255, 193, 7, .6);
+                                    box-shadow: 0 4px 16px rgba(255, 193, 7, .25);
+
+                                    background: rgba(255, 235, 159, .65);
 
                                     & > i {
-                                        transform: translateX(4px);
+                                        transform: translateX(3px);
+
+                                        &.restore {
+                                            transform: rotateZ(180deg);
+                                        }
                                     }
                                 }
                             }
@@ -4283,7 +4312,11 @@ body {
         }
 
         & > #settings-container {
-            display: none;
+            z-index: calc(var(--max-z-index) - 6);
+
+            pointer-events: none;
+
+            display: flex;
             align-items: center;
             justify-content: center;
 
@@ -4292,16 +4325,24 @@ body {
             right: 0;
             top: 0;
             bottom: 0;
-            z-index: calc(var(--max-z-index) - 6);
 
+            opacity: 0;
+
+            transition: opacity .2s ease;
+
+            /* Theme dependent */
             background: rgba(0, 0, 0, .6);
             -webkit-backdrop-filter: blur(12px);
                     backdrop-filter: blur(12px);
 
             &.show {
-                display: flex;
+                pointer-events: auto;
 
-                animation: fade-in .2s ease;
+                opacity: 1;
+
+                & > .settings {
+                    transform: scale(1);
+                }
             }
 
             & > .settings {
@@ -4315,7 +4356,9 @@ body {
 
                 overflow: hidden;
 
-                animation: scale-in .2s ease;
+                transform: scale(.75);
+
+                transition: transform .1s ease;
 
                 /* Theme dependent */
                 border-color: rgba(255, 255, 255, .1);
@@ -4389,9 +4432,9 @@ body {
                                     font-weight: 500;
 
                                     transition: background .2s ease,
-                                            color .2s ease,
-                                            box-shadow .2s ease,
-                                            opacity .2s ease;
+                                                color .2s ease,
+                                                box-shadow .2s ease,
+                                                opacity .2s ease;
 
                                     /* Theme dependent */
                                     color: rgba(200, 200, 200, 1);
@@ -5174,6 +5217,136 @@ body {
                                         /* Theme dependent */
                                         background: rgba(102, 126, 234, .3);
                                         color: rgba(224, 224, 224, 1);
+                                    }
+                                }
+                            }
+
+                            .settings-slider {
+                                display: flex;
+                                flex-direction: column;
+                                gap: 14px;
+
+                                border-radius: 14px;
+                                padding: 16px 20px;
+
+                                /* Theme dependent */
+                                background: rgba(40, 43, 52, .7);
+
+                                & > .settings-slider-labels {
+                                    display: flex;
+                                    justify-content: space-between;
+                                    gap: 12px;
+                                }
+
+                                & > .settings-slider-labels > .settings-slider-label-left,
+                                & > .settings-slider-labels > .settings-slider-label-right {
+                                    display: flex;
+                                    flex-direction: column;
+                                    gap: 2px;
+
+                                    font-size: .9em;
+                                    font-weight: 600;
+
+                                    transition: color .2s ease;
+
+                                    /* Theme dependent */
+                                    color: rgba(192, 192, 192, 1);
+
+                                    &.active {
+                                        /* Theme dependent */
+                                        color: rgba(224, 224, 224, 1);
+                                    }
+
+                                    & > .percent {
+                                        font-size: .85em;
+                                        font-weight: 500;
+                                        font-variant-numeric: tabular-nums;
+
+                                        /* Theme dependent */
+                                        color: rgba(143, 163, 255, .9);
+                                    }
+                                }
+
+                                & > .settings-slider-labels > .settings-slider-label-right {
+                                    text-align: right;
+                                }
+
+                                & > .settings-slider-track {
+                                    cursor: pointer;
+
+                                    height: 8px;
+
+                                    position: relative;
+
+                                    border-radius: 100vh;
+
+                                    /* Theme dependent */
+                                    background: rgba(255, 255, 255, .08);
+
+                                    &::before {
+                                        content: '';
+
+                                        width: var(--fill, 50%);
+                                        height: 100%;
+
+                                        position: absolute;
+                                        left: 0;
+                                        top: 0;
+
+                                        border-radius: 100vh;
+
+                                        /* Theme dependent */
+                                        background: linear-gradient(90deg,
+                                            rgba(102, 126, 234, .6),
+                                            rgba(118, 75, 162, .6)
+                                        );
+                                    }
+
+                                    & > .settings-slider-thumb {
+                                        cursor: grab;
+
+                                        width: 22px;
+                                        height: 22px;
+
+                                        position: absolute;
+                                        top: 50%;
+
+                                        border: 2px solid;
+
+                                        border-radius: 50%;
+
+                                        transform: translate(-50%, -50%);
+
+                                        transition: transform .15s ease,
+                                                    box-shadow .2s ease;
+
+                                        /* Theme dependent */
+                                        border-color: rgba(255, 255, 255, .2);
+                                        box-shadow: 0 2px 8px rgba(0, 0, 0, .4),
+                                                    0 0 12px rgba(102, 126, 234, .3);
+
+                                        background: linear-gradient(135deg,
+                                            rgba(102, 126, 234, 1),
+                                            rgba(118, 75, 162, 1)
+                                        );
+
+                                        &:hover {
+                                            transform: translate(-50%, -50%) scale(1.15);
+
+                                            /* Theme dependent */
+                                            box-shadow: 0 3px 12px rgba(0, 0, 0, .5),
+                                                        0 0 20px rgba(102, 126, 234, .5);
+                                        }
+
+                                        &:active, &.dragging {
+                                            cursor: grabbing;
+
+                                            transform: translate(-50%, -50%) scale(1.2);
+
+                                            /* Theme dependent */
+                                            box-shadow: 0 4px 16px rgba(0, 0, 0, .5),
+                                                        0 0 24px rgba(102, 126, 234, .6);
+                                        }
                                     }
                                 }
                             }

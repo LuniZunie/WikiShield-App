@@ -7,8 +7,10 @@ const { truncate } = require("../global/truncate/script.com.js");
 const { Memory } = require("../global/memory/script.com.js");
 const { ORES } = require("./ores.js");
 
-const __tags__ = new Set([ "en.wikipedia.org" ]);
-const __pendingChanges__ = new Set([ "en.wikipedia.org", "de.wikipedia.org" ]);
+const __servers__ = require("../servers.js");
+
+const __tags__ = new Set(__servers__.filter(s => s.tag).map(s => s.host));
+const __pendingChanges__ = new Set(__servers__.filter(s => s.pending_changes).map(s => s.host));
 
 class MediaWikiAPI {
     static cache = { };
@@ -34,6 +36,9 @@ class MediaWikiAPI {
             param = [ param ];
         return [ ...new Set(param) ];
     }
+    static join(param) {
+        return param.join("|").replace(/\|\|+/g, "|");
+    }
 
     static getUsername(oauth, server) {
         return oauth.fetch(`https://${server}/w/api.php`, {
@@ -45,10 +50,9 @@ class MediaWikiAPI {
         }, undefined, "POST", true).then(data => data?.query?.userinfo?.name || null);
     }
 
-    constructor(glob, oauth, ores, server, username) {
+    constructor(glob, oauth, server, username) {
         this.glob = glob;
         this.oauth = oauth;
-        this.ores = ores;
         this.server = server;
         this.username = username;
 
@@ -131,15 +135,16 @@ class MediaWikiAPI {
     }
 
     async getToken(type = "csrf", bypass, serverOverride) {
-        if (this.tokens[type] === undefined) {
+        const id = `${serverOverride ?? this.server}:${type}`;
+        if (this.tokens[id] === undefined) {
             try {
-                return this.tokens[type] = this.post({ action: "query", meta: "tokens", type: type }, bypass, serverOverride).then(data => data?.query?.tokens?.[`${type}token`] || null);
+                return this.tokens[id] = this.post({ action: "query", meta: "tokens", type: type }, bypass, serverOverride).then(data => data?.query?.tokens?.[`${type}token`] || null);
             } catch (err) {
                 Logger.error("Error fetching token:", err);
                 throw err;
             }
         } else
-            return this.tokens[type];
+            return this.tokens[id];
     }
     async postWithToken(params, type = "csrf", bypass, serverOverride) {
         try {
@@ -154,6 +159,17 @@ class MediaWikiAPI {
         try {
             return (await this.post({ action: "query", meta: "userinfo", uiprop: "*" }, bypass, serverOverride))?.query?.userinfo || { };
         } catch (err) { return void(Logger.error("Error fetching account info:", err)) ?? { } };
+    }
+    async getGlobalUserInfo(username, bypass, serverOverride) {
+        try {
+            const response = await this.post({
+                action: "query",
+                meta: "globaluserinfo",
+                guiuser: username,
+                guiprop: "groups|rights"
+            }, bypass, serverOverride);
+            return response.query?.globaluserinfo || { };
+        } catch (err) { return void(Logger.error("Error fetching global user info:", err)) ?? { }; }
     }
 
     async append(title, section, content, summary, check = null, bypass, serverOverride) {
@@ -185,7 +201,6 @@ class MediaWikiAPI {
         } catch (err) { return void(Logger.error("Error editing section:", err)) ?? { valid: false, reason: err.message }; }
     }
 
-    // FIX
     async acceptPendingEdit(id, summary, bypass, serverOverride) {
         try {
             await this.postWithToken({ action: "review", revid: id, comment: summary }, "csrf", bypass, serverOverride);
@@ -287,7 +302,7 @@ class MediaWikiAPI {
         titles = MediaWikiAPI.paramify(titles);
         try {
             const promises = await Promise.allSettled(MediaWikiAPI.chunk(titles, 50).map(async chunk => {
-                return await this.post({ action: "query", prop: "revisions", rvprop: "content", rvslots: "*", titles: chunk.join("|") }, bypass, serverOverride);
+                return await this.post({ action: "query", prop: "revisions", rvprop: "content", rvslots: "*", titles: MediaWikiAPI.join(chunk) }, bypass, serverOverride);
             }));
 
             const pages = { };
@@ -305,7 +320,7 @@ class MediaWikiAPI {
         revids = MediaWikiAPI.paramify(revids);
         try {
             const promises = await Promise.allSettled(MediaWikiAPI.chunk(revids, 500).map(async chunk => {
-                return await this.post({ action: "query", prop: "revisions", rvprop: "ids|content", rvslots: "*", revids: chunk.join("|") }, bypass, serverOverride);
+                return await this.post({ action: "query", prop: "revisions", rvprop: "ids|content", rvslots: "*", revids: MediaWikiAPI.join(chunk) }, bypass, serverOverride);
             }));
 
             const revisions = { };
@@ -325,7 +340,7 @@ class MediaWikiAPI {
         titles = MediaWikiAPI.paramify(titles);
         try {
             const promises = await Promise.allSettled(MediaWikiAPI.chunk(titles, 50).map(async chunk => {
-                return await this.post({ action: "query", prop: "revisions", rvprop: "ids", titles: chunk.join("|") }, bypass, serverOverride);
+                return await this.post({ action: "query", prop: "revisions", rvprop: "ids", titles: MediaWikiAPI.join(chunk) }, bypass, serverOverride);
             }));
 
             const pages = { };
@@ -351,7 +366,7 @@ class MediaWikiAPI {
         usernames = MediaWikiAPI.paramify(usernames);
         try {
             const promises = await Promise.allSettled(MediaWikiAPI.chunk(usernames, 500).map(async chunk => {
-                return await this.post({ action: "query", list: "users", usprop: "editcount", ususers: chunk.join("|") }, bypass, serverOverride);
+                return await this.post({ action: "query", list: "users", usprop: "editcount", ususers: MediaWikiAPI.join(chunk) }, bypass, serverOverride);
             }));
 
             const users = { };
@@ -369,7 +384,7 @@ class MediaWikiAPI {
         usernames = MediaWikiAPI.paramify(usernames);
         try {
             const promises = await Promise.allSettled(MediaWikiAPI.chunk(usernames, 500).map(async chunk => {
-                return await this.post({ action: "query", list: "blocks", bkusers: chunk.join("|"), bkprop: "id|by|reason|expiry" }, bypass, serverOverride);
+                return await this.post({ action: "query", list: "blocks", bkusers: MediaWikiAPI.join(chunk), bkprop: "id|by|reason|expiry" }, bypass, serverOverride);
             }));
 
             const users = { };
@@ -381,6 +396,16 @@ class MediaWikiAPI {
             }
             return users;
         } catch (err) { return void(Logger.error("Error fetching blocked users:", err)) ?? { }; }
+    }
+    async isUserGloballyLocked(username, bypass, serverOverride) {
+        try {
+            const response = await this.post({
+                action: "query",
+                meta: "globaluserinfo",
+                guiuser: username,
+            }, bypass, serverOverride);
+            return response.query?.globaluserinfo?.locked === true;
+        } catch (err) { return void(Logger.error("Error checking if user is globally locked:", err)) ?? false; }
     }
 
     async getContributions(username, limit = 10, bypass, serverOverride) {
@@ -414,7 +439,7 @@ class MediaWikiAPI {
         titles = MediaWikiAPI.paramify(titles);
         try {
             const promises = await Promise.allSettled(MediaWikiAPI.chunk(titles, 50).map(async chunk => {
-                return await this.post({ action: "query", prop: "revisions", rvprop: "content", rvslots: "*", titles: chunk.join("|") }, bypass, serverOverride);
+                return await this.post({ action: "query", prop: "revisions", rvprop: "content", rvslots: "*", titles: MediaWikiAPI.join(chunk) }, bypass, serverOverride);
             }));
 
             const pages = { };
@@ -435,7 +460,7 @@ class MediaWikiAPI {
                 return await this.continuous({
                     action: "query",
                     prop: "info|categories|templates",
-                    titles: chunk.join("|"),
+                    titles: MediaWikiAPI.join(chunk),
 
                     inprop: "protection|watched",
 
@@ -541,8 +566,7 @@ class MediaWikiAPI {
         } catch (err) { return void(Logger.error("Error counting page reverts:", err)) ?? 0; }
     }
 
-    // TODO make an option for models
-    async getORES(revids, models = [ "damaging:true", "goodfaith:false" ], bypass, serverOverride) {
+    async getORES(revids, bias, bypass, serverOverride) {
         revids = MediaWikiAPI.paramify(revids);
         try {
             const ores = { };
@@ -554,28 +578,22 @@ class MediaWikiAPI {
             });
 
             const chunks = MediaWikiAPI.chunk(revids, 50);
-            if (this.glob.externalServices && ORES.enabled) {
-                const promises = await Promise.allSettled(chunks.map(async chunk => await this.ores.score(chunk, models)));
-                for (const promise of promises) {
-                    if (promise.status !== "fulfilled")
-                        continue;
-                    Object.assign(ores, promise.value);
-                }
-            } else {
-                const promises = await Promise.allSettled(chunks.map(async chunk => {
-                    return await this.post({ action: "query", prop: "revisions", rvprop: "ids|oresscores", rvslots: "*", revids: chunk.join("|") }, bypass, serverOverride);
-                }));
-                for (const promise of promises) {
-                    if (promise.status !== "fulfilled")
-                        continue;
-                    for (const page of promise.value.query?.pages || [ ])
-                        for (const rev of page.revisions || [ ])
-                            ores[rev.revid] = rev.oresscores || { };
-                }
+            const promises = await Promise.allSettled(chunks.map(async chunk => {
+                return await this.post({ action: "query", prop: "revisions", rvprop: "ids|oresscores", rvslots: "*", revids: MediaWikiAPI.join(chunk) }, bypass, serverOverride);
+            }));
+            for (const promise of promises) {
+                if (promise.status !== "fulfilled")
+                    continue;
+                for (const page of promise.value.query?.pages || [ ])
+                    for (const rev of page.revisions || [ ])
+                        ores[rev.revid] = rev.oresscores || { };
             }
 
-            return this.ores.extract(ores, models);
+            return ORES.extract(ores, bias);
         } catch (err) { return void(Logger.error("Error fetching ORES scores:", err)) ?? { }; }
+    }
+    async extractORES(ores, bias = 0.5) {
+        return ORES.extract(ores, bias);
     }
 
     async getDiff(from, to, format = "table", bypass, serverOverride) {
@@ -667,7 +685,7 @@ class MediaWikiAPI {
                     prop: "revisions",
                     rvprop: "ids|user|comment|timestamp|size|tags|flags|oresscores",
                     rvslots: "*",
-                    revids: chunk.join("|")
+                    revids: MediaWikiAPI.join(chunk)
                 }, bypass, serverOverride);
             }));
 
@@ -765,7 +783,7 @@ class MediaWikiAPI {
         } catch (err) { return void(Logger.error("Parse user error:", err)) ?? result; }
     }
 
-    async parseEdits(items, simple, bypass, serverOverride) {
+    async parseEdits(items, simple, oresBias, bypass, serverOverride) {
         items = MediaWikiAPI.paramify(items);
 
         const users = MediaWikiAPI.paramify(items.map(item => item.item.user));
@@ -794,7 +812,7 @@ class MediaWikiAPI {
                         result[i].data.page.metadata = data[item.item.title]?.metadata || [ ];
                     });
                 }),
-                this.getORES(revids, undefined, bypass, serverOverride).then(data => {
+                this.getORES(revids, oresBias, bypass, serverOverride).then(data => {
                     items.forEach((item, i) => {
                         result[i].data.edit.ores = data[item.item.revid] || 0;
                     });
@@ -885,7 +903,7 @@ class MediaWikiAPI {
         } catch (err) { return void(Logger.error("Error fetching abuse log revids:", err)) ?? { }; }
     }
 
-    async feeds(recent = { }, pending = { }, users = { }, watchlist = { }, abuselog = { }) {
+    async feeds(recent = null, pending = null, users = null, watchlist = null, abuselog = null) {
         [ recent, pending, users, watchlist, abuselog ] = [ recent, pending, users, watchlist, abuselog ].map(feed => typeof feed === "object" ? feed : ({ }));
         try {
             const options = { action: "query", list: [ ] };
@@ -897,9 +915,9 @@ class MediaWikiAPI {
                 options.rcprop = "title|ids|sizes|flags|user|timestamp|comment|tags|oresscores";
 
                 options.rcshow = "!bot";
-                options.rcnamespace = recent.ns || undefined;
+                options.rcnamespace = recent.ns || "*";
 
-                options.rcstart = recent.since || undefined;
+                if (recent.since) options.rcstart = recent.since;
                 options.rcdir = recent.since ? "newer" : "older";
 
                 options.rclimit = "max";
@@ -907,7 +925,7 @@ class MediaWikiAPI {
             if (pending !== null && __pendingChanges__.has(this.server)) {
                 options.list.push("oldreviewedpages");
 
-                options.ornamespace = pending.ns || undefined;
+                options.ornamespace = pending.ns || "*";
 
                 options.orlimit = "max";
             }
@@ -916,7 +934,7 @@ class MediaWikiAPI {
 
                 options.letype = "newusers";
 
-                options.lestart = users.since || undefined;
+                if (users.since) options.lestart = users.since;
                 options.ledir = users.since ? "newer" : "older";
 
                 options.lelimit = "max";
@@ -928,9 +946,9 @@ class MediaWikiAPI {
                 options.wlprop = "title|ids|sizes|flags|user|timestamp|comment|tags|oresscores";
 
                 options.wlexcludeuser = this.username;
-                options.wlnamespace = watchlist.ns || undefined;
+                options.wlnamespace = watchlist.ns || "*";
 
-                options.wlstart = watchlist.since || undefined;
+                if (watchlist.since) options.wlstart = watchlist.since;
                 options.wldir = watchlist.since ? "newer" : "older";
 
                 options.wllimit = "max";
@@ -938,16 +956,16 @@ class MediaWikiAPI {
             if (abuselog !== null) {
                 options.list.push("abuselog");
 
-                options.aflnamespace = abuselog.ns || undefined;
+                options.aflnamespace = abuselog.ns || "*";
 
-                options.aflstart = abuselog.since || undefined;
+                if (abuselog.since) options.aflstart = abuselog.since;
                 options.afldir = abuselog.since ? "newer" : "older";
 
                 options.aflprop = "ids|user|title|action|result|timestamp|hidden|revid|filter|details";
                 options.afllimit = "max";
             }
 
-            options.list = options.list.join("|");
+            options.list = MediaWikiAPI.join(options.list);
 
             const data = { recent: [ ], pending: [ ], users: [ ], watchlist: [ ], abuselog: [ ] };
             (await this.continuous(options)).responses.forEach(response => {
@@ -955,7 +973,7 @@ class MediaWikiAPI {
                 if (query.recentchanges)
                     data.recent = data.recent.concat(query.recentchanges);
                 if (query.oldreviewedpages)
-                    data.pending = data.pending.concat(query.oldreviewedpages);
+                    data.pending = data.pending.concat(query.oldreviewedpages).slice(0, 100); // pending changes feed can be very large, so we limit it to 100 entries
                 if (query.logevents)
                     data.users = data.users.concat(query.logevents.filter(entry => !entry.temp));
                 if (query.watchlist)
@@ -965,30 +983,24 @@ class MediaWikiAPI {
             });
 
             if (data.pending.length > 0) {
-                const revisions = { }, process = [ ];
-                data.pending.forEach(item => {
-                    if (this.cache.pending.has(item.revid))
-                        revisions[item.revid] = this.cache.pending.get(item.revid);
-                    else
-                        process.push(item);
-                });
-
-                if (process.length > 0)
-                    await this.getRevisions(process.map(item => item.revid)).then(data => {
-                        Object.entries(data).forEach(([ revid, rev ]) => {
-                            this.cache.pending.set(revid = +revid, rev);
-                            revisions[revid] = rev;
-                        });
-                    });
-
                 const stability = new Map();
                 const temp = { };
-                await Promise.allSettled(process.map(async item => {
+                await Promise.allSettled(data.pending.map(async item => {
+                    if (!this.cache.pending.has(item.revid))
+                        this.cache.pending.set(item.revid, await this.post({
+                            action: "query",
+                            prop: "revisions",
+                            titles: item.title,
+                            rvstartid: item.revid,
+                            rvlimit: 1,
+                            rvprop: "ids|flags|user|timestamp|comment|size|tags",
+                        }));
+                    const rev = this.cache.pending.get(item.revid);
+
                     if (!stability.has(item.title))
                         stability.set(item.title, this.post({ action: "query", list: "logevents", letype: "stable", letitle: item.title, lelimit: 1 }));
                     item.stability = (await stability.get(item.title))?.query?.logevents?.[0] || { };
 
-                    const rev = revisions[item.revid];
                     const page = rev.query?.pages?.[0];
                     temp[item.title] = { title: item.title, sizediff: item.diff_size, ...page.revisions?.[0], pending: item };
                 }));
@@ -1088,202 +1100,6 @@ class MediaWikiAPI {
                 abuselog: [ ],
             };
         }
-    }
-
-    async queue(type, ns, since, full) {
-        const options = {
-            get recent() {
-                return {
-                    action: "query",
-                    list: "recentchanges",
-                    rcnamespace: ns,
-                    rclimit: "max",
-                    rcprop: "title|ids|sizes|flags|user|timestamp|comment|tags",
-                    rctype: "edit",
-                    rctoponly: true,
-                    rcstart: since || "",
-                    rcdir: since ? "newer" : "older",
-                };
-            },
-            get pending() {
-                return {
-                    action: "query",
-                    list: "oldreviewedpages",
-                    ornamespace: ns,
-                    orlimit: "max",
-                    orstart: since || "",
-                    ordir: since ? "newer" : "older",
-                };
-            },
-            get users() {
-                return {
-                    action: "query",
-                    list: "logevents",
-                    letype: "newusers",
-                    lelimit: "max",
-                    lestart: since || "",
-                    ledir: since ? "newer" : "older",
-                };
-            },
-            get watchlist() {
-                return {
-                    action: "query",
-                    list: "watchlist",
-                    wlnamespace: ns,
-                    wllimit: "max",
-                    wlprop: "title|ids|sizes|flags|user|timestamp|comment|tags",
-                    wltype: "edit",
-                    wlstart: since || "",
-                    wldir: since ? "newer" : "older",
-                    wlexcludeuser: this.username,
-                };
-            },
-            get abuselog() {
-                return {
-                    action: "query",
-                    list: "abuselog",
-                    afllimit: "max",
-                    aflstart: since || "",
-                    afldir: since ? "newer" : "older",
-                    aflnamespace: ns,
-                    aflprop: "ids|user|title|action|result|timestamp|hidden|revid|filter|details"
-                };
-            },
-        };
-
-        if (type === "pending" && !__pendingChanges__.has(this.server))
-            return [ ];
-
-        try {
-            const data = await this.continuous(options[type]);
-
-            switch (type) {
-                case "recent": {
-                    return data.responses.flatMap(response => response.query?.recentchanges || [ ]);
-                }
-                case "pending": {
-                    const localCache = {
-                        stability: new Map(),
-                    };
-
-                    const promises = await Promise.allSettled(data.responses.flatMap(response => response.query?.oldreviewedpages || [ ]).map(async obj => {
-                        if (!this.cache.pending.has(obj.revid))
-                            this.cache.pending.set(obj.revid, await this.post({
-                                action: "query",
-                                prop: "revisions",
-                                titles: obj.title,
-                                rvstartid: obj.revid,
-                                rvlimit: 1,
-                                rvprop: "ids|flags|user|timestamp|comment|size|tags",
-                            }));
-                        const rev = this.cache.pending.get(obj.revid);
-
-                        if (!localCache.stability.has(obj.title))
-                            localCache.stability.set(obj.title, this.post({ action: "query", list: "logevents", letype: "stable", letitle: obj.title, lelimit: 1 }));
-                        obj.stability = (await localCache.stability.get(obj.title))?.query?.logevents?.[0] || { };
-
-                        const page = rev.query?.pages?.[0];
-                        return { title: obj.title, sizediff: obj.diff_size, ...page.revisions?.[0], pending: obj };
-                    }));
-
-                    const list = promises.filter(p => p.status === "fulfilled").map(p => p.value);
-                    if (full === false)
-                        return list;
-
-                    const temp = { };
-                    await Promise.allSettled(list.map(async item => {
-                        const between = await this.getRevisionsBetween(item.title, item.pending.stable_revid, item.revid);
-                        if (between.length < 2)
-                            return;
-
-                        const stable = between.pop();
-                        temp[item.title] = {
-                            count: between.length,
-                            users: between.reduce((acc, rev) => {
-                                if (rev.user in acc)
-                                    acc[rev.user]++;
-                                else
-                                    acc[rev.user] = 1;
-
-                                return acc;
-                            }, { }),
-
-                            revid: item.revid,
-                            prior: stable.revid,
-
-                            sizediff: item.size - stable.size,
-
-                            timestamp: {
-                                new: item.timestamp,
-                                old: between[between.length - 1].timestamp,
-                            },
-
-                            pending: item.pending,
-                        };
-                    }));
-
-                    return temp;
-                }
-                case "abuselog": {
-                    const logs = data.responses.flatMap(response => response.query?.abuselog || [ ]);
-
-                    const logsById = { };
-                    logs.forEach(log => {
-                        if (log.action !== "edit")
-                            return;
-
-                        const id = `${log.user}|${log.title}|${log.timestamp}`;
-                        if (id in logsById)
-                            logsById[id].push(log);
-                        else
-                            logsById[id] = [ log ];
-                    });
-
-                    const temp = [ ];
-                    await Promise.allSettled(Object.entries(logsById).map(async ([ , log ]) => {
-                        const last = log[log.length - 1];
-
-                        const result = new Set(log.flatMap(e => e.result.split(",")));
-
-                        const revision = log.find(e => e.revid !== "" && e.revid !== undefined);
-                        const publicEntry = log.find(e => Object.keys(e.details).length);
-                        temp.push({
-                            id: last.id,
-
-                            revision: revision !== undefined,
-                            private: !publicEntry,
-                            result,
-                            action: last.action,
-
-                            revid: revision?.revid ?? null,
-                            diff: publicEntry.details ? {
-                                new: publicEntry.details.new_wikitext,
-                                old: publicEntry.details.old_wikitext,
-                                size: publicEntry.details.edit_delta,
-                            } : null,
-                            timestamp: last.timestamp,
-                            comment: publicEntry?.details?.summary ?? null,
-
-                            user: last.user,
-                            editcount: publicEntry?.details?.user_editcount ?? null,
-
-                            ns: last.ns,
-                            title: last.title,
-
-                            entries: log
-                        });
-                    }));
-
-                    return temp;
-                }
-                case "users": {
-                    return data.responses.flatMap(response => response.query?.logevents || [ ]);
-                }
-                case "watchlist": {
-                    return data.responses.flatMap(response => response.query?.watchlist || [ ]);
-                }
-            }
-        } catch (err) { return void(Logger.error(`Error fetching ${type} queue:`, err)) ?? [ ]; }
     }
 }
 

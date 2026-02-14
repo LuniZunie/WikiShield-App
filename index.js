@@ -14,14 +14,12 @@ const { generateRandomUUID } = require("./global/UUID/script.com.js");
 const { Security } = require("./app/security.js");
 const { Translator } = require("./app/translate.js");
 const { CreateBadgeIcon } = require("./app/badge.js");
-const { ORES } = require("./wikipedia/ores.js");
 const { MediaWikiOAuth2 } = require("./wikipedia/oauth2.js");
 const { MediaWikiAPI } = require("./wikipedia/api.js");
-const { PythonInstaller } = require("./py/installer.js");
 
 // constants
 const __dev__ = process.env.NODE_ENV === "development" || process.env.ELECTRON_ENV === "development" || !app.isPackaged;
-const __servers__ = [ "en.wikipedia.org", "test2.wikipedia.org" ];
+const __servers__ = require("./servers.js");
 const __userAgent__ = `WikiShield-Bot/${app.getVersion()} (https://en.wikipedia.org/wiki/Wikipedia:WikiShield; lunizunie@gmail.com)`;
 
 // global references
@@ -46,9 +44,9 @@ const glob = {
 
     accounts: [ ],
     account: null,
+    rememberAccounts: false,
 
     notifications: true,
-    externalServices: true,
 
     python: null,
     mwapi: null,
@@ -100,6 +98,13 @@ if (process.platform === "win32") {
     }
 }
 
+// GPU / media flags for smooth video playback in webviews
+app.commandLine.appendSwitch("enable-gpu-rasterization");
+app.commandLine.appendSwitch("enable-accelerated-video-decode");
+app.commandLine.appendSwitch("enable-features", "VaapiVideoDecoder,VaapiVideoEncoder,CanvasOopRasterization");
+app.commandLine.appendSwitch("disable-features", "HardwareMediaKeyHandling");
+app.commandLine.appendSwitch("autoplay-policy", "no-user-gesture-required");
+
 // listen for custom protocol (wikishield://)
 if (process.defaultApp) {
     if (process.argv.length >= 2)
@@ -138,22 +143,22 @@ const store = new Store({
             isFullScreen: false
         },
 
-        server: __servers__[0],
+        server: __servers__[0].host,
 
         accounts: { },
         account: null,
+        rememberAccounts: false,
 
         notifications: true,
-        externalServices: true,
     }
 });
 
 glob.window = store.get("window", { width: null, height: null, isMaximized: true, isFullScreen: false });
 
-glob.server = store.get("server", __servers__[0]);
+glob.server = store.get("server", __servers__[0].host);
 
 glob.notifications = store.get("notifications", true);
-glob.externalServices = store.get("externalServices", true);
+glob.rememberAccounts = store.get("rememberAccounts", false);
 
 // crash reporter
 crashReporter.start({ uploadToServer: false });
@@ -202,20 +207,20 @@ function UpdateMenu(options = { }) {
                 {
                     label: "Servers",
                     type: "submenu",
-                    submenu: __servers__.map(server => ({
-                        label: server,
-                        type: "radio",
+                    submenu: __servers__.map(server => server.name === "seperator" ? { type: "separator" } : {
+                        label: server.name,
+                        type: "checkbox",
                         click: () => {
-                            glob.server = server;
-                            store.set("server", server);
+                            glob.server = server.host;
+                            store.set("server", server.host);
 
                             if (glob.windows.main)
                                 glob.windows.main.reload();
 
                             UpdateMenu(options);
                         },
-                        checked: glob.server === server
-                    }))
+                        checked: glob.server === server.host
+                    })
                 },
                 { type: "separator" },
                 ...Object.entries(glob.accounts)
@@ -228,7 +233,8 @@ function UpdateMenu(options = { }) {
                                 label: "Switch to account",
                                 click: () => {
                                     glob.account = account;
-                                    store.set("account", username);
+                                    if (glob.rememberAccounts)
+                                        store.set("account", username);
 
                                     if (glob.windows.main)
                                         glob.windows.main.reload();
@@ -241,11 +247,13 @@ function UpdateMenu(options = { }) {
                                 label: "Remove account",
                                 click: () => {
                                     delete glob.accounts[username];
-                                    store.set("accounts", Security.encryptAccounts(glob.accounts));
+                                    if (glob.rememberAccounts)
+                                        store.set("accounts", Security.encryptAccounts(glob.accounts));
 
                                     if (glob.account === account) {
                                         glob.account = null;
-                                        store.set("account", null);
+                                        if (glob.rememberAccounts)
+                                            store.set("account", null);
 
                                         if (glob.windows.main)
                                             glob.windows.main.close();
@@ -262,11 +270,12 @@ function UpdateMenu(options = { }) {
                 {
                     label: "Logout",
                     click: () => {
-                        delete glob.accounts[glob.account.username];
-                        store.set("accounts", Security.encryptAccounts(glob.accounts));
-
                         glob.account = null;
-                        store.set("account", null);
+                        delete glob.accounts[glob.account.username];
+                        if (glob.rememberAccounts) {
+                            store.set("account", null);
+                            store.set("accounts", Security.encryptAccounts(glob.accounts));
+                        }
 
                         if (glob.windows.main)
                             glob.windows.main.close();
@@ -291,15 +300,6 @@ function UpdateMenu(options = { }) {
                         store.set("notifications", glob.notifications);
                     },
                     checked: glob.notifications
-                },
-                {
-                    label: 'Allow External Services',
-                    type: 'checkbox',
-                    click() {
-                        glob.externalServices = !glob.externalServices;
-                        store.set("externalServices", glob.externalServices);
-                    },
-                    checked: glob.externalServices,
                 },
                 { type: 'separator' },
                 {
@@ -464,7 +464,7 @@ function UpdateMenu(options = { }) {
     Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
-function BuildTray() {
+function BuildTray() { // TODO
     const tray = new Tray(nativeImage.createFromPath(path.join(__dirname, "assets", "icon.png")));
     tray.setToolTip("WikiShield");
 
@@ -570,7 +570,7 @@ class BuildWindow {
                     const $link = event.target.closest("a[href]");
                     if ($link) {
                         event.preventDefault();
-                        electronAPI.openInBrowser($link.href);
+                        electron.openInBrowser($link.href);
                     }
                 }
             }, true);
@@ -647,7 +647,6 @@ class BuildWindow {
             minimizable: false,
             backgroundColor: "#1e1e1e",
             icon: nativeImage.createFromPath(path.join(__dirname, "assets", "icon.png")),
-            alwaysOnTop: true,
             webPreferences: {
                 preload: path.join(__dirname, "preload", "signin.js"),
                 contextIsolation: true,
@@ -759,7 +758,7 @@ class BuildWindow {
         return glob.windows.authorize;
     }
 
-    static translation(parent, translation) {
+    static translation(parent) {
         if (glob.quitting) return;
 
         if (glob.windows.translation)
@@ -850,6 +849,7 @@ class Popup {
         Popup.windows.set(id, popup);
 
         popup.webContents.on("did-attach-webview", (event, webContents) => {
+            webContents.setBackgroundThrottling(false);
             webContents.on("context-menu", (e, params) => {
                 const contextMenu = Menu.buildFromTemplate([
                     ...(params.editFlags.canCopy ? [ { role: "copy" } ] : [ ]),
@@ -949,12 +949,17 @@ class Popup {
         });
 
         const browser = path.join(__dirname, "src", "browser", "index.html");
-        popup.loadFile(browser, { query: { url: url } });
+        popup.loadFile(browser, { query: { url: url, host: glob.server } });
 
         const attached = new Set();
         popup.webContents.on("did-attach-webview", (event, webContents) => {
             attached.add(webContents);
             webContents.on("destroyed", () => attached.delete(webContents));
+
+            webContents.setWindowOpenHandler(({ url }) => {
+                popup.webContents.send("open-link-in-new-tab", url);
+                return { action: "deny" };
+            });
         });
 
         popup.on("close", () => {
@@ -1011,7 +1016,7 @@ class NotificationHandler {
 }
 
 // API
-async function CreateAPI(username = null) {
+async function CreateAPI(username = null, api = true) {
     const active = username ?? glob.account?.username ?? null;
     if (active === null)
         return null;
@@ -1029,35 +1034,27 @@ async function CreateAPI(username = null) {
         oauth.expires = expires.toISOString();
         oauth.lastUsed = new Date().toISOString();
         oauth.valid = true;
-        store.set("accounts", Security.encryptAccounts(glob.accounts));
+        if (glob.rememberAccounts)
+            store.set("accounts", Security.encryptAccounts(glob.accounts));
     } catch (err) {
         oauth.valid = false;
-        store.set("accounts", Security.encryptAccounts(glob.accounts));
+        if (glob.rememberAccounts)
+            store.set("accounts", Security.encryptAccounts(glob.accounts));
         return null;
     }
 
     if (glob.mwapi && MediaWikiAPI.controller)
         MediaWikiAPI.controller.abort();
 
-    glob.mwapi = new MediaWikiAPI(glob, mw, new ORES(glob.server, glob.python), glob.server, active);
+    if (!api)
+        return null;
+
+    glob.mwapi = new MediaWikiAPI(glob, mw, glob.server, active);
     return glob.mwapi;
 }
 
 // app setup
 app.whenReady().then(async () => {
-    Logger.debug(`WikiShield starting (version ${app.getVersion()})`);
-    try {
-        Logger.debug("Building python environment...");
-
-        glob.python = await new PythonInstaller(app.getPath("userData")).setup();
-        ORES.enabled = true;
-
-        Logger.debug(`Python environment ready. (${glob.python})`);
-    } catch (err) { // ORES will just be done via web requests
-        ORES.enabled = false;
-        Logger.error(`Failed to set up python environment: ${err.stack || err}`);
-    }
-
     glob.accounts = Security.decryptAccounts(store.get("accounts", { }));
     glob.account = glob.accounts[store.get("account", null)] ?? null;
 
@@ -1069,29 +1066,47 @@ app.whenReady().then(async () => {
         setInterval(update, 10 * 60 * 1000); // every 10 minutes
     }
 
-    ipcMain.on("are-external-services-allowed", event => event.returnValue = glob.externalServices);
+    ipcMain.on("open-external", (event, url) => Security.openExternal(url));
 
-    ipcMain.on('open-external', (event, url) => Security.openExternal(url));
+    ipcMain.handle("get-language", async () => __servers__.find(server => server.host === glob.server) ?? __servers__[0]);
 
     ipcMain.handle("get-account", async () => glob.account);
-    ipcMain.handle("get-accounts", async () => Object.entries(glob.accounts).map(([ username, account ]) => ({
-        username, valid: account.valid, lastUsed: account.lastUsed
-    })));
+    ipcMain.handle("get-accounts", async () => [
+        glob.rememberAccounts,
+        Object.entries(glob.accounts).map(([ username, account ]) => ({
+            username, valid: account.valid, lastUsed: account.lastUsed
+        }))
+    ]);
+    ipcMain.on("set-remember-accounts", (event, remember) => {
+        glob.rememberAccounts = remember;
+        store.set("rememberAccounts", remember);
+        if (remember) {
+            store.set("accounts", Security.encryptAccounts(glob.accounts));
+            if (glob.account)
+                store.set("account", glob.account.username);
+        } else {
+            store.delete("account");
+            store.delete("accounts");
+        }
+    });
 
-    ipcMain.on('signin', (event, username) => {
+    ipcMain.on("signin", (event, username) => {
         glob.account = glob.accounts[username];
         glob.account.lastUsed = new Date().toISOString();
-        store.set("account", username);
-        store.set("accounts", Security.encryptAccounts(glob.accounts));
+        if (glob.rememberAccounts) {
+            store.set("account", username);
+            store.set("accounts", Security.encryptAccounts(glob.accounts));
+        }
 
         glob.windows.signin.close();
         glob.windows.signin = null;
 
         BuildWindow.main();
     });
-    ipcMain.on('delete-account', (event, username) => {
+    ipcMain.on("delete-account", (event, username) => {
         delete glob.accounts[username];
-        store.set("accounts", Security.encryptAccounts(glob.accounts));
+        if (glob.rememberAccounts)
+            store.set("accounts", Security.encryptAccounts(glob.accounts));
     });
 
     ipcMain.handle("authorize", async () => {
@@ -1124,10 +1139,12 @@ app.whenReady().then(async () => {
                 valid: true,
                 lastUsed: new Date().toISOString()
             };
-            store.set("accounts", Security.encryptAccounts(glob.accounts));
 
             glob.account = glob.accounts[username];
-            store.set("account", username);
+            if (glob.rememberAccounts) {
+                store.set("account", username);
+                store.set("accounts", Security.encryptAccounts(glob.accounts));
+            }
 
             glob.windows.signin.close();
             glob.windows.signin = null;
@@ -1151,7 +1168,15 @@ app.whenReady().then(async () => {
 
     ipcMain.on("log", (event, message, level) => Logger[level ?? "info"]?.(message));
     ipcMain.on("error", (event, message, detail) => dialog.showErrorBox(message, detail?.toString() ?? "No additional details provided."));
-    ipcMain.handle('send-notification', async (event, options, url) => void(NotificationHandler.send(options, url)));
+    ipcMain.handle("send-notification", async (event, options, url) => void(NotificationHandler.send(options, url)));
+    ipcMain.handle("local-storage", async (event, action, key, value) => {
+        switch (action) {
+            case "get": return store.get(key);
+            case "set": return store.set(key, value);
+            case "delete": return store.delete(key);
+            default: throw new Error("Invalid local storage action");
+        }
+    });
 
     ipcMain.on("menu-enabler", (event, options) => { UpdateMenu(options); });
     ipcMain.on("set-badge-count", async(event, count) => {
@@ -1193,7 +1218,8 @@ app.whenReady().then(async () => {
             if (glob.windows.main)
                 glob.windows.main.close();
 
-            return BuildWindow.signin();
+            BuildWindow.signin();
+            return;
         }
 
         try {
@@ -1204,7 +1230,8 @@ app.whenReady().then(async () => {
                 if (glob.windows.main)
                     glob.windows.main.close();
 
-                return BuildWindow.signin();
+                BuildWindow.signin();
+                return;
             }
 
         } catch (err) {

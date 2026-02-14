@@ -276,6 +276,19 @@
                     <i class="fas fa-chevron-right menu-option-chevron"></i>
                     <div class="submenu"></div>
                 </div>
+                <div class="menu-divider"></div>
+                <div id="user-request-global-block" class="menu-option submenu-trigger">
+                    <i class="fas fa-ban"></i>
+                    <span>Request global block</span>
+                    <i class="fas fa-chevron-right menu-option-chevron"></i>
+                    <div class="submenu"></div>
+                </div>
+                <div id="user-request-global-lock" class="menu-option submenu-trigger">
+                    <i class="fas fa-lock"></i>
+                    <span>Request global lock</span>
+                    <i class="fas fa-chevron-right menu-option-chevron"></i>
+                    <div class="submenu"></div>
+                </div>
             </div>
             <div class="bottom-tool-menu" id="page-menu">
                 <div id="page-open-page" class="menu-option">
@@ -488,6 +501,21 @@
                                     <div class="settings-section-title">Minimum ORES score</div>
                                     <div class="settings-section-desc">Minimum ORES score required for an edit to appear in the recent changes queue.</div>
                                     <numeric-input id="settings-minimum-ores-score" step="0.05" min="0" max="1" value="0"></numeric-input>
+                                </div>
+                            </div>
+                            <div class="settings-section">
+                                <div class="settings-section-title">ORES bias</div>
+                                <div class="settings-section-desc">
+                                    Select how ORES scores are calculated for edits in the recent changes queue. "Badfaith" is how likely an edit is to be made in bad faith, "Damaging" is how likely an edit is to be damaging.
+                                </div>
+                                <div id="settings-ores-bias" class="settings-slider">
+                                    <div class="settings-slider-labels">
+                                        <div class="settings-slider-label-left active">Badfaith<span class="percent">50%</span></div>
+                                        <div class="settings-slider-label-right active">Damaging<span class="percent">50%</span></div>
+                                    </div>
+                                    <div class="settings-slider-track">
+                                        <div class="settings-slider-thumb"></div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="settings-section">
@@ -1006,12 +1034,12 @@
                                     <div class="stat-card">
                                         <div class="inside shimmer shimmer-border">
                                             <div class="front">
-                                                <div id="stats-abuselogs-changes-reviewed" class="stat-value"></div>
+                                                <div id="stats-abuselog-changes-reviewed" class="stat-value"></div>
                                                 <div class="stat-label">Abuse Log Changes Reviewed</div>
                                             </div>
                                             <div class="back">
                                                 <div class="stat-sublabel">
-                                                    <span id="stats-abuselogs-changes-percentage"></span>% of your reviews came from your abuse log
+                                                    <span id="stats-abuselog-changes-percentage"></span>% of your reviews came from your abuse log
                                                 </div>
                                             </div>
                                         </div>
@@ -1103,7 +1131,13 @@
                                                     another <span id="stats-UAA-reports-percentage"></span>% were for UAA
                                                 </div>
                                                 <div class="stat-sublabel">
-                                                    and <span id="stats-RFPP-reports-percentage"></span>% were posted at RFPP &lpar;yes, we count that as a report&rpar;
+                                                    <span id="stats-global-block-reports-percentage"></span>% were for global block requests
+                                                </div>
+                                                <div class="stat-sublabel">
+                                                    while <span id="stats-global-lock-reports-percentage"></span>% were for global lock requests
+                                                </div>
+                                                <div class="stat-sublabel">
+                                                    finally, <span id="stats-RFPP-reports-percentage"></span>% were posted at RFPP
                                                 </div>
                                             </div>
                                         </div>
@@ -1201,19 +1235,6 @@
                                 </div>
 
                                 <div class="save-settings-content">
-                                    <div class="save-settings-card cloud-storage-card">
-                                        <div class="card-header">
-                                            <div class="card-icon">
-                                                <i class="fa fa-cloud"></i>
-                                            </div>
-                                            <div class="card-header-content">
-                                                <div class="card-title">Cloud Storage</div>
-                                                <div class="card-desc">Store your settings in the cloud for access across multiple browsers and devices.</div>
-                                            </div>
-                                            <toggle-input id="settings-cloud-storage-toggle" class="card-toggle"></toggle-input>
-                                        </div>
-                                    </div>
-
                                     <div class="save-settings-card data-management-card">
                                         <div class="card-header">
                                             <div class="card-icon">

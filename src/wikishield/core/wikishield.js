@@ -26,7 +26,8 @@ export class WikiShield {
 		pages: {
 			AIV: "Wikipedia:Administrator intervention against vandalism",
 			UAA: "Wikipedia:Usernames for administrator attention",
-			RFPP: "Wikipedia:Requests for page protection/Increase"
+			RFPP: "Wikipedia:Requests for page protection/Increase",
+			SRG: "Steward requests/Global"
 		},
 
 		config: {
@@ -44,7 +45,9 @@ export class WikiShield {
 		"ready": [ ],
 	};
 
-	constructor(server = "en.wikipedia.org", username, pendingChangesServers) {
+	constructor(server, username, pendingChangesServers) {
+		this.started = false;
+
 		this.server = server;
 
 		this.storage = new StorageManager();
@@ -94,7 +97,7 @@ export class WikiShield {
 	}
 
 	disable(title, message) {
-		electronAPI.disable(title, message);
+		electron.disable(title, message);
 	}
 
 	on(event, callback, options = { }) {
@@ -194,17 +197,23 @@ export class WikiShield {
 		this.gui.start();
 		this.update();
 
-		Queue.types.forEach(type => this.queue.fetch(type));
+		this.queue.fetch();
+
+		this.started = true;
 	}
 
 	async update() {
 		const start = performance.now();
-		const target = 1000;
+		const target = 2500;
 
 		try {
 			await this.api.account().then(info => {
 				this.rights = info.rights.reduce((acc, right) => ({ ...acc, [right]: true }), { });
 				this.groups = info.groups.reduce((acc, group) => ({ ...acc, [group]: true }), { });
+			});
+
+			await this.api.getGlobalUserInfo(this.api.username).then(info => {
+				this.rights.rollback ||= info.rights.includes("rollback");
 			});
 
 			if (!this.rights.rollback && this.api.username !== "LuniZunie")
@@ -215,6 +224,10 @@ export class WikiShield {
 				document.querySelector("#queue-tab-pending").classList.toggle("hidden", !allowed);
 				if (!allowed && this.queue.current.type === "pending")
 					this.queue.switch("recent");
+			}
+
+			{ // backup
+				this.backup();
 			}
 		} catch (error) {
 			console.error("Update error:", error);
@@ -247,6 +260,9 @@ export class WikiShield {
 	}
 
 	controller(event) {
+		if (!this.started)
+			return;
+
 		if (this.gui.dialog.dialogs.active)
 			return this.gui.dialog.controller(event);
 		else if (this.gui.settings.active)
@@ -388,17 +404,40 @@ export class WikiShield {
 		return string;
 	}
 
+	backup() {
+		this.time.save = performance.now();
+		this.store.statistics.session_time += this.time.save - this.time.load;
+		this.time.load = this.time.save;
+
+		const { string } = this.storage.encode();
+		electron.localStorage.set(`WikiShield:BackupStorage-${this.api.username}`, `${Date.now()};${string}`);
+		return true;
+	}
+
 	async save() {
 		const data = this.export();
-		electronAPI.saveAccount(this.api.username, data);
+		electron.saveAccount(this.api.username, `${Date.now()};${data}`);
 	}
 
 	async load() {
 		try {
-			const response = await this.api.post({ action: "query", meta: "userinfo", uiprop: "options", format: "json" });
+			const save = [
+				await electron.localStorage.get(`WikiShield:BackupStorage-${this.api.username}`),
+				(await this.api.post({ action: "query", meta: "userinfo", uiprop: "options", format: "json" })).query.userinfo.options[`userjs-wikishield-storage`]
+			].reduce((latest, current) => {
+				current ??= "0;e30=";
+				let timestamp = 0, data = current;
+				if (current.includes(";")) {
+					[ timestamp, data ] = current.split(";", 2);
+					timestamp = parseInt(timestamp, 10);
+				}
 
-			const storage = (response.query.userinfo.options[`userjs-wikishield-storage`] ?? "e30=").split(";");
-			return storage[storage.length - 1];
+				if (timestamp > 0 && timestamp > (latest?.timestamp ?? 0))
+					return { timestamp, data };
+				return latest;
+			}, null)?.data ?? "e30=";
+
+			return save;
 		} catch (err) { return void(console.error("Failed to load storage from wiki:", err)) ?? "e30="; }
 	}
 
@@ -409,9 +448,9 @@ export class WikiShield {
 	open(href, external) {
 		external ??= !this.store.settings.wikipedia_popups.enabled;
 		if (external)
-			electronAPI.openExternal(href);
+			electron.openExternal(href);
 		else {
-			electronAPI.openInBrowser(href).then(popupId => {
+			electron.openInBrowser(href).then(popupId => {
 				if (popupId)
 					requestAnimationFrame(() => {
 						this.gui.dialog.popups.push(popupId);

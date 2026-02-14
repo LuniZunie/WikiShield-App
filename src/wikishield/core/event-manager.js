@@ -37,8 +37,19 @@ export class EventManager {
 	}
 	submenu($el, name) {
 		const event = this.events[name];
-
 		$el.dataset.eventName = name;
+
+		const current = this.ws.queue.current;
+		const id = `${current.type}:${current.item?.id}`;
+		const cachedParams = { };
+		if ($el.dataset.eventId === id)
+			for (const param of event.parameters?.(this.ws, this.ws.queue.current.item) || []) {
+				const $input = $el.querySelector(`[data-paramid="${param.id}"]`);
+				cachedParams[param.id] = $input.value;
+			}
+		else
+			$el.dataset.eventId = id;
+
 		$el.innerHTML = "";
 
 		const $description = document.createElement("div");
@@ -77,7 +88,10 @@ export class EventManager {
 						$select.appendChild($option);
 					}
 
-					if ("default" in param) {
+					if (cachedParams[param.id] !== undefined) {
+						$select.value = cachedParams[param.id];
+						actions[param.id] = cachedParams[param.id];
+					} else if ("default" in param) {
 						$select.value = _default;
 						actions[param.id] = _default;
 					}
@@ -119,7 +133,10 @@ export class EventManager {
 					$input.dataset.paramid = param.id;
 					$el.appendChild($input);
 
-					if ("default" in param) {
+					if (cachedParams[param.id] !== undefined) {
+						$input.value = cachedParams[param.id];
+						actions[param.id] = cachedParams[param.id];
+					} else if ("default" in param) {
 						$input.value = _default;
 						actions[param.id] = _default;
 					}
@@ -136,7 +153,10 @@ export class EventManager {
 					$input.dataset.paramid = param.id;
 					$el.appendChild($input);
 
-					if ("default" in param) {
+					if (cachedParams[param.id] !== undefined) {
+						$input.checked = cachedParams[param.id];
+						actions[param.id] = cachedParams[param.id];
+					} else if ("default" in param) {
 						$input.checked = _default;
 						actions[param.id] = _default;
 					}
@@ -152,7 +172,10 @@ export class EventManager {
 					$input.dataset.paramid = param.id;
 					$el.appendChild($input);
 
-					if ("default" in param) {
+					if (cachedParams[param.id] !== undefined) {
+						$input.value = cachedParams[param.id];
+						actions[param.id] = cachedParams[param.id];
+					} else if ("default" in param) {
 						$input.value = _default;
 						actions[param.id] = _default;
 					}

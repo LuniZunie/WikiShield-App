@@ -1,7 +1,8 @@
 import { Memory, Stack } from "../../../global/memory/script.esm.js";
+import { profanity } from "../data/profanity.js";
 
 export class Queue {
-	static refresh = 2000;
+	static refresh = 1000;
 	static types = [ "recent", "pending", "watchlist", "abuselog", "users" ];
 	static groups = {
 		recent: "edit",
@@ -67,18 +68,6 @@ export class Queue {
 		this.bypass = new Memory({ timeout: 60 * 60 * 1000, size: 10000 }); // 1 hour
 
 		this.backoff = 2000;
-
-		this.ws.api.feeds(
-			{ ns: "*", since: ws.util.utcString(new Date(Date.now() - 60 * 1000)) }, // recent
-			{ ns: "*", full: true }, // pending
-			{ ns: "*", since: ws.util.utcString(new Date(Date.now() - 60 * 1000)) }, // users
-			{ ns: "*", since: ws.util.utcString(new Date(Date.now() - 60 * 1000)) }, // watchlist
-			{ ns: "*", since: ws.util.utcString(new Date(Date.now() - 60 * 1000)) }  // abuselog
-		).then(feeds => {
-			console.log(feeds);
-		}).catch(error => {
-			console.error("Initial feed fetch failed:", error);
-		});
 	}
 
 	switch(type) {
@@ -98,249 +87,258 @@ export class Queue {
 		document.querySelector(`#queue-tab-${type}`).classList.add("selected");
 	}
 
-	async fetch(type) {
-		if (!this.ws.store.settings.queue[type].enabled)
-			return setTimeout(() => this.fetch(type), Queue.refresh);
-
+	async fetch() {
 		try {
+			const queues = this.ws.store.settings.queue;
+			if (queues.pending.enabled && this.ws.rights.review) {
+				const pending = (await this.ws.api.feeds(null, { ns: "*", full: true })).pending;
+
+				this.pending.clear();
+				Object.values(pending).forEach(item => this.pending.set(item.revid, item));
+
+				await this.outdated("pending");
+			}
+
+			const feeds = await this.ws.api.feeds(
+				queues.recent.enabled ? { ns: this.ws.store.settings.namespaces.join("|"), since: this.queues.recent.last.timestamp } : null,
+				queues.pending.enabled && this.ws.rights.review ? { ns: "*", full: false } : null,
+				queues.users.enabled ? { ns: "*", since: this.queues.users.last.timestamp } : null,
+				queues.watchlist.enabled ? { ns: "*", since: this.queues.watchlist.last.timestamp } : null,
+				queues.abuselog.enabled ? { ns: this.ws.store.settings.namespaces.join("|"), since: this.queues.abuselog.last.timestamp } : null
+			);
+
 			const whitelist = this.ws.store.whitelist;
+			for (const type of Queue.types) {
+				const lastId = this.queues[type].last.id;
 
-			let ns = "*";
-			switch (type) {
-				case "recent":
-				case "abuselog": {
-					ns = this.ws.store.settings.namespaces.join("|");
-				} break;
-				case "pending": {
-					const pending = await this.ws.api.queue(type, ns, undefined, true);
+				let q = feeds[type] ?? [ ];
+				if (q[0]?.timestamp)
+					this.queues[type].last.timestamp = this.ws.util.utcString(new Date(q[0].timestamp));
 
-					this.pending.clear()
-					Object.values(pending).forEach(item => this.pending.set(item.revid, item));
+				switch (Queue.groups[type]) {
+					case "edit": {
+						const fn = item => item.revid > lastId;
+						if (type === "recent")
+							q = q.filter(item => fn(item) && !whitelist.pages.has(item.title));
+						else
+							q = q.filter(fn);
+					} break;
+					case "abuselog": {
+						q = q.filter(item => item.id > lastId);
+					} break;
+					case "logevent": {
+						q = q.filter(item => item.logid > lastId);
+					} break;
+				}
 
-					await this.outdated(type);
-				} break;
-			}
+				q = q.concat(this.queues[type].hold);
+				if (q.length > 25)
+					this.queues[type].hold = q.splice(25).reverse();
+				else
+					this.queues[type].hold = [ ];
 
-			const timestamp = type === "pending" ? undefined : this.queues[type].last.timestamp;
-			const lastId = this.queues[type].last.id;
+				let changed = false;
+				switch (type) {
+					case "recent": {
+						const remove = new Set();
+						for (const a of q)
+							for (const b of this.queues[type].queue) {
+								if (remove.has(b))
+									continue;
+								else if (b.id === this.current.item?.id)
+									continue;
 
-			let q = await this.ws.api.queue(type, ns, timestamp || undefined, false) ?? [ ];
-			if (q[0]?.timestamp)
-				this.queues[type].last.timestamp = this.ws.util.utcString(new Date(q[0].timestamp));
+								if (a.title === b.page.title && b.id < a.revid)
+									remove.add(b);
+							}
 
-			switch (Queue.groups[type]) {
-				case "edit": {
-					const fn = item => item.revid > lastId;
-					if (type === "recent")
-						q = q.filter(item => fn(item) && !whitelist.pages.has(item.title));
-					else
-						q = q.filter(fn);
-				} break;
-				case "abuselog": {
-					q = q.filter(item => item.id > lastId);
-				} break;
-				case "logevent": {
-					q = q.filter(item => item.logid > lastId);
-				} break;
-			}
-
-			q = q.concat(this.queues[type].hold);
-			if (q.length > 25)
-				this.queues[type].hold = q.splice(25).reverse();
-			else
-				this.queues[type].hold = [ ];
-
-			let changed = false;
-			switch (type) {
-				case "recent": {
-					const remove = new Set();
-					for (const a of q)
-						for (const b of this.queues[type].queue) {
-							if (remove.has(b))
-								continue;
-							else if (b.id === this.current.item?.id)
-								continue;
-
-							if (a.title === b.page.title && b.id < a.revid)
-								remove.add(b);
-						}
-
-					for (const item of remove) {
-						const i = this.queues[type].queue.indexOf(item);
-						if (i > -1) {
-							this.queues[type].queue.splice(i, 1);
-							this.ws.gui.removeQueueItem(type, item.id);
-						}
-					}
-
-					changed = remove.size > 0;
-				} break;
-				case "pending": {
-					for (const item of this.queues[type].queue)
-						if (this.current.item?.id !== item.id && !this.pending.has(item.id)) {
+						for (const item of remove) {
 							const i = this.queues[type].queue.indexOf(item);
 							if (i > -1) {
 								this.queues[type].queue.splice(i, 1);
 								this.ws.gui.removeQueueItem(type, item.id);
-
-								changed = true;
 							}
 						}
-				} break;
-				case "users": {
-					q = q.filter(item => !item.temp); // remove temp accounts
-				} break;
-				case "watchlist": {
-					const remove = new Set();
-					for (const a of q)
-						for (const b of this.queues[type].queue) {
-							if (remove.has(b))
-								continue;
-							else if (b.id === this.current.item?.id)
-								continue;
 
-							if (a.title === b.page.title && b.id < a.revid)
-								remove.add(b);
-							else if (!b.page.watched)
-								remove.add(b);
-						}
-
-					if (q.length === 0)
+						changed = remove.size > 0;
+					} break;
+					case "pending": {
 						for (const item of this.queues[type].queue)
-							if (!item.page.watched)
-								remove.add(item);
+							if (this.current.item?.id !== item.id && !this.pending.has(item.id)) {
+								const i = this.queues[type].queue.indexOf(item);
+								if (i > -1) {
+									this.queues[type].queue.splice(i, 1);
+									this.ws.gui.removeQueueItem(type, item.id);
 
-					for (const item of remove) {
-						const i = this.queues[type].queue.indexOf(item);
-						if (i > -1) {
-							this.queues[type].queue.splice(i, 1);
-							this.ws.gui.removeQueueItem(type, item.id);
+									changed = true;
+								}
+							}
+					} break;
+					case "users": {
+						q = q.filter(item => !item.temp); // remove temp accounts
+					} break;
+					case "watchlist": {
+						const remove = new Set();
+						for (const a of q)
+							for (const b of this.queues[type].queue) {
+								if (remove.has(b))
+									continue;
+								else if (b.id === this.current.item?.id)
+									continue;
+
+								if (a.title === b.page.title && b.id < a.revid)
+									remove.add(b);
+								else if (!b.page.watched)
+									remove.add(b);
+							}
+
+						if (q.length === 0)
+							for (const item of this.queues[type].queue)
+								if (!item.page.watched)
+									remove.add(item);
+
+						for (const item of remove) {
+							const i = this.queues[type].queue.indexOf(item);
+							if (i > -1) {
+								this.queues[type].queue.splice(i, 1);
+								this.ws.gui.removeQueueItem(type, item.id);
+							}
 						}
-					}
 
-					changed = remove.size > 0;
-				} break;
-			}
+						changed = remove.size > 0;
+					} break;
+				}
 
-			if (q.length === 0) {
-				if (changed)
-					this.ws.gui.renderQueue(this.queues[type].queue, this.current.edit, type);
-				return setTimeout(() => this.fetch(type), Queue.refresh);
-			}
+				if (q.length === 0) {
+					if (changed)
+						this.ws.gui.renderQueue(this.queues[type].queue, this.current.edit, type);
+					continue;
+				}
 
-			switch (Queue.groups[type]) {
-				case "edit": {
-					this.queues[type].last.id = Math.max(...q.map(item => item.revid));
+				switch (Queue.groups[type]) {
+					case "edit": {
+						this.queues[type].last.id = Math.max(...q.map(item => item.revid));
 
-					const highlight = this.ws.store.highlight;
-					const hasHighlight = item => highlight.users.has(item.user) ||
-												 highlight.pages.has(item.title) ||
-												 item.tags?.some(tag => highlight.tags.has(tag));
+						const highlight = this.ws.store.highlight;
+						const hasHighlight = item => highlight.users.has(item.user) ||
+													 highlight.pages.has(item.title) ||
+													 item.tags?.some(tag => highlight.tags.has(tag));
 
-					q = q.filter(item => !whitelist.users.has(item.user) && !item.tags?.some(tag => whitelist.tags.has(tag)) && (!this.bypass.has(item.user) || hasHighlight(item)));
+						q = q.filter(item => !whitelist.users.has(item.user) && !item.tags?.some(tag => whitelist.tags.has(tag)) && (!this.bypass.has(item.user) || hasHighlight(item)));
 
-					// parallel
-					let [
-						editCounts,
-						ores
-					] = await Promise.allSettled([
-						type === "recent" ? this.ws.api.getEditCounts(q.map(item => item.user).filter(user => !this.bypass.has(user))) : Promise.resolve([ ]),
-						this.ws.api.getORES(q.map(item => item.revid))
-					]);
+						// parallel
+						const oresCache = { };
+						let [
+							editCounts,
+							ores
+						] = await Promise.allSettled([
+							type === "recent" ? this.ws.api.getEditCounts(q.map(item => item.user).filter(user => !this.bypass.has(user))) : Promise.resolve([ ]),
+							this.ws.api.getORES(q.filter(item => {
+								if (item.oresscores?.length)
+									return void(oresCache[item.revid] = item.oresscores);
+								return true;
+							}, this.ws.store.settings.queue.ores_bias).map(item => item.revid))
+						]);
 
-					if (editCounts.status === "rejected")
-						console.error("Edit counts failed:", editCounts.reason);
-					if (editCounts.status === "fulfilled")
-						editCounts = editCounts.value;
-					else
-						editCounts = { };
+						if (editCounts.status === "rejected")
+							console.error("Edit counts failed:", editCounts.reason);
+						if (editCounts.status === "fulfilled")
+							editCounts = editCounts.value;
+						else
+							editCounts = { };
 
-					if (ores.status === "rejected")
-						console.error("ORES failed:", ores.reason);
-					if (ores.status === "fulfilled")
-						ores = ores.value;
-					else
-						ores = { };
+						if (ores.status === "rejected")
+							console.error("ORES failed:", ores.reason);
+						if (ores.status === "fulfilled")
+							ores = ores.value;
+						else
+							ores = { };
 
-					const repeats = this.queues[type].repeats;
-					const filtered = [ ];
-					if (type === "recent") {
-						const minORES = this.ws.store.settings.queue.min_ores;
-						const max = this.ws.store.settings.queue.max_edits;
-						q.forEach(item => {
-							if (isNaN(ores[item.revid]) && (repeats[item.revid] || 0) < 3) {
-								repeats[item.revid] = (repeats[item.revid] || 0) + 1;
-								return this.queues[type].hold.push(item);
-							}
+						for (const [ revid, score ] of Object.entries(await this.ws.api.extractORES(oresCache, this.ws.store.settings.queue.ores_bias)))
+							ores[revid] = score;
 
-							delete repeats[item.revid];
+						const repeats = this.queues[type].repeats;
+						const filtered = [ ];
+						if (type === "recent") {
+							const minORES = this.ws.store.settings.queue.min_ores;
+							const max = this.ws.store.settings.queue.max_edits;
+							q.forEach(item => {
+								if (isNaN(ores[item.revid]) && (repeats[item.revid] || 0) < 3) {
+									repeats[item.revid] = (repeats[item.revid] || 0) + 1;
+									return this.queues[type].hold.push(item);
+								}
 
-							const edits = editCounts[item.user] ?? this.bypass.get(item.user) ?? 0;
-							if (edits > max)
-								this.bypass.set(item.user, edits);
-							else if ((ores[item.revid] || 0) >= minORES || hasHighlight(item))
+								delete repeats[item.revid];
+
+								const edits = editCounts[item.user] ?? this.bypass.get(item.user) ?? 0;
+								if (edits > max) {
+									this.bypass.set(item.user, edits);
+									if (hasHighlight(item))
+										filtered.push(item);
+								} else if ((ores[item.revid] || 0) >= minORES || hasHighlight(item))
+									filtered.push(item);
+							});
+						} else
+							q.forEach(item => {
+								if (isNaN(ores[item.revid]) && (repeats[item.revid] || 0) < 3) {
+									repeats[item.revid] = (repeats[item.revid] || 0) + 1;
+									return this.queues[type].hold.push(item);
+								}
+
+								delete repeats[item.revid];
+
 								filtered.push(item);
-						});
-					} else
+							});
+
+						await this.add(type, filtered);
+					} break;
+					case "logevent": {
+						let max = 0;
+						const set = new Set();
+						const filtered = [ ];
 						q.forEach(item => {
-							if (isNaN(ores[item.revid]) && (repeats[item.revid] || 0) < 3) {
-								repeats[item.revid] = (repeats[item.revid] || 0) + 1;
-								return this.queues[type].hold.push(item);
-							}
+							if (set.has(item.logid))
+								return;
+							set.add(item.logid);
 
-							delete repeats[item.revid];
-
+							if (item.logid > max)
+								max = item.logid;
 							filtered.push(item);
 						});
 
-					await this.add(type, filtered);
-				} break;
-				case "logevent": {
-					let max = 0;
-					const set = new Set();
-					const filtered = [ ];
-					q.forEach(item => {
-						if (set.has(item.logid))
-							return;
-						set.add(item.logid);
+						this.queues[type].last.id = max;
 
-						if (item.logid > max)
-							max = item.logid;
-						filtered.push(item);
-					});
+						await this.add(type, filtered);
+					} break;
+					case "abuselog": {
+						const noEditCounts = q.filter(item => item.editcount === null);
 
-					this.queues[type].last.id = max;
+						let editCounts = { };
+						if (noEditCounts.length > 0)
+							editCounts = await this.ws.api.getEditCounts(noEditCounts.map(item => item.user));
 
-					await this.add(type, filtered);
-				} break;
-				case "abuselog": {
-					const noEditCounts = q.filter(item => item.editcount === null);
+						const maxEdits = this.ws.store.settings.queue.max_edits;
 
-					let editCounts = { };
-					if (noEditCounts.length > 0)
-						editCounts = await this.ws.api.getEditCounts(noEditCounts.map(item => item.user));
+						let max = 0;
+						const filtered = [ ];
+						q.forEach(item => {
+							if (((item.editcount ?? editCounts[item.user]) || 0) > maxEdits)
+								return;
 
-					const maxEdits = this.ws.store.settings.queue.max_edits;
+							if (item.id > max)
+								max = item.id;
+							filtered.push(item);
+						});
 
-					let max = 0;
-					const filtered = [ ];
-					q.forEach(item => {
-						if (((item.editcount ?? editCounts[item.user]) || 0) > maxEdits)
-							return;
+						this.queues[type].last.id = max;
 
-						if (item.id > max)
-							max = item.id;
-						filtered.push(item);
-					});
+						await this.add(type, filtered);
+					} break;
+				}
 
-					this.queues[type].last.id = max;
-
-					await this.add(type, filtered);
-				} break;
+				if (type !== "pending" && type !== "users")
+					await this.outdated(type);
 			}
-
-			if (type !== "pending" && type !== "users")
-				await this.outdated(type);
 
 			this.backoff = Queue.refresh;
 		} catch (error) {
@@ -348,7 +346,7 @@ export class Queue {
 			this.backoff = Math.min(this.backoff * 2, 120000);
 		}
 
-		setTimeout(() => this.fetch(type), this.backoff);
+		setTimeout(() => this.fetch(), this.backoff);
 	}
 	async outdated(type) {
 		if (this.queues[type].queue.length === 0)
@@ -629,7 +627,7 @@ export class Queue {
 					return { item, prior };
 				});
 
-				const parsed = await ws.api.parseEdits(items, simple, bypass);
+				const parsed = await ws.api.parseEdits(items, simple, this.ws.store.settings.queue.ores_bias, bypass);
 				for (const temp of parsed) {
 					const { item, prior, data } = temp;
 
@@ -833,8 +831,8 @@ export class Queue {
                     	this.warnings.set(user, warning);
 
 					const performerWarning = this.getWarningLevel(performer.user.talk || "");
-                	if (levels.indexOf(warning) > levels.indexOf(this.warnings.get(item.user) || "0"))
-                    	this.warnings.set(item.user, warning);
+                	if (levels.indexOf(performerWarning) > levels.indexOf(this.warnings.get(item.user) || "0"))
+                    	this.warnings.set(item.user, performerWarning);
 
 					const object = {
 						display: {
@@ -918,7 +916,9 @@ export class Queue {
 
 							get talk() {
 								return ws.queue.talks.get(user) ?? data.user.talk;
-							}
+							},
+
+							profanity: profanity.evaluate(user)
 						},
 						performer: {
 							name: item.user,
@@ -1175,6 +1175,31 @@ export class Queue {
 				else
 					this.queues[t].queue = this.queues[t].queue.filter(item => item.id !== id);
 			});
+
+			if (group !== "abuselog") {
+				let toRemove = this.queues.abuselog.queue.filter(item => {
+					return leaving.user.name === item.user.name &&
+						   leaving.page.title === item.page.title &&
+						   Math.abs(new Date(leaving.timestamp).getTime() - new Date(item.timestamp).getTime()) < 10 * 1000 // 10 seconds
+				});
+
+				if (toRemove.length > 0) {
+					Promise.allSettled(toRemove.map(async item => {
+						const revid = await this.ws.api.getAbuseLogRevid(item.id);
+						if (revid)
+							return { id: item.id, revid };
+						return null;
+					})).then(result => {
+						const remove = result.map(r => r.status === "fulfilled" ? r.value : null).filter(v => v);
+						this.queues.abuselog.queue = this.queues.abuselog.queue.filter(item => !remove.some(r => r.revid === item.revid));
+
+						if (this.current.type === "abuselog") {
+							remove.forEach(r => this.ws.gui.removeQueueItem("abuselog", r.id));
+							this.ws.gui.renderQueue(this.queues.abuselog.queue, this.queues.abuselog.item, "abuselog");
+						}
+					}).catch(() => { });
+				}
+			}
 		}
 
 		leaving.reviewed = true;
@@ -1275,7 +1300,12 @@ export class Queue {
 				}, void 0, void 0, item);
 		} catch (error) { console.error("Error during auto-welcome check:", error); }
 	}
-	async promptUAA(item, analysis) {
+	#uaaQueue = Promise.resolve();
+	promptUAA(item, analysis) {
+		this.#uaaQueue = this.#uaaQueue.then(() => this.#promptUAAInternal(item, analysis)).catch(() => {});
+		return this.#uaaQueue;
+	}
+	async #promptUAAInternal(item, analysis) {
 		if (item.user.anon)
 			return;
 		else if (this.ws.store.whitelist.users.has(item.user.name))
@@ -1287,16 +1317,17 @@ export class Queue {
 
 		const violation = analysis.issues.map(issue => `${issue.severity} ${issue.policy} violation`).join(", ");
 		const confidence = Math.round(analysis.confidence * 100);
+		const username = item.user.name;
 
 		await this.ws.gui.settings.waitForClose();
 		const confirmed = await this.ws.gui.dialog.confirm(
 			"Report Username to UAA",
 			`
-				The username <span class="confirmation-modal-username">${this.ws.util.escape(item.user.name)}</span> for ${violation}.<br><br>
+				The username <span class="confirmation-modal-username">${this.ws.util.escape(username)}</span> for ${violation}.<br><br>
 				<strong>AI Confidence:</strong> ${confidence}%<br>
-				<strong>Reasoning:</strong> ${this.ws.util.escape(analysis.explanation)}<br>
+				<strong>Reasoning:</strong> ${analysis.explanation}<br>
 			`,
-			{ username: item.user.name },
+			username,
 		);
 
 		if (confirmed) {
@@ -1329,7 +1360,10 @@ export class Queue {
 
 			resolve();
 			item.propagating = false;
-		}
+		} else
+			this.generate(item.type, [ item.origin ], false, { bypass }).then(([ loaded ]) => {
+				Object.assign(item, loaded);
+			});
 	}
 
 	loadFromItem(item) {

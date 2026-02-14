@@ -193,6 +193,8 @@
                             left: 0;
                             right: 0;
 
+                            overflow: hidden auto;
+
                             /* Theme dependent */
                             background: rgba(15, 12, 41, .98);
                             box-shadow: 0 8px 32px rgba(0, 0, 0, .4);
@@ -423,6 +425,11 @@
     </div>
 
     <script>
+        const params = new URLSearchParams(window.location.search), host = params.get("host");
+        document.querySelectorAll(".link-card").forEach($card => {
+            $card.href = $card.href.replace(/^https?:\/\/en\.wikipedia\.org/, `https://${host || "en.wikipedia.org"}`);
+        });
+
         class Memory extends Map {
             constructor(limit = 100) {
                 super();
@@ -436,15 +443,15 @@
             }
         }
 
-        function UpdateClock() {
-            const format = str => str.toString().padStart(2, "0");
-
+        const $clock = document.querySelector("#clock");
+        function updateClock() {
             const now = new Date();
-            document.querySelector("#clock").textContent = `${format(now.getHours())}:${format(now.getMinutes())}`;
-
-            requestAnimationFrame(UpdateClock);
+            const h = String(now.getHours()).padStart(2, "0");
+            const m = String(now.getMinutes()).padStart(2, "0");
+            $clock.textContent = `${h}:${m}`;
         }
-        UpdateClock();
+        updateClock();
+        setInterval(updateClock, 1000);
 
         class Autocomplete {
             static isUrl(string) {
@@ -454,70 +461,76 @@
                 return urlPattern.test(string) || localhostPattern.test(string) || string.includes(".");
             }
 
-            cache = new Memory(1000);
-            index = -1;
+            #cache = new Memory(1000);
+            #index = -1;
+            #debounceTimer = null;
 
             constructor($input, $dropdown) {
                 this.$input = $input;
                 this.$dropdown = $dropdown;
 
-                $input.addEventListener("input", async event => {
-                    const query = event.target.value.trim();
-                    if (query)
-                        this.show(await this.suggestions(query));
-                    else
-                        this.hide();
+                $input.addEventListener("input", (e) => {
+                    const query = e.target.value.trim();
+                    clearTimeout(this.#debounceTimer);
+
+                    if (!query)
+                        return void this.hide();
+
+                    this.#debounceTimer = setTimeout(async () => {
+                        this.show(await this.#fetchSuggestions(query));
+                    }, 150);
                 });
-                $input.addEventListener("keydown", event => {
+
+                $input.addEventListener("keydown", (e) => {
                     const items = this.$dropdown.querySelectorAll(".autocomplete-item");
 
-                    if (event.key === "ArrowDown") {
-                        event.preventDefault();
-                        this.index = Math.min(this.index + 1, items.length - 1);
-                        this.update();
-                    } else if (event.key === "ArrowUp") {
-                        event.preventDefault();
-                        this.index = Math.max(this.index - 1, -1);
-                        this.update();
-                    } else if (event.key === "Escape")
-                        this.hide();
-                });
-                $input.addEventListener("keypress", event => {
-                    if (event.key === "Enter") {
-                        const items = this.$dropdown.querySelectorAll(".autocomplete-item");
-                        if (this.index >= 0 && items[this.index]) {
-                            const selectedItem = items[this.index];
-                            this.navigate(selectedItem.dataset.url, selectedItem.querySelector(".autocomplete-title").textContent);
-                        } else {
-                            const query = this.$input.value.trim();
-                            if (query)
-                                this.navigate(query, query);
-                        }
-                        this.hide();
+                    switch (e.key) {
+                        case "ArrowDown":
+                            e.preventDefault();
+                            this.#index = Math.min(this.#index + 1, items.length - 1);
+                            this.#highlight();
+                            break;
+                        case "ArrowUp":
+                            e.preventDefault();
+                            this.#index = Math.max(this.#index - 1, -1);
+                            this.#highlight();
+                            break;
+                        case "Enter": {
+                            e.preventDefault();
+                            const selected = items[this.#index];
+                            if (selected)
+                                this.#navigate(selected.dataset.url);
+                            else if (this.$input.value.trim())
+                                this.#navigate(this.$input.value.trim());
+                            this.hide();
+                        } break;
+                        case "Escape":
+                            this.hide();
+                            break;
                     }
                 });
 
                 $input.addEventListener("focus", async () => {
                     const query = this.$input.value.trim();
                     if (query)
-                        this.show(await this.suggestions(query));
+                        this.show(await this.#fetchSuggestions(query));
                 });
-                $input.addEventListener("blur", () => setTimeout(() => this.hide(), 100));
+                $input.addEventListener("blur", () => setTimeout(() => this.hide(), 150));
             }
 
-            async suggestions(query) {
+            async #fetchSuggestions(query) {
                 if (Autocomplete.isUrl(query))
-                    return [ { title: query, url: query, isSearch: false } ];
+                    return [{ title: query, url: query, isSearch: false }];
 
-                if (this.cache.has(query))
-                    return this.cache.get(query);
+                if (this.#cache.has(query))
+                    return this.#cache.get(query);
 
                 try {
                     const $script = document.createElement("script");
                     const callback = `autocompleteCallback_${Date.now()}`;
 
-                    const data = await new Promise(resolve => {
-                        window[callback] = data => {
+                    const data = await new Promise((resolve) => {
+                        window[callback] = (data) => {
                             delete window[callback];
                             $script.remove();
                             resolve(data);
@@ -530,78 +543,83 @@
                             if (window[callback]) {
                                 delete window[callback];
                                 $script.remove();
-                                resolve([ query, [ ] ]);
+                                resolve([query, []]);
                             }
                         }, 3000);
                     });
 
-                    const suggestions = (data[1] || [ ]).map(item => ({
+                    const suggestions = (data[1] || []).map(item => ({
                         title: item,
                         url: `https://www.google.com/search?q=${encodeURIComponent(item)}`,
                         isSearch: true,
                     }));
 
-                    this.cache.set(query, suggestions);
-                    return this.cache.get(query);
-                } catch (error) { return void(console.error("Failed to fetch suggestions:", error)) ?? [ ]; }
+                    this.#cache.set(query, suggestions);
+                    return suggestions;
+                } catch (error) {
+                    console.error("Failed to fetch suggestions:", error);
+                    return [];
+                }
             }
 
             show(suggestions) {
                 if (suggestions.length === 0)
-                    return void(this.hide());
+                    return void this.hide();
 
-                this.$dropdown.innerHTML = suggestions.map((item, index) => {
+                this.$dropdown.replaceChildren();
+                this.#index = -1;
+
+                for (const item of suggestions) {
                     const $item = document.createElement("div");
                     $item.className = "autocomplete-item";
                     $item.dataset.url = item.url;
-                    $item.dataset.index = index;
 
                     const $icon = document.createElement("i");
                     $icon.className = item.isSearch ? "fas fa-magnifying-glass" : "fas fa-globe";
-                    $item.appendChild($icon);
 
                     const $text = document.createElement("div");
                     $text.className = "autocomplete-text";
-                    $item.appendChild($text);
 
                     const $title = document.createElement("div");
                     $title.className = "autocomplete-title";
                     $title.textContent = item.title;
-                    $text.appendChild($title);
 
                     const $url = document.createElement("div");
                     $url.className = "autocomplete-url";
                     $url.textContent = item.isSearch ? "Search Google" : item.url;
+
+                    $text.appendChild($title);
                     $text.appendChild($url);
+                    $item.appendChild($icon);
+                    $item.appendChild($text);
 
-                    $item.addEventListener("click", () => this.navigate(item.url, item.title));
+                    $item.addEventListener("click", () => this.#navigate(item.url));
 
-                    return $item.outerHTML;
-                }).join("");
+                    this.$dropdown.appendChild($item);
+                }
+
                 this.$dropdown.style.display = "block";
             }
 
             hide() {
                 this.$dropdown.style.display = "none";
-                this.index = -1;
+                this.#index = -1;
             }
 
-            navigate(url, title) {
-                if (url.startsWith("http://") || url.startsWith("https://"))
-                    window.location.href = url;
-                else if (title && !url.includes("."))
-                    window.location.href = `https://www.google.com/search?q=${encodeURIComponent(title)}`;
-                else if (url.includes("."))
-                    window.location.href = `https://${url}`;
+            #navigate(input) {
+                if (/^https?:\/\//i.test(input))
+                    window.location.href = input;
+                else if (Autocomplete.isUrl(input))
+                    window.location.href = `https://${input}`;
                 else
-                    window.location.href = `https://www.google.com/search?q=${encodeURIComponent(url)}`;
+                    window.location.href = `https://www.google.com/search?q=${encodeURIComponent(input)}`;
             }
 
-            update() {
+            #highlight() {
                 const $items = this.$dropdown.querySelectorAll(".autocomplete-item");
-                $items.forEach((item, i) => item.classList.toggle("selected", i === this.index));
-                if (this.index >= 0 && $items[this.index])
-                    $items[this.index].scrollIntoView({ block: "nearest" });
+                $items.forEach((item, i) => item.classList.toggle("selected", i === this.#index));
+                if (this.#index >= 0 && $items[this.#index])
+                    $items[this.#index].scrollIntoView({ block: "nearest" });
             }
         }
 

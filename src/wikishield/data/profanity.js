@@ -199,7 +199,7 @@ class Profanity {
             multiWord: true,
             note: "Well-known sockpuppeteer on Wikipedia."
         },
-        { term: "ass", severity: 0.6, ignore: [ "456", "a62", "a56", "a62", "a65", "a26", "a25", "4s2", "4s5", "4s6", "42s", "45s", "46s", "466", "422", "455" ] },
+        { term: "ass", severity: 0.4, ignore: [ "456", "465", "a62", "a56", "a62", "a65", "a26", "a25", "4s2", "4s5", "4s6", "42s", "45s", "46s", "466", "422", "455", "a22" ] },
         { term: "arse", severity: 0.6 },
         { term: "anal", severity: 0.7 },
         { term: "anus", severity: 0.5 },
@@ -1873,6 +1873,7 @@ class Profanity {
             risk = "Low";
 
         return {
+            clamped: Math.max(0, Math.min(1, finalScore / 5)),
             finalScore: Math.round(finalScore * 100) / 100,
             risk: risk,
             matches: matches,

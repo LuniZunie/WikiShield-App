@@ -72,7 +72,7 @@ export class Notifications {
                 .forEach(n => {
                     n.notified = true;
                     if (!this.first[type])
-                        electronAPI.sendNotification({
+                        electron.sendNotification({
                             title: this.ws.util.textify(n["*"].header),
                             body: this.ws.util.textify(n["*"].body),
                         }, n["*"].links.primary.url);
@@ -218,7 +218,7 @@ export class Notifications {
         if (!zen.enabled || zen.messages.enabled)
             unread += this.message?.filter(n => !n.read).length || 0;
 
-        electronAPI.setBadgeCount(unread);
+        electron.setBadgeCount(unread);
         if (unread > 0)
             document.title = `(${unread}) WikiShield`;
         else

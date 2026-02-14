@@ -16,19 +16,19 @@ addEventListener("wheel", event => {
     }
 }, { passive: true });
 
-electronAPI.menuEnabler();
+electron.menuEnabler();
 
-electronAPI.mwapiLoaded(async (server, username, pendingChangesServers) => {
-    if (StorageManager.okay(null, electronAPI)) {
+electron.mwapiLoaded(async (server, username, pendingChangesServers) => {
+    if (StorageManager.okay(null, electron)) {
         document.querySelector("#rollback-needed .request-link").href = await fetch("https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q7765871&props=sitelinks/urls&format=json&origin=*")
             .then(res => res.json())
             .then(data => Object.values(data.entities.Q7765871.sitelinks).find(sitelink => sitelink.url.startsWith(`https://${server}/wiki/`))?.url || null)
             .catch(() => null) ?? "https://www.wikidata.org/wiki/Q7765871";
 
         const ws = new WikiShield(server, username, pendingChangesServers);
-        electronAPI.onOpenBrowser(() => ws.open(null, false));
-        electronAPI.onOpenUrl(url => ws.open(url, false));
-        electronAPI.onOpenNotification(link => {
+        electron.onOpenBrowser(() => ws.open(null, false));
+        electron.onOpenUrl(url => ws.open(url, false));
+        electron.onOpenNotification(link => {
             const url = new URL(link);
             if (url.searchParams.has("markasread")) {
                 const n = ws.notifications.find(null, +url.searchParams.get("markasread"));
@@ -38,26 +38,26 @@ electronAPI.mwapiLoaded(async (server, username, pendingChangesServers) => {
 
             ws.open(link);
         });
-        electronAPI.menuEnabler({ browser: true });
+        electron.menuEnabler({ browser: true });
 
         ws.on("ready", () => {
-            electronAPI.onBeforeunload(() => {
+            electron.onBeforeunload(() => {
                 ws.save();
-                electronAPI.unloaded();
+                electron.unloaded();
             });
             window.addEventListener("beforeunload", () => ws.save());
 
             const killswitch = new Killswitch(ws);
             killswitch.on("kill", () => {
                 alert("WikiShield has been temporarily disabled. Please contact the development team for more information.");
-                electronAPI.quit();
+                electron.quit();
             });
             killswitch.on("force-update", () => {
                 alert("The current version of WikiShield is no longer supported. Please update to the latest version to continue using WikiShield.");
-                electronAPI.quit();
+                electron.quit();
             });
             killswitch.on("update", () => {
-                electronAPI.sendNotification({
+                electron.sendNotification({
                     title: "WikiShield Update",
                     body: "A new version of WikiShield is available. Please update to the latest version for the best experience.",
                 }, "");
@@ -65,7 +65,7 @@ electronAPI.mwapiLoaded(async (server, username, pendingChangesServers) => {
 
             killswitch.on("unsafe", () => {
                 alert("Could not verify the integrity of WikiShield. Make sure you are connected to the internet. If the problem persists, please contact the development team.");
-                electronAPI.quit();
+                electron.quit();
             });
             killswitch.on("okay", async () => {
                 addEventListener("keydown", event => ws.controller(event));
@@ -77,10 +77,10 @@ electronAPI.mwapiLoaded(async (server, username, pendingChangesServers) => {
         }, { once: true });
     } else {
         alert("An error has occurred with the WikiShield storage system that could lead to data loss. For that reason, WikiShield has been automatically disabled. Please report this immediately to the development team.");
-        electronAPI.quit();
+        electron.quit();
     }
 });
-electronAPI.mwapiLoader().catch(err => {
+electron.mwapiLoader().catch(err => {
     alert(`An error occurred while loading the WikiShield API:\n\n${err.stack || err}`);
-    electronAPI.quit();
+    electron.quit();
 });

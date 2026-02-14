@@ -32,6 +32,8 @@ Version.v3 = class V3 extends Version {
                     max_edits: 50,
                     min_ores: 0.0,
 
+                    ores_bias: 0.5,
+
                     recent: {
                         enabled: true,
                         order: 0,
@@ -52,10 +54,6 @@ Version.v3 = class V3 extends Version {
                         enabled: true,
                         order: 4,
                     }
-                },
-
-                cloud_storage: {
-                    enabled: true,
                 },
 
                 username_highlighting: {
@@ -336,6 +334,9 @@ Version.v3 = class V3 extends Version {
                     AIV: 0,
                     UAA: 0,
                     RFPP: 0,
+
+                    global_blocks: 0,
+                    global_locks: 0,
                 },
 
                 watchlist: {
@@ -396,6 +397,8 @@ Version.v3 = class V3 extends Version {
             throw new Error("INVALID_UPGRADE_ATTEMPT");
         }
 
+        this.deprecated("settings", "cloud_storage");
+
         // properties without sanitization did not exist in the previous version
         const defaults = this.default;
         return {
@@ -412,6 +415,8 @@ Version.v3 = class V3 extends Version {
                     max_size: this.sanitize([ "settings", "queue", "max_size" ], defaults.settings.queue.max_size),
                     max_edits: this.sanitize([ "settings", "queue", "max_edits" ], defaults.settings.queue.max_edits),
                     min_ores: this.sanitize([ "settings", "queue", "min_ores" ], defaults.settings.queue.min_ores),
+
+                    ores_bias: defaults.settings.queue.ores_bias,
 
                     recent: {
                         enabled: this.sanitize([ "settings", "queue", "recent", "enabled" ], defaults.settings.queue.recent.enabled),
@@ -433,10 +438,6 @@ Version.v3 = class V3 extends Version {
                         enabled: defaults.settings.queue.abuselog.enabled,
                         order: defaults.settings.queue.abuselog.order,
                     },
-                },
-
-                cloud_storage: {
-                    enabled: this.sanitize([ "settings", "cloud_storage", "enabled" ], defaults.settings.cloud_storage.enabled),
                 },
 
                 username_highlighting: {
@@ -858,7 +859,10 @@ Version.v3 = class V3 extends Version {
 
                     AIV: this.sanitize([ "statistics", "reports_filed", "AIV" ], defaults.statistics.reports_filed.AIV),
                     UAA: this.sanitize([ "statistics", "reports_filed", "UAA" ], defaults.statistics.reports_filed.UAA),
-                    RFPP: this.sanitize([ "statistics", "reports_filed", "RFPP" ], defaults.statistics.reports_filed.RFPP)
+                    RFPP: this.sanitize([ "statistics", "reports_filed", "RFPP" ], defaults.statistics.reports_filed.RFPP),
+
+                    global_blocks: defaults.statistics.reports_filed.global_blocks,
+                    global_locks: defaults.statistics.reports_filed.global_locks,
                 },
 
                 watchlist: {
@@ -976,6 +980,12 @@ Version.v3 = class V3 extends Version {
                         this.reset("settings", "queue", "min_ores");
                 }
 
+                { // root.settings.queue.ores_bias
+                    const value = root.settings.queue.ores_bias;
+                    if (!(typeof value === "number" && value >= 0.0 && value <= 1.0))
+                        this.reset("settings", "queue", "ores_bias");
+                }
+
                 [ "recent", "pending", "users", "watchlist", "abuselog" ].forEach((section, _, queues) => {
                     { // root.settings.queue[section]
                         const scope = root.settings.queue[section];
@@ -994,17 +1004,6 @@ Version.v3 = class V3 extends Version {
                         }
                     }
                 });
-            }
-
-            { // root.settings.cloud_storage
-                const scope = root.settings.cloud_storage;
-                this.restrictObject(scope, "settings", "cloud_storage");
-
-                { // root.settings.cloud_storage.enabled
-                    const value = root.settings.cloud_storage.enabled;
-                    if (typeof value !== "boolean")
-                        this.reset("settings", "cloud_storage", "enabled");
-                }
             }
 
             { // root.settings.username_highlighting
@@ -1767,6 +1766,16 @@ Version.v3 = class V3 extends Version {
                     if (!isValidStatistic(value))
                         this.reset("statistics", "reports_filed", "RFPP");
                 }
+                { // root.statistics.reports_filed.global_blocks
+                    const value = root.statistics.reports_filed.global_blocks;
+                    if (!isValidStatistic(value))
+                        this.reset("statistics", "reports_filed", "global_blocks");
+                }
+                { // root.statistics.reports_filed.global_locks
+                    const value = root.statistics.reports_filed.global_locks;
+                    if (!isValidStatistic(value))
+                        this.reset("statistics", "reports_filed", "global_locks");
+                }
             }
 
             { // root.statistics.watchlist
@@ -1836,27 +1845,6 @@ Version.v3 = class V3 extends Version {
                     const value = root.statistics.items_highlighted.tags;
                     if (!isValidStatistic(value))
                         this.reset("statistics", "items_highlighted", "tags");
-                }
-            }
-
-            { // root.statistics.blocks_issued
-                const scope = root.statistics.blocks_issued;
-                this.restrictObject(scope, "statistics", "blocks_issued");
-
-                { // root.statistics.blocks_issued.total
-                    const value = root.statistics.blocks_issued.total;
-                    if (!isValidStatistic(value))
-                        this.reset("statistics", "blocks_issued", "total");
-                }
-            }
-            { // root.statistics.pages_protected
-                const scope = root.statistics.pages_protected;
-                this.restrictObject(scope, "statistics", "pages_protected");
-
-                { // root.statistics.pages_protected.total
-                    const value = root.statistics.pages_protected.total;
-                    if (!isValidStatistic(value))
-                        this.reset("statistics", "pages_protected", "total");
                 }
             }
 

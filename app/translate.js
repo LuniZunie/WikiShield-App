@@ -1,4 +1,5 @@
 const Logger = require("electron-log");
+const __servers__ = require("../servers.js");
 
 class Translator {
     static languages = {
@@ -24,15 +25,10 @@ class Translator {
 
         "unknown": "Unknown"
     };
-    static targets = {
-        "en.wikipedia.org": "en",
-        "test.wikipedia.org": "en",
-        "test2.wikipedia.org": "en"
-    };
 
     static async translate(glob, text) {
         try {
-            const target = Translator.targets[glob.server];
+            const target = __servers__.find(server => server.host === glob.server)?.language_code || "en";
             const data = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${target}&dt=t&q=${encodeURIComponent(text)}`)
                 .then(res => res.json());
 

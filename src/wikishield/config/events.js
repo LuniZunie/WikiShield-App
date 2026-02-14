@@ -798,7 +798,7 @@ export const events = {
     },
     "report-user-to-uaa": {
         title: "Report user to UAA",
-        icon: "fas fa-flag",
+        icon: "fas fa-user-slash",
 
         parameters: (ws, item) => [
             {
@@ -949,6 +949,205 @@ export const events = {
         successful: (ws, item, params) => {
             ws.store.statistics.reports_filed.total++;
             ws.store.statistics.reports_filed.RFPP++;
+        }
+    },
+
+    "request-global-block": {
+        title: "Request global block",
+        icon: "fas fa-ban",
+
+        parameters: (ws, item) => [
+            {
+                id: "reason",
+                title: "Reason",
+
+                type: "choice",
+                options: [
+                    "Generic",
+                    "Long-term abuse",
+                    "Cross-wiki abuse",
+                    "Spam / spambot",
+                    "Compromised account"
+                ],
+                default: "Generic",
+            },
+            {
+                id: "summary",
+                title: "Summary (optional)",
+
+                type: "text",
+            }
+        ],
+
+        progress: "Requesting global block",
+        valid: (ws, item, params) => {
+            if (!item)
+                return { valid: false, reason: "Global block can only be requested when an item is selected." };
+            return { valid: true };
+        },
+        script: async (ws, item, params) => {
+            if (item.user.name === ws.api.username)
+                return { valid: false, reason: "You cannot request a global block for yourself, silly!" };
+
+            await ws.gui.settings.waitForClose();
+            if (ws.store.whitelist.users.has(item.user.name) && await ws.gui.dialog.confirm(
+                "User is whitelisted",
+                `The user <a href="https://${ws.server}/wiki/User:${encodeURIComponent(item.user.name)}" target="_blank">${item.user.name}</a> is whitelisted. Are you sure you want to request a global block for them?`
+            ) === false)
+                return { valid: false, reason: "Global block request cancelled by user." };
+
+            if (await ws.api.isUserGloballyLocked(item.user.name))
+                return { valid: false, reason: "User is globally locked." };
+
+            const reason = params.reason === "Generic" ? params.summary : `${params.reason}. ${params.summary}`;
+
+            const page = (await ws.api.getPagesContent([ WikiShield.config.pages.SRG ], true, "meta.wikimedia.org"))[WikiShield.config.pages.SRG] || "";
+            const sections = ws.util.getPageSections(page);
+
+            return await ws.api.append(
+                WikiShield.config.pages.SRG,
+                (Number(Object.entries(sections).find(([ , section ]) => section.level === 2 && section.title === "Requests for global (un)block")?.[0]) + 1) || undefined,
+                `\n${fullTrim(`
+                    === Global block for ${item.user.name} ===
+                    {{Status|}} <!-- Do not remove this template -->
+                    * {{Luxotool|${item.user.name}}}
+                    ${reason ? `${reason} ~~~~` : "~~~~"}
+                `)}`,
+                ws.api.summary(`Requesting global block for ${item.user.name}`),
+                page => {
+                    let searching = false;
+                    let sections = [ ];
+                    for (const section of ws.util.getPageSections(page)) {
+                        if (section.level === 2) {
+                            if (section.title === "Requests for global (un)block")
+                                searching = true;
+                            else if (searching)
+                                break;
+                        } else if (searching && section.level === 3)
+                            sections.push(section);
+                    }
+
+                    sections = sections.filter(section => !section.content.match(/^{{Status\|not done}}/i));
+                    return {
+                        valid: !sections.some(section => {
+                            const content = section.content;
+                            if (content.match(new RegExp(`{{Luxotool\\|\\s*${item.user.name}}}`, "i")))
+                                return true;
+                            else if (content.match(new RegExp(`{{MultiLock\\|(?:[^|}]*\\|)*(?:\\d+=)?\\s*${item.user.name}(?:\\|hidename=1)?(?:\\||})`, "i")))
+                                return true;
+                            return false;
+                        }),
+                        reason: "User has already been requested for global block."
+                    };
+                },
+                false,
+                "meta.wikimedia.org"
+            );
+        },
+        successful: (ws, item, params) => {
+            ws.store.statistics.reports_filed.total++;
+            ws.store.statistics.reports_filed.global_block++;
+        }
+    },
+    "request-global-lock": {
+        title: "Request global lock",
+        icon: "fas fa-lock",
+
+        parameters: (ws, item) => [
+            {
+                id: "reason",
+                title: "Reason",
+
+                type: "choice",
+                options: [
+                    "Generic",
+                    "Long-term abuse",
+                    "Cross-wiki abuse",
+                    "Abusive-username",
+                    "Spam / spambot",
+                    "Compromised account"
+                ],
+                default: "Generic",
+            },
+            {
+                id: "summary",
+                title: "Summary (optional)",
+
+                type: "text",
+            }
+        ],
+
+        progress: "Requesting global lock",
+        valid: (ws, item, params) => {
+            if (!item)
+                return { valid: false, reason: "Global lock can only be requested when an item is selected." };
+            else if (item.user.anon)
+                return { valid: false, reason: "Global lock cannot be requested for anonymous users." };
+            return { valid: true };
+        },
+        script: async (ws, item, params) => {
+            if (item.user.name === ws.api.username)
+                return { valid: false, reason: "You cannot request a global lock for yourself, silly!" };
+
+            await ws.gui.settings.waitForClose();
+            if (ws.store.whitelist.users.has(item.user.name) && await ws.gui.dialog.confirm(
+                "User is whitelisted",
+                `The user <a href="https://${ws.server}/wiki/User:${encodeURIComponent(item.user.name)}" target="_blank">${item.user.name}</a> is whitelisted. Are you sure you want to request a global lock for them?`
+            ) === false)
+                return { valid: false, reason: "Global lock request cancelled by user." };
+
+            if (await ws.api.isUserGloballyLocked(item.user.name))
+                return { valid: false, reason: "User is already globally locked." };
+
+            const reason = params.reason === "Generic" ? params.summary : `${params.reason}. ${params.summary}`;
+            const user = params.reason === "Abusive-username" ? "" : ` for ${item.user.name}`;
+
+            const page = (await ws.api.getPagesContent([ WikiShield.config.pages.SRG ], true, "meta.wikimedia.org"))[WikiShield.config.pages.SRG] || "";
+            const sections = ws.util.getPageSections(page);
+
+            return await ws.api.append(
+                WikiShield.config.pages.SRG,
+                (Number(Object.entries(sections).find(([ , section ]) => section.level === 2 && section.title === "Requests for global (un)lock and (un)hiding")?.[0]) + 1) || undefined,
+                `\n${fullTrim(`
+                    === Global lock${user} ===
+                    {{Status|}} <!-- Do not remove this template -->
+                    * {{LockHide|${item.user.name}${params.reason === "Abusive-username" ? "|hidename=1" : ""}}}
+                    ${reason ? `${reason} ~~~~` : "~~~~"}
+                `)}`,
+                ws.api.summary(`Requesting global lock${user}`),
+                page => {
+                    let searching = false;
+                    let sections = [ ];
+                    for (const section of ws.util.getPageSections(page)) {
+                        if (section.level === 2) {
+                            if (section.title === "Requests for global (un)lock and (un)hiding")
+                                searching = true;
+                            else if (searching)
+                                break;
+                        } else if (searching && section.level === 3)
+                            sections.push(section);
+                    }
+
+                    sections = sections.filter(section => !section.content.match(/^{{Status\|not done}}/i));
+                    return {
+                        valid: !sections.some(section => {
+                            const content = section.content;
+                            if (content.match(new RegExp(`{{LockHide|\\s*${item.user.name}(\\|hidename=1)?}}`, "i")))
+                                return true;
+                            else if (content.match(new RegExp(`{{MultiLock\\|(?:[^|}]*\\|)*(?:\\d+=)?\\s*${item.user.name}(?:\\|hidename=1)?(?:\\||})`, "i")))
+                                return true;
+                            return false;
+                        }),
+                        reason: "User has already been requested for global lock."
+                    };
+                },
+                false,
+                "meta.wikimedia.org"
+            );
+        },
+        successful: (ws, item, params) => {
+            ws.store.statistics.reports_filed.total++;
+            ws.store.statistics.reports_filed.global_lock++;
         }
     },
 

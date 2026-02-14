@@ -1,6 +1,4 @@
-electronAPI.onSetTranslation((event, obj) => {
-    console.log("Received translation:", obj);
-
+electron.onSetTranslation((event, obj) => {
     document.querySelector("#loader").style.display = "none";
     document.querySelector("#content").style.display = "block";
 
@@ -13,4 +11,4 @@ electronAPI.onSetTranslation((event, obj) => {
     document.querySelector("#original-text").textContent = obj.before || "";
 });
 
-document.querySelector("#close").addEventListener("click", () => electronAPI.close());
+document.querySelector("#close").addEventListener("click", () => electron.close());

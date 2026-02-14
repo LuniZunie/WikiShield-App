@@ -11,7 +11,7 @@ class Security {
             console.error(`Blocked attempt to open external URL with unsupported protocol: ${url}`);
     }
 
-    static encrypt(data) { // SECURITY not safe enough on windows and linux
+    static encrypt(data) {
         data ??= "";
         return safeStorage.isEncryptionAvailable() ? safeStorage.encryptString(data) : data;
     }

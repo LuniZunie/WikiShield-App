@@ -1,13 +1,35 @@
+const params = new URLSearchParams(window.location.search);
+const serverHost = params.get("host") || "en.wikipedia.org";
 class Tab {
+    #loaded = false;
+
     constructor(browser, id, url) {
         this.browser = browser;
         this.id = id;
         this.url = url;
-        this.title = "Loading...";
+        this.title = "New Tab";
         this.failedUrl = null;
 
         this.#createElements();
         this.#attachWebviewListeners();
+    }
+
+    get isBlank() {
+        return this.url === "about:blank" || this.url.includes("/about-blank/index.html");
+    }
+
+    get isError() {
+        return this.url.includes("/error/index.html");
+    }
+
+    get displayUrl() {
+        if (this.isError && this.failedUrl) return this.failedUrl;
+        if (this.isBlank) return "";
+        return this.url;
+    }
+
+    get loaded() {
+        return this.#loaded;
     }
 
     #createElements() {
@@ -25,7 +47,7 @@ class Tab {
 
         this.$title = document.createElement("span");
         this.$title.className = "tab-title";
-        this.$title.textContent = "Loading...";
+        this.$title.textContent = this.title;
 
         this.$close = document.createElement("button");
         this.$close.className = "tab-close";
@@ -41,14 +63,22 @@ class Tab {
         this.$tab.appendChild(this.$close);
 
         this.$tab.addEventListener("click", () => this.browser.switchTab(this.id));
+        this.$tab.addEventListener("auxclick", (e) => {
+            if (e.button === 1) {
+                e.preventDefault();
+                this.browser.closeTab(this.id);
+            }
+        });
 
         this.$webview = document.createElement("webview");
         this.$webview.dataset.tabId = this.id;
         this.$webview.setAttribute("allowpopups", "true");
         this.$webview.setAttribute("preload", "./preload.js");
+        this.$webview.setAttribute("webpreferences", "backgroundThrottling=false, autoplayPolicy=no-user-gesture-required");
+        this.$webview.setAttribute("partition", "persist:browser");
 
         if (this.url === "about:blank")
-            this.$webview.src = "./about-blank/index.html";
+            this.$webview.src = `./about-blank/index.html?host=${serverHost}`;
         else {
             this.$webview.src = this.url;
             this.browser.history.add(this.url);
@@ -74,8 +104,11 @@ class Tab {
         this.$webview.addEventListener("did-start-loading", () => this.#onStartLoading());
         this.$webview.addEventListener("did-stop-loading", () => this.#onStopLoading());
         this.$webview.addEventListener("dom-ready", () => {
-            if (this.browser.activeTabId === this.id)
+            this.#loaded = true;
+            if (this.browser.activeTabId === this.id) {
                 this.browser.navigation.updateButtons();
+                this.browser.hideLoadingOverlay();
+            }
         });
 
         this.$webview.addEventListener("did-fail-load", (e) => this.#handleLoadError(e));
@@ -90,7 +123,7 @@ class Tab {
         if (this.browser.activeTabId === this.id) {
             this.browser.navigation.updateUrlBar(this);
             this.browser.navigation.updateButtons();
-            if (!e.url.includes("/about-blank/index.html") && !e.url.includes("/error/index.html"))
+            if (!this.isBlank && !this.isError)
                 this.browser.history.add(e.url);
         }
     }
@@ -99,7 +132,7 @@ class Tab {
         this.$loadingSpinner.style.display = "block";
         this.$favicon.style.display = "none";
 
-        if (this.failedUrl && !this.$webview.src.includes("/error/index.html"))
+        if (this.failedUrl && !this.isError)
             this.failedUrl = null;
     }
 
@@ -118,7 +151,7 @@ class Tab {
 
         this.failedUrl = e.validatedURL;
 
-        const errorCode = this.browser.getErrorCodeString(e.errorCode);
+        const errorCode = Browser.getErrorCodeString(e.errorCode);
         const errorUrl = encodeURIComponent(e.validatedURL);
         const errorDesc = encodeURIComponent(e.errorDescription);
 
@@ -126,36 +159,27 @@ class Tab {
     }
 
     #handleIPCMessage(event) {
-        // Allow open-in-new-tab from any tab
         if (event.channel === "open-in-new-tab")
-            return void(this.browser.createTab(event.args[0]));
-        else if (this.browser.activeTabId !== this.id)
+            return void this.browser.createTab(event.args[0]);
+
+        if (this.browser.activeTabId !== this.id)
             return;
 
-        switch (event.channel) {
-            case "close-tab": {
-                this.browser.closeTab(this.browser.activeTabId);
-            } break;
-            case "new-tab": {
-                this.browser.createTab("about:blank");
-            } break;
-            case "next-tab": {
-                this.browser.switchToNextTab();
-            } break;
-            case "prev-tab": {
-                this.browser.switchToPrevTab();
-            } break;
-            case "refresh": {
-                this.reload();
-            } break;
-            case "focus-url-bar": {
-                this.browser.navigation.focusUrlBar();
-            } break;
-        }
+        const actions = {
+            "close-tab": () => this.browser.closeTab(this.id),
+            "new-tab": () => this.browser.createTab("about:blank"),
+            "next-tab": () => this.browser.switchToNextTab(),
+            "prev-tab": () => this.browser.switchToPrevTab(),
+            "refresh": () => this.reload(),
+            "focus-url-bar": () => this.browser.navigation.focusUrlBar(),
+        };
+
+        actions[event.channel]?.();
     }
 
     reload() {
         this.browser.elements.$refreshBtn.classList.add("loading");
+        this.#loaded = false;
         this.$webview.reload();
     }
 
@@ -186,6 +210,7 @@ class Tab {
     }
 
     navigateTo(url) {
+        this.#loaded = false;
         this.$webview.src = url;
     }
 
@@ -319,7 +344,7 @@ class NavigationManager {
     #attachListeners() {
         const { $backBtn, $forwardBtn, $refreshBtn, $homeBtn, $urlBar, $externalLinkBtn, $closeBrowserBtn } = this.browser.elements;
 
-        $closeBrowserBtn.addEventListener("click", () => electronAPI.close());
+        $closeBrowserBtn.addEventListener("click", () => electron.close());
         $backBtn.addEventListener("click", () => this.goBack());
         $forwardBtn.addEventListener("click", () => this.goForward());
         $refreshBtn.addEventListener("click", () => this.refresh());
@@ -328,7 +353,7 @@ class NavigationManager {
             const activeTab = this.browser.getActiveTab();
             if (activeTab) {
                 this.browser.closeTab(activeTab.id);
-                electronAPI.openExternal(activeTab.url);
+                electron.openExternal(activeTab.url);
             }
         });
 
@@ -361,7 +386,7 @@ class NavigationManager {
     goHome() {
         const activeTab = this.browser.getActiveTab();
         if (activeTab)
-            activeTab.navigateTo("./about-blank/index.html");
+            activeTab.navigateTo(`./about-blank/index.html?host=${serverHost}`);
     }
 
     updateButtons() {
@@ -379,14 +404,7 @@ class NavigationManager {
     }
 
     updateUrlBar(tab) {
-        const { $urlBar } = this.browser.elements;
-
-        if (tab.url.includes("/error/index.html") && tab.failedUrl)
-            $urlBar.value = tab.failedUrl;
-        else if (tab.url.includes("/about-blank/index.html"))
-            $urlBar.value = "";
-        else
-            $urlBar.value = tab.url;
+        this.browser.elements.$urlBar.value = tab.displayUrl;
     }
 
     navigateToUrl(input) {
@@ -397,8 +415,11 @@ class NavigationManager {
         if (!trimmedInput) return;
 
         // Handle about:blank
-        if (trimmedInput.toLowerCase() === "about:blank")
-            return void(activeTab.navigateTo("./about-blank/index.html"));
+        if (trimmedInput.toLowerCase() === "about:blank") {
+            this.browser.elements.$urlBar.value = "";
+            activeTab.navigateTo("./about-blank/index.html");
+            return;
+        }
 
         // Check if input is a URL
         if (this.isUrl(trimmedInput)) {
@@ -433,25 +454,30 @@ class NavigationManager {
  * AutocompleteManager class - Manages URL bar autocomplete dropdown
  */
 class AutocompleteManager {
+    #debounceTimer = null;
+
     constructor(browser) {
         this.browser = browser;
         this.#attachListeners();
     }
 
     #attachListeners() {
-        const { $urlBar, $autocompleteDropdown } = this.browser.elements;
+        const { $urlBar } = this.browser.elements;
 
-        $urlBar.addEventListener("input", async (e) => {
+        $urlBar.addEventListener("input", (e) => {
             const query = e.target.value.trim();
-            if (query)
-                await this.show(query);
-            else
-                this.hide();
+            clearTimeout(this.#debounceTimer);
+
+            if (!query)
+                return void this.hide();
+
+            this.#debounceTimer = setTimeout(() => this.show(query), 150);
         });
 
-        $urlBar.addEventListener("focus", async () => {
-            if ($urlBar.value.trim())
-                await this.show($urlBar.value.trim());
+        $urlBar.addEventListener("focus", () => {
+            const query = $urlBar.value.trim();
+            if (query)
+                this.show(query);
         });
 
         $urlBar.addEventListener("blur", () => {
@@ -548,6 +574,10 @@ class Browser {
             $newTabBtn: document.getElementById("new-tab"),
         };
 
+        this.$loadingOverlay = document.createElement("div");
+        this.$loadingOverlay.id = "webview-loading-overlay";
+        this.elements.$webviewsContainer.appendChild(this.$loadingOverlay);
+
         this.navigation = new NavigationManager(this);
         this.autocomplete = new AutocompleteManager(this);
 
@@ -555,16 +585,23 @@ class Browser {
         this.#initialize();
     }
 
+    showLoadingOverlay() {
+        this.$loadingOverlay.classList.remove("hidden");
+    }
+
+    hideLoadingOverlay() {
+        this.$loadingOverlay.classList.add("hidden");
+    }
+
     #attachListeners() {
         this.elements.$newTabBtn.addEventListener("click", () => this.createTab("about:blank"));
 
-        electronAPI.onOpenLinkInNewTab((url) => this.createTab(url));
+        electron.onOpenLinkInNewTab((url) => this.createTab(url));
     }
 
     #initialize() {
         const urlParams = new URLSearchParams(window.location.search);
-        const initialUrl = urlParams.get("url") || "about:blank";
-        console.log("Initial URL:", initialUrl);
+        const initialUrl = urlParams.get("url") || "";
         this.createTab(initialUrl.trim() || "about:blank");
     }
 
@@ -585,15 +622,16 @@ class Browser {
         const tab = this.tabs.get(tabId);
         if (!tab) return;
 
+        const currentIndex = Array.from(this.tabs.keys()).indexOf(tabId);
+
         tab.destroy();
         this.tabs.delete(tabId);
 
         if (this.tabs.size === 0)
-            return void(electronAPI.close());
+            return void(electron.close());
 
         if (tabId === this.activeTabId) {
             const tabIds = Array.from(this.tabs.keys());
-            const currentIndex = tabIds.indexOf(tabId);
             const newTabId = tabIds[Math.min(currentIndex, tabIds.length - 1)] || tabIds[0];
             this.switchTab(newTabId);
         }
@@ -611,6 +649,13 @@ class Browser {
             tab.$tab.classList.toggle("active", isActive);
             tab.$webview.classList.toggle("active", isActive);
         });
+
+        if (newTab.loaded)
+            this.hideLoadingOverlay();
+        else
+            this.showLoadingOverlay();
+
+        this.elements.$refreshBtn.classList.remove("loading");
 
         this.navigation.updateUrlBar(newTab);
         this.navigation.updateButtons();
@@ -639,7 +684,7 @@ class Browser {
         return this.tabs.get(this.activeTabId);
     }
 
-    getErrorCodeString(errorCode) {
+    static getErrorCodeString(errorCode) {
         const errorMap = {
             "-105": "ERR_NAME_NOT_RESOLVED",
             "-102": "ERR_CONNECTION_REFUSED",

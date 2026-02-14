@@ -617,10 +617,29 @@ body {
 
                 border: none;
 
-                animation: webview-fade-in .2s ease-out;
-
                 &.active {
                     display: flex;
+                }
+            }
+
+            & > #webview-loading-overlay {
+                position: absolute;
+                inset: 0;
+                z-index: 1;
+
+                pointer-events: none;
+
+                transition: opacity .2s ease;
+
+                /* Theme dependent */
+                background: linear-gradient(135deg,
+                    rgba(15, 12, 41, 1),
+                    rgba(25, 22, 50, 1),
+                    rgba(36, 36, 62, 1)
+                );
+
+                &.hidden {
+                    opacity: 0;
                 }
             }
         }

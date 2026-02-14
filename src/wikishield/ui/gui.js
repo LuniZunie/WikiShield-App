@@ -5,7 +5,6 @@ import { EventManager } from "../core/event-manager.js";
 import { Settings } from "./settings.js";
 import { Queue } from "../core/queue.js";
 import { warnings, warningsLookup, warningTemplateColors, getWarningFromLookup } from "../data/warnings.js";
-import { profanity } from "../data/profanity.js";
 import { generateRandomUUID } from "../../../global/UUID/script.esm.js";
 import { BuildPalette } from "../utilities/build-palette.js";
 import { AutoScroll } from "./auto-scroll.js";
@@ -41,6 +40,25 @@ export class GUI {
 	}
 
 	async build() {
+		const shhhhh = {
+			code: [ "ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a" ],
+			index: 0,
+			function: event => {
+				if (event.key === shhhhh.code[shhhhh.index]) {
+					if (++shhhhh.index === shhhhh.code.length) {
+						shhhhh.index = 0;
+						this.ws.open("https://ws.luni.me/konami-easter-egg", false);
+					}
+
+					return;
+				}
+
+				shhhhh.index = event.key === shhhhh.code[0] ? 1 : 0;
+			}
+		};
+
+		window.addEventListener("keydown", shhhhh.function);
+
 		this.updateAccessibility();
 
 		document.querySelector("#initial").classList.remove("hidden");
@@ -292,6 +310,8 @@ export class GUI {
 		}
 
 		document.querySelector("#start-button").addEventListener("click", () => {
+			window.removeEventListener("keydown", shhhhh.function);
+
 			controller.abort();
 			this.ws.audio.playSound([ "ui", "click" ]);
 
@@ -300,7 +320,7 @@ export class GUI {
 			this.ws.start();
 		});
 
-		addEventListener("click", event => {
+		window.addEventListener("click", event => {
 			[...document.querySelectorAll(".tooltip.buttons")].forEach(elem => elem.remove());
 
 			const $href = event.target.closest("[href]");
@@ -723,7 +743,7 @@ export class GUI {
 		const version = WikiShield.config.changelog.version;
 		if (version.endsWith("!") || version !== this.ws.store.changelog) {
 			this.ws.store.changelog = version.replace(/!$/, "");
-			electronAPI.open?.("changelog");
+			electron.open?.("changelog");
 		}
 
 		this.addTooltipListener(document.querySelector("#clear-queue"));
@@ -742,9 +762,11 @@ export class GUI {
 		this.events.button(document.querySelector("#user-unwhitelist"), "unwhitelist-user");
 		this.events.button(document.querySelector("#user-highlight"), "highlight-user");
 		this.events.button(document.querySelector("#user-unhighlight"), "unhighlight-user");
+		this.events.submenu(document.querySelector("#user-welcome .submenu"), "welcome-user");
 		this.events.submenu(document.querySelector("#user-report-aiv .submenu"), "report-user-to-aiv");
 		this.events.submenu(document.querySelector("#user-report-uaa .submenu"), "report-user-to-uaa");
-		this.events.submenu(document.querySelector("#user-welcome .submenu"), "welcome-user");
+		this.events.submenu(document.querySelector("#user-request-global-block .submenu"), "request-global-block");
+		this.events.submenu(document.querySelector("#user-request-global-lock .submenu"), "request-global-lock");
 
 		this.events.button(document.querySelector("#page-open-page"), "open-page");
 		this.events.button(document.querySelector("#page-open-talk"), "open-page-talk");
@@ -775,7 +797,7 @@ export class GUI {
 
 		this.renderQueue();
 
-		electronAPI.menuEnabler({ browser: true, settings: { preferences: true } });
+		electron.menuEnabler({ browser: true, settings: { preferences: true } });
 	}
 
 	animation() {
@@ -892,7 +914,7 @@ export class GUI {
 					$ores.classList.add("queue-item-color");
 					$ores.dataset.oresScore = `${Math.round((item.ores || 0) * 100)}%`;
 					$ores.dataset.rawOresScore = item.ores || 0;
-					$ores.style.backgroundColor = this.getORESColor(item.ores);
+					$ores.style.backgroundColor = this.getORESColor(item.ores || 0);
 					$item.prepend($ores);
 				}
 
@@ -951,6 +973,15 @@ export class GUI {
 			} break;
 			case "logevent": {
 				$user.classList.add("queue-log-title");
+
+				const $ores = document.createElement("div");
+				{
+					$ores.classList.add("queue-item-color");
+					$ores.dataset.oresScore = `${Math.round((item.user.profanity.clamped || 0) * 100)}%`;
+					$ores.dataset.rawOresScore = item.user.profanity.clamped || 0;
+					$ores.style.backgroundColor = this.getORESColor(item.user.profanity.clamped || 0);
+					$item.prepend($ores);
+				}
 			} break;
 			case "abuselog": {
 				const $ores = document.createElement("div");
@@ -978,7 +1009,7 @@ export class GUI {
 					$ores.classList.add("queue-item-color", "use-icon");
 					$ores.dataset.oresScore = results[max][1];
 					$ores.dataset.rawOresScore = ores || 0;
-					$ores.style.backgroundColor = this.getORESColor(ores);
+					$ores.style.backgroundColor = this.getORESColor(ores || 0);
 					$item.prepend($ores);
 
 					$ores.dataset.tooltip = `Abuse filter action: ${results[max][0]}`;
@@ -1198,6 +1229,7 @@ export class GUI {
 		if (item === null) {
 			document.querySelector("#middle-top").innerHTML = "";
 			document.querySelector("#diff-container").innerHTML = "";
+			document.querySelector("#ai-analysis-container").classList.add("hidden");
 
 			document.querySelector("#page-metadata").innerHTML = "";
 			document.querySelector("#protection-indicator").innerHTML = "";
@@ -1982,7 +2014,7 @@ export class GUI {
 					case "users": {
 						$diff.innerHTML = "";
 
-						const evaluation = profanity.evaluate(item.user.name);
+						const evaluation = item.user.profanity;
 
 						const $container = document.createElement("div");
 						$container.classList.add("profanity");
@@ -2279,6 +2311,31 @@ export class GUI {
 		if ($first)
 			requestAnimationFrame(() => ($first.querySelector(".diffchange") ?? $first).scrollIntoView({ behavior: "smooth", block: "center" }));
 	}
+	#sanitizeInlineHtml(html) {
+		const allowed = new Set(["B", "I", "EM", "STRONG", "CODE", "SPAN", "BR"]);
+		const container = document.createElement("div");
+		container.innerHTML = html;
+
+		const walk = (node) => {
+			const children = [...node.childNodes];
+			for (const child of children) {
+				if (child.nodeType === Node.ELEMENT_NODE) {
+					if (!allowed.has(child.tagName)) {
+						child.replaceWith(...child.childNodes);
+					} else {
+						// strip all attributes
+						while (child.attributes.length > 0)
+							child.removeAttribute(child.attributes[0].name);
+						walk(child);
+					}
+				}
+			}
+		};
+
+		walk(container);
+		return container.innerHTML;
+	}
+
 	updateAIAnalysisDisplay(analysis) {
 		const $analysis = document.querySelector("#ai-analysis-container");
 		if ($analysis && analysis)
@@ -2302,7 +2359,9 @@ export class GUI {
 			$assessment.className = `assessment ${analysis.assessment.toLowerCase().replace(/\s+/g, "-")}`;
 
 			$analysis.querySelector(":scope > .header > .confidence").textContent = `${Math.round((analysis.confidence || 0) * 100)}% confidence`;
-			$analysis.querySelector(":scope > .explanation").textContent = analysis.explanation || "No explanation provided.";
+			console.log("Raw explanation:", analysis.explanation);
+			const explanationHtml = this.#sanitizeInlineHtml(analysis.explanation || "No explanation provided.");
+			$analysis.querySelector(":scope > .explanation").innerHTML = explanationHtml;
 
 			const $issues = $analysis.querySelector(":scope > .issues");
 			$issues.innerHTML = "";
@@ -2423,7 +2482,7 @@ export class GUI {
 
 			const $restore = document.createElement("span");
 			$restore.classList.add("button");
-			$restore.innerHTML = "<i class='fas fa-redo'></i> Restore this revision";
+			$restore.innerHTML = "<i class='fas fa-redo restore'></i> Restore this revision";
 			$restore.addEventListener("click", async e => {
 				e.preventDefault();
 
@@ -2632,7 +2691,7 @@ export class GUI {
 			}
 		}
 
-		$target.addEventListener("mousewheel", e => $tooltip.scrollBy(e.deltaX, e.deltaY));
+		$target.addEventListener("mousewheel", e => $tooltip.scrollBy({ left: e.deltaX, top: e.deltaY, behavior: "smooth" }));
 
 		setTimeout(() => $tooltip.style.opacity = 1, delay);
 

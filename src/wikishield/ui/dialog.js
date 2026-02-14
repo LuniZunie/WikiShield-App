@@ -13,7 +13,7 @@ export class Dialog {
 
         addEventListener("focus", () => {
             if (this.popups.length > 0) {
-                this.popups.forEach(popupId => electronAPI.closePopup(popupId));
+                this.popups.forEach(popupId => electron.closePopup(popupId));
                 this.popups = [];
 
                 requestAnimationFrame(() => {
@@ -23,7 +23,7 @@ export class Dialog {
             }
         });
 
-        electronAPI.onPopupClosed(popupId => {
+        electron.onPopupClosed(popupId => {
             const index = this.popups.indexOf(popupId);
             if (index !== -1)
                 this.popups.splice(index, 1);
@@ -412,7 +412,7 @@ export class Dialog {
             if (username && !hideUAA) {
                 const $uaa = document.createElement("button");
                 $uaa.classList.add("confirmation-modal-button", "confirmation-modal-button-uaa");
-                $uaa.style.setProperty("--background", "211, 153, 51");
+                $uaa.style.setProperty("--background", "211, 51, 51");
                 $uaa.textContent = "Report to UAA";
                 $footer.appendChild($uaa);
                 $uaa.addEventListener("click", () => {

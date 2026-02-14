@@ -1,6 +1,6 @@
 const $authorize = document.getElementById("authorize");
 $authorize.addEventListener("click", () => {
-    electronAPI.handleAuthorization();
+    electron.handleAuthorization();
     $authorize.disabled = true;
 
     const $text = $authorize.querySelector("span");
@@ -9,4 +9,4 @@ $authorize.addEventListener("click", () => {
 });
 
 const $cancel = document.getElementById("cancel");
-$cancel.addEventListener("click", () => electronAPI.close());
+$cancel.addEventListener("click", () => electron.close());

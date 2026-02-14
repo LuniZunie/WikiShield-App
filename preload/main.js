@@ -1,9 +1,8 @@
 const { contextBridge, ipcRenderer } = require("electron/renderer");
 
-contextBridge.exposeInMainWorld("electronAPI", {
-    areExternalServicesAllowed: () => ipcRenderer.sendSync("are-external-services-allowed"),
-
+contextBridge.exposeInMainWorld("electron", {
     getAccount: () => ipcRenderer.invoke("get-account"),
+    getLanguage: () => ipcRenderer.invoke("get-language"),
 
     mwapiLoader: () => ipcRenderer.invoke("mwapi-loader"),
     mwapiLoaded: callback => ipcRenderer.on("mwapi-loaded", (event, server, username, pendingChangesServers) => callback(server, username, pendingChangesServers)),
@@ -13,6 +12,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
     setBadgeCount: count => ipcRenderer.send("set-badge-count", count),
     sendNotification: (options, url) => ipcRenderer.invoke("send-notification", options, url),
+    localStorage: {
+        get: key => ipcRenderer.invoke("local-storage", "get", key),
+        set: (key, value) => ipcRenderer.invoke("local-storage", "set", key, value),
+        delete: key => ipcRenderer.invoke("local-storage", "delete", key),
+    },
 
     copyToClipboard: text => ipcRenderer.send("copy-to-clipboard", text),
     getClipboardText: () => ipcRenderer.invoke("get-clipboard-text"),

@@ -1,6 +1,8 @@
 const { contextBridge, ipcRenderer } = require("electron/renderer");
 
-contextBridge.exposeInMainWorld("electronAPI", {
+contextBridge.exposeInMainWorld("electron", {
+    getLanguage: () => ipcRenderer.invoke("get-language"),
+
     openExternal: url => ipcRenderer.send("open-external", url),
     onOpenLinkInNewTab: callback => ipcRenderer.on("open-link-in-new-tab", (event, url) => callback(url)),
 

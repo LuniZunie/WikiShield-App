@@ -36,8 +36,8 @@ export class Settings {
 	constructor(ws) {
 		this.ws = ws;
 
-		electronAPI.onImportSettingsFromClipboard(async () => {
-			const b64 = await electronAPI.getClipboardText();
+		electron.onImportSettingsFromClipboard(async () => {
+			const b64 = await electron.getClipboardText();
 			try {
 				const logs = await this.ws.noinit(b64);
 				StorageManager.output(logs, "Import for clipboard");
@@ -52,7 +52,7 @@ export class Settings {
 				this.ws.gui.dialog.toast("Import Failed", "The settings could not be imported from the clipboard.", "error");
 			}
 		});
-		electronAPI.onImportSettingsFromInput(async () => {
+		electron.onImportSettingsFromInput(async () => {
 			const b64 = await this.ws.gui.dialog.input("Import Settings", "Paste your WikiShield settings data below:");
 			if (!b64)
 				return;
@@ -72,9 +72,9 @@ export class Settings {
 			}
 		});
 
-		electronAPI.onExportSettingsToClipboard(async () => {
+		electron.onExportSettingsToClipboard(async () => {
 			try {
-				await electronAPI.copyToClipboard(await this.ws.export());
+				await electron.copyToClipboard(await this.ws.export());
 				this.ws.gui.dialog.toast("Settings Exported", "The settings have been copied to the clipboard.", "success");
 			} catch (error) {
 				console.error(error);
@@ -212,11 +212,13 @@ export class Settings {
 	}
 
 	start() {
-		electronAPI.onOpenSettings(this.open.bind(this));
-		electronAPI.onOpenChangelog(() => void(this.open()) ?? this.changelog());
+		let cockBlock = 0;
+
+		electron.onOpenSettings(this.open.bind(this));
+		electron.onOpenChangelog(() => void(this.open()) ?? this.changelog());
 
 		document.querySelector("#settings-container").addEventListener("click", e => {
-			if (e.target.id === "settings-container")
+			if (e.target.id === "settings-container" && !(cockBlock = Math.max(0, cockBlock)))
 				this.close();
 		});
 
@@ -246,6 +248,66 @@ export class Settings {
 
 		document.querySelector("#settings-changelog-button").addEventListener("click", this.changelog.bind(this));
 		document.querySelector("#settings-about-button").addEventListener("click", this.about.bind(this));
+
+		{
+			const $slider = document.querySelector("#settings-ores-bias");
+
+			const $track = $slider.querySelector(".settings-slider-track");
+			const $thumb = $slider.querySelector(".settings-slider-thumb");
+
+			const $leftLabel = $slider.querySelector(".settings-slider-label-left");
+			const $leftPercent = $leftLabel.querySelector(".percent");
+
+			const $rightLabel = $slider.querySelector(".settings-slider-label-right");
+			const $rightPercent = $rightLabel.querySelector(".percent");
+
+			const updateValue = value => {
+				this.ws.store.settings.queue.ores_bias = +value.toFixed(2);
+				value = Math.max(0, Math.min(100, Math.round(value * 100)));
+
+				$thumb.style.left = `${value}%`;
+				$track.style.setProperty("--fill", `${value}%`);
+
+				const left = 100 - value;
+				$leftPercent.textContent = `${left}%`;
+				$leftLabel.classList.toggle("active", left > 0);
+
+				const right = value;
+				$rightPercent.textContent = `${right}%`;
+				$rightLabel.classList.toggle("active", right > 0);
+			};
+
+			const getValue = e => {
+				const rect = $track.getBoundingClientRect();
+				return ((e.clientX - rect.left) / rect.width);
+			};
+
+			$track.addEventListener("click", e => updateValue(getValue(e)));
+
+			let dragging = false;
+			$thumb.addEventListener("mousedown", e => {
+				e.preventDefault();
+				dragging = true;
+				cockBlock++;
+				$thumb.classList.add("dragging");
+			});
+
+			window.addEventListener("mousemove", e => {
+				if (!dragging)
+					return;
+				updateValue(getValue(e));
+			});
+
+			window.addEventListener("mouseup", () => {
+				if (!dragging)
+					return;
+				dragging = false;
+				cockBlock--;
+				$thumb.classList.remove("dragging");
+			});
+
+			updateValue(this.ws.store.settings.queue.ores_bias);
+		}
 
 		{
 			const $edits = document.querySelector("#settings-maximum-edit-count");
@@ -683,11 +745,6 @@ export class Settings {
 					if (models.length > 0) {
 						$container.classList.remove("searching", "none", "error", "animate-loading-dots");
 						$status.innerHTML = `<span class="fa fa-check-circle"></span> Found ${models.length} ${new Text("model").get(models.length)}.`;
-					} else {
-						$container.classList.add("none");
-						$container.classList.remove("searching", "error", "animate-loading-dots");
-
-						$status.textContent = "No models found.";
 
 						$models.innerHTML = "";
 						models.forEach(model => {
@@ -760,6 +817,11 @@ export class Settings {
 								$indicator.classList.add("fa-check-circle");
 							});
 						});
+					} else {
+						$container.classList.add("none");
+						$container.classList.remove("searching", "error", "animate-loading-dots");
+
+						$status.textContent = "No models found.";
 					}
 				} catch (error) {
 					$container.classList.add("error");
@@ -831,19 +893,13 @@ export class Settings {
 		}
 
 		{
-			const $cloud = document.querySelector("#settings-cloud-storage-toggle");
-			$cloud.value = this.ws.store.settings.cloud_storage.enabled;
-			$cloud.addEventListener("change", e => {
-				this.ws.store.settings.cloud_storage.enabled = $cloud.value;
-			});
-
 			const $status = document.querySelector("#settings-save-status");
 
 			const $export = document.querySelector("#settings-export-button");
 			$export.addEventListener("click", async e => {
 				try {
 					const b64 = this.ws.export();
-					electronAPI.copyToClipboard(b64);
+					electron.copyToClipboard(b64);
 
 					$status.classList.remove("hidden", "error", "info");
 					$status.classList.add("success");
@@ -1038,10 +1094,6 @@ export class Settings {
 
 			document.querySelector("#settings-username-highlighting-toggle").value = this.ws.store.settings.username_highlighting.enabled;
 			document.querySelector("#settings-username-highlighting-fuzzy-toggle").value = this.ws.store.settings.username_highlighting.fuzzy;
-		}
-
-		{
-			document.querySelector("#settings-cloud-storage-toggle").value = this.ws.store.settings.cloud_storage.enabled;
 		}
 	}
 
@@ -2016,6 +2068,12 @@ export class Settings {
 
 			const $UAA = document.querySelector("#stats-UAA-reports-percentage");
 			$UAA.textContent = (stats.reports_filed.UAA / stats.reports_filed.total * 100 || 0).toFixed(2);
+
+			const $block = document.querySelector("#stats-global-block-reports-percentage");
+			$block.textContent = (stats.reports_filed.global_block / stats.reports_filed.total * 100 || 0).toFixed(2);
+
+			const $lock = document.querySelector("#stats-global-lock-reports-percentage");
+			$lock.textContent = (stats.reports_filed.global_lock / stats.reports_filed.total * 100 || 0).toFixed(2);
 
 			const $RFPP = document.querySelector("#stats-RFPP-reports-percentage");
 			$RFPP.textContent = (stats.reports_filed.RFPP / stats.reports_filed.total * 100 || 0).toFixed(2);

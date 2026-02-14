@@ -441,7 +441,7 @@ export const warnings = {
 				auto: "notice",
 
 				templates: [
-					{ name: "notice", template: "subst:uw-engvar" }
+					{ name: "notice", template: "uw-engvar" }
 				]
 			},
 			{
@@ -765,8 +765,8 @@ export const warnings = {
 					return edit?.user?.edits < 500 ? "newcomer" : "experienced";
 				},
 				templates: [
-					{ name: "newcomer", template: "subst:uw-es" },
-					{ name: "experienced", template: "subst:uw-es2" }
+					{ name: "newcomer", template: "uw-es" },
+					{ name: "experienced", template: "uw-es2" }
 				],
 			},
 			{

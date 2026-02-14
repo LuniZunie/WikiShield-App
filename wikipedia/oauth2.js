@@ -115,7 +115,7 @@ class Server {
                     handled = true;
                     reject(new Error("Authorization window was closed by user"));
                 }
-            })
+            });
 
             setTimeout(() => {
                 if (!handled) {
@@ -284,7 +284,7 @@ class MediaWikiOAuth2 {
                     });
                     throw err;
                 }
-            })
+            });
         }, bypass);
     }
 }

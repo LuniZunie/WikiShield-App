@@ -1,6 +1,16 @@
 const elemMap = new Map();
+let rememberAccounts = false;
 
-electronAPI.getAccounts().then(accounts => {
+electron.getAccounts().then(([ rememberMe, accounts ]) => {
+    rememberAccounts = rememberMe;
+
+    const $remember = document.querySelector("#remember-accounts");
+    $remember.checked = rememberMe;
+    $remember.addEventListener("change", event => {
+        rememberAccounts = event.target.checked;
+        electron.setRememberAccounts(rememberAccounts);
+    });
+
     const $container = document.querySelector("#accounts-container");
 
     for (const account of accounts) {
@@ -56,8 +66,6 @@ function createAccountCard(account) {
     $signin.classList.add("card-action", "signin");
     $signin.title = "Sign in";
     $signin.innerHTML = "<i class='fas fa-sign-in-alt'></i>";
-    if (!account.valid)
-        $signin.disabled = true;
 
     $signin.addEventListener("click", () => {
         for (const [, $el] of elemMap) {
@@ -68,7 +76,7 @@ function createAccountCard(account) {
                 $btn.disabled = false;
         }
 
-        electronAPI.signin(account.username);
+        electron.signin(account.username);
         $card.classList.add("active");
         $signin.disabled = true;
     });
@@ -81,7 +89,7 @@ function createAccountCard(account) {
     $delete.addEventListener("click", () => {
         const $container = document.querySelector("#accounts-container");
 
-        electronAPI.deleteAccount(account.username);
+        electron.deleteAccount(account.username);
         $container.removeChild($card);
         elemMap.delete(account.username);
     });
@@ -90,11 +98,11 @@ function createAccountCard(account) {
     return $card;
 }
 
-document.querySelector("#add-account").addEventListener("click", () => electronAPI.authorize());
-document.querySelector("#close").addEventListener("click", () => electronAPI.close());
+document.querySelector("#add-account").addEventListener("click", () => electron.authorize());
+document.querySelector("#close").addEventListener("click", () => electron.close());
 
-electronAPI.onAuthorizationFailed((event, message) => document.querySelector("#status-message").textContent = message);
-electronAPI.onFocusWindow(() => document.querySelector("#close").classList.remove("blurred"));
-electronAPI.onBlurWindow(() => document.querySelector("#close").classList.add("blurred"));
+electron.onAuthorizationFailed((event, message) => document.querySelector("#status-message").textContent = message);
+electron.onFocusWindow(() => document.querySelector("#close").classList.remove("blurred"));
+electron.onBlurWindow(() => document.querySelector("#close").classList.add("blurred"));
 
-electronAPI.ready();
+electron.ready();
