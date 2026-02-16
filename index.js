@@ -1163,8 +1163,8 @@ app.whenReady().then(async () => {
         }
     });
 
-    ipcMain.on('copy-to-clipboard', (event, text) => clipboard.writeText(text));
-    ipcMain.handle('get-clipboard-text', async () => clipboard.readText());
+    ipcMain.on("copy-to-clipboard", (event, text) => clipboard.writeText(text));
+    ipcMain.handle("get-clipboard-text", async () => clipboard.readText());
 
     ipcMain.on("log", (event, message, level) => Logger[level ?? "info"]?.(message));
     ipcMain.on("error", (event, message, detail) => dialog.showErrorBox(message, detail?.toString() ?? "No additional details provided."));

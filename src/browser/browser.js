@@ -120,6 +120,11 @@ class Tab {
 
     #handleNavigation(e) {
         this.url = e.url;
+
+        // Clear failedUrl when navigating away from the error page
+        if (this.failedUrl && !this.isError)
+            this.failedUrl = null;
+
         if (this.browser.activeTabId === this.id) {
             this.browser.navigation.updateUrlBar(this);
             this.browser.navigation.updateButtons();
@@ -131,9 +136,6 @@ class Tab {
     #onStartLoading() {
         this.$loadingSpinner.style.display = "block";
         this.$favicon.style.display = "none";
-
-        if (this.failedUrl && !this.isError)
-            this.failedUrl = null;
     }
 
     #onStopLoading() {
@@ -146,7 +148,7 @@ class Tab {
 
     #handleLoadError(e) {
         // Ignore certain errors
-        if (e.errorCode === -3 || e.isMainFrame === false || e.validatedURL.includes("/about-blank/index.html"))
+        if (e.errorCode === -3 || e.isMainFrame === false || e.validatedURL.includes("/about-blank/index.html") || e.validatedURL.includes("/error/index.html"))
             return;
 
         this.failedUrl = e.validatedURL;
@@ -155,7 +157,7 @@ class Tab {
         const errorUrl = encodeURIComponent(e.validatedURL);
         const errorDesc = encodeURIComponent(e.errorDescription);
 
-        this.$webview.src = `./error/index.html?code=${errorCode}&url=${errorUrl}&desc=${errorDesc}`;
+        this.$webview.src = `./error/index.html?code=${errorCode}&url=${errorUrl}&description=${errorDesc}`;
     }
 
     #handleIPCMessage(event) {

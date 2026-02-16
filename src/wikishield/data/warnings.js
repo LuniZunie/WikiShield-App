@@ -201,11 +201,11 @@ export const warnings = {
 
 				auto: defaultAuto,
 				templates: [
-					{ name: "1", template: "uw-jokes1" },
-					{ name: "2", template: "uw-jokes2" },
-					{ name: "3", template: "uw-jokes3" },
-					{ name: "4", template: "uw-jokes4" },
-					{ name: "4im", template: "uw-jokes4im" }
+					{ name: "1", template: "uw-joke1" },
+					{ name: "2", template: "uw-joke2" },
+					{ name: "3", template: "uw-joke3" },
+					{ name: "4", template: "uw-joke4" },
+					{ name: "4im", template: "uw-joke4im" }
 				]
 			},
 			{
