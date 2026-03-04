@@ -828,8 +828,7 @@ class Popup {
             parent: glob.windows.main,
             width: Math.floor(width * 0.8),
             height: Math.floor(height * 0.8),
-            autoHideMenuBar: true,
-            titleBarStyle: "hidden",
+            frame: false,
             resizable: false,
             maximizable: false,
             minimizable: false,
@@ -1360,4 +1359,16 @@ app.whenReady().then(async () => {
 app.on("window-all-closed", () => {
     if (!glob.quitting)
         app.quit();
+});
+
+app.on("activate", () => {
+    const windows = BrowserWindow.getAllWindows();
+    if (windows.length === 0)
+        BuildWindow.main();
+    else {
+      const win = windows[0];
+      if (win.isMinimized())
+        win.restore()
+      win.show()
+    }
 });

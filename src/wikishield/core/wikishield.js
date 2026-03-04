@@ -332,7 +332,7 @@ export class WikiShield {
 				updateProgress = (_) => { };
 		}
 
-		if (checker(script, item)) {
+		if (checker(script, item)) { // TODO, placing this randomly, add "send message to user" button
 			for (const action of script.actions) {
 				if (!("name" in action))
 					continue;

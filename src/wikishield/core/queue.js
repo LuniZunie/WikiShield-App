@@ -1192,7 +1192,7 @@ export class Queue {
 						   Math.abs(new Date(leaving.timestamp).getTime() - new Date(item.timestamp).getTime()) < 10 * 1000 // 10 seconds
 				});
 
-				if (toRemove.length > 0) {
+				if (toRemove.length > 0) { // TODO, if we are going to fetch the revid here why not use it if it shouldn't be removed
 					Promise.allSettled(toRemove.map(async item => {
 						const revid = await this.ws.api.getAbuseLogRevid(item.id);
 						if (revid)
