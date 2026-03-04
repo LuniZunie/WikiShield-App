@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const { fullTrim } = require("../global/full-trim");
+const { fullTrim } = require("../global/full-trim/script.com.js");
 
 exports.default = async function(context) {
     console.log(`\nAfter-pack hook running for ${context.electronPlatformName}...`);
