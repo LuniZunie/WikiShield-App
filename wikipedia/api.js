@@ -223,6 +223,8 @@ class MediaWikiAPI {
             const result = await this.postWithToken({ action: "rollback", title, user, summary }, "rollback", bypass, serverOverride);
             if (result === "editconflict")
                 return { valid: false, reason: "Edit conflict." };
+            else if (result === "onlyauthor")
+                return { valid: false, reason: "Cannot rollback edits as the no other user has edited the page." };
             else if (!result.rollback?.revid)
                 return { valid: false, reason: "Edit conflict." };
 

@@ -430,7 +430,8 @@ function UpdateMenu(options = { }) {
                     click: () => {
                         if (glob.windows.main)
                             glob.windows.main.webContents.send("open-changelog");
-                    }
+                    },
+                    enabled: options?.help?.changelog ?? false
                 },
                 { type: "separator" },
                 {

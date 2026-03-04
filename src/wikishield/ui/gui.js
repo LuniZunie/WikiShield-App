@@ -24,8 +24,6 @@ export class GUI {
 	constructor(ws) {
 		this.ws = ws;
 
-		this.newerRevisionInterval = null;
-
 		this.dialog = new Dialog(this.ws);
 		this.events = new EventManager(this.ws);
 		this.settings = new Settings(this.ws);
@@ -797,7 +795,7 @@ export class GUI {
 
 		this.renderQueue();
 
-		electron.menuEnabler({ browser: true, settings: { preferences: true } });
+		electron.menuEnabler({ browser: true, settings: { preferences: true }, help: { changelog: true } });
 	}
 
 	animation() {

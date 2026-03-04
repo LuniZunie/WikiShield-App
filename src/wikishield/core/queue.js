@@ -533,9 +533,9 @@ export class Queue {
 					if (a.history && b.history)
 						return a.history - b.history;
 					else if (a.history)
-						return -1;
-					else if (b.history)
 						return 1;
+					else if (b.history)
+						return -1;
 
 					const aScore = mentions && a.mentions.has;
 					const bScore = mentions && b.mentions.has;
@@ -550,9 +550,9 @@ export class Queue {
 					if (a.history && b.history)
 						return a.history - b.history;
 					else if (a.history)
-						return -1;
-					else if (b.history)
 						return 1;
+					else if (b.history)
+						return -1;
 
 					let aScore = 0;
 					if (highlight.users.has(a.user.name))
@@ -608,13 +608,22 @@ export class Queue {
 		switch (Queue.groups[type]) {
 			case "edit": {
 				items = items.filter(item => {
-					if (simple) {
-						if (this.cache.full.has(item.revid))
-							return void(result.push(this.cache.full.get(item.revid))) ?? false;
-						else if (this.cache.simple.has(item.revid))
-							return void(result.push(this.cache.simple.get(item.revid))) ?? false;
-					} else if (this.cache.full.has(item.revid))
-						return void(result.push(this.cache.full.get(item.revid))) ?? false;
+					const cached = ((revid) => {
+						if (simple) {
+							if (this.cache.simple.has(revid))
+								return this.cache.simple.get(revid);
+							else if (this.cache.full.has(revid))
+								return this.cache.full.get(revid);
+						} else if (this.cache.full.has(revid))
+							return this.cache.full.get(revid);
+						return null;
+					})(item.revid);
+
+					if (cached) {
+						if (item.pending && !cached.pending)
+							cached.pending = item.pending;
+						return void(result.push(cached)) ?? false;
+					}
 					return true;
 				});
 

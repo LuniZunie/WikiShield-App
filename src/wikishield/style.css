@@ -5978,7 +5978,8 @@ body {
                                 & > .changelog-header {
                                     border-bottom: 2px solid;
 
-                                    padding-bottom: 20px;
+                                    padding-bottom: 24px;
+                                    margin-bottom: 8px;
 
                                     text-align: center;
 
@@ -6009,7 +6010,7 @@ body {
                                     }
 
                                     & > .changelog-subtitle {
-                                        margin: 0;
+                                        margin: 0 0 20px 0;
 
                                         font-size: 1.1em;
                                         font-weight: 400;
@@ -6017,21 +6018,144 @@ body {
                                         /* Theme dependent */
                                         color: rgba(200, 200, 200, .9);
                                     }
+
+                                    & > .changelog-nav {
+                                        display: flex;
+                                        justify-content: center;
+                                        flex-wrap: wrap;
+                                        gap: 8px;
+
+                                        & > .changelog-nav-item {
+                                            cursor: pointer;
+
+                                            border: 1px solid;
+                                            border-radius: 20px;
+                                            padding: 6px 16px;
+
+                                            font-size: .85em;
+                                            font-weight: 600;
+                                            text-decoration: none;
+
+                                            transition: all .2s ease;
+
+                                            /* Theme dependent */
+                                            border-color: rgba(102, 126, 234, .3);
+                                            color: rgba(200, 200, 200, .9);
+                                            background: rgba(102, 126, 234, .08);
+
+                                            &:hover {
+                                                /* Theme dependent */
+                                                border-color: rgba(102, 126, 234, .6);
+                                                color: rgba(255, 255, 255, 1);
+                                                background: rgba(102, 126, 234, .2);
+                                            }
+
+                                            &.active {
+                                                /* Theme dependent */
+                                                border-color: rgba(102, 126, 234, .8);
+                                                color: rgba(255, 255, 255, 1);
+                                                background: linear-gradient(135deg,
+                                                    rgba(102, 126, 234, .3),
+                                                    rgba(118, 168, 255, .3)
+                                                );
+                                                box-shadow: 0 0 12px rgba(102, 126, 234, .3);
+                                            }
+                                        }
+                                    }
+                                }
+
+                                & > .changelog-divider {
+                                    height: 2px;
+
+                                    margin: 48px auto 8px;
+
+                                    border-radius: 1px;
+
+                                    /* Theme dependent */
+                                    background: linear-gradient(90deg,
+                                        transparent,
+                                        rgba(102, 126, 234, .4) 20%,
+                                        rgba(118, 168, 255, .4) 50%,
+                                        rgba(102, 126, 234, .4) 80%,
+                                        transparent
+                                    );
                                 }
 
                                 & > .changelog-version {
-                                    margin-top: 40px;
+                                    margin-top: 32px;
+                                    padding: 24px;
+
+                                    border: 1px solid;
+                                    border-radius: 16px;
+
+                                    /* Theme dependent */
+                                    border-color: rgba(255, 255, 255, .06);
+                                    background: rgba(30, 33, 42, .4);
 
                                     & > .changelog-version-header {
-                                        margin-bottom: 20px;
-                                        padding-bottom: 10px;
+                                        margin-bottom: 24px;
+                                        padding-bottom: 16px;
+
+                                        border-bottom: 1px solid;
 
                                         text-align: center;
 
-                                        & > h1 {
-                                            margin: 0 0 10px 0;
+                                        /* Theme dependent */
+                                        border-color: rgba(255, 255, 255, .08);
 
-                                            font-size: 1.5em;
+                                        & > .version-badge-row {
+                                            display: flex;
+                                            align-items: center;
+                                            justify-content: center;
+                                            gap: 10px;
+
+                                            margin-bottom: 12px;
+
+                                            & > .version-badge {
+                                                display: inline-block;
+
+                                                border: 1px solid;
+                                                border-radius: 20px;
+                                                padding: 4px 16px;
+
+                                                font-size: .8em;
+                                                font-weight: 700;
+                                                font-family: 'Courier New', monospace;
+                                                letter-spacing: .5px;
+
+                                                /* Theme dependent */
+                                                border-color: rgba(102, 126, 234, .4);
+                                                color: rgba(118, 168, 255, 1);
+                                                background: rgba(102, 126, 234, .12);
+                                            }
+
+                                            & > .version-tag {
+                                                display: inline-block;
+
+                                                border-radius: 20px;
+                                                padding: 4px 12px;
+
+                                                font-size: .7em;
+                                                font-weight: 700;
+                                                text-transform: uppercase;
+                                                letter-spacing: 1px;
+
+                                                &.latest {
+                                                    /* Theme dependent */
+                                                    color: rgba(255, 255, 255, 1);
+                                                    background: linear-gradient(135deg,
+                                                        rgba(102, 126, 234, .8),
+                                                        rgba(118, 168, 255, .8)
+                                                    );
+                                                    box-shadow: 0 2px 8px rgba(102, 126, 234, .4);
+                                                }
+                                            }
+                                        }
+
+                                        & > h1 {
+                                            margin: 0 0 8px 0;
+
+                                            font-size: 1.6em;
                                             font-weight: 800;
 
                                             /* Theme dependent */
@@ -6044,10 +6168,15 @@ body {
                                         & > .changelog-version-subtitle {
                                             margin: 0;
 
+                                            font-size: .9em;
                                             font-weight: 400;
 
                                             /* Theme dependent */
-                                            color: rgba(200, 200, 200, .9);
+                                            color: rgba(200, 200, 200, .7);
+
+                                            & > i {
+                                                margin-right: 4px;
+                                            }
                                         }
                                     }
 
@@ -6122,6 +6251,8 @@ body {
                                             }
 
                                             &.featured {
+                                                grid-column: 1 / -1;
+
                                                 /* Theme dependent */
                                                 border-color: rgba(102, 126, 234, .4);
                                                 background: linear-gradient(135deg,
