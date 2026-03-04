@@ -26,7 +26,7 @@ class Security {
     }
     static decryptAccounts(accounts) {
         return Object.fromEntries(Object.entries(accounts).map(([ username, data ]) => {
-            return [ username, { ...data, accessToken: undefined, refreshToken: Security.decrypt(data.refreshToken) } ];
+            return [ username, { ...data, accessToken: undefined, refreshToken: data.refreshToken ? Security.decrypt(data.refreshToken) : undefined } ];
         }));
     }
 }
