@@ -5,6 +5,8 @@
 /out
 /dist
 /build
+!/build/
+!/build/entitlements.mac.plist
 
 # Logs
 *.log
