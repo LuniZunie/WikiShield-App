@@ -765,6 +765,7 @@ export class GUI {
 		this.events.submenu(document.querySelector("#user-report-uaa .submenu"), "report-user-to-uaa");
 		this.events.submenu(document.querySelector("#user-request-global-block .submenu"), "request-global-block");
 		this.events.submenu(document.querySelector("#user-request-global-lock .submenu"), "request-global-lock");
+		this.events.submenu(document.querySelector("#user-new-talk-topic .submenu"), "send-message-to-user-talk");
 
 		this.events.button(document.querySelector("#page-open-page"), "open-page");
 		this.events.button(document.querySelector("#page-open-talk"), "open-page-talk");
@@ -776,6 +777,7 @@ export class GUI {
 		this.events.button(document.querySelector("#page-unhighlight"), "unhighlight-page");
 		this.events.submenu(document.querySelector("#page-request-protection .submenu"), "request-page-protection");
 		this.events.button(document.querySelector("#page-view-history"), "open-page-history");
+		this.events.submenu(document.querySelector("#page-new-talk-topic .submenu"), "send-message-to-page-talk");
 
 		this.events.button(document.querySelector("#edit-view-revision"), "open-revision");
 		this.events.button(document.querySelector("#edit-view-diff"), "open-diff");
@@ -1329,6 +1331,7 @@ export class GUI {
 				} break;
 				case "watchlist": {
 					this.ws.store.statistics.watchlist_changes_reviewed.total++;
+					this.ws.api.markWatchlistSeen(item.page.title, item.id);
 				} break;
 				case "users": {
 					this.ws.store.statistics.users_reviewed.total++;

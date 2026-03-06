@@ -31,6 +31,7 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "Vandalism",
+				name: "vandalism",
 				icon: "fas fa-skull-crossbones",
 				description: "Warning for general vandalism.",
 
@@ -51,6 +52,7 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "Subtle vandalism",
+				name: "subtle vandalism",
 				icon: "fas fa-user-secret",
 				description: "Warning for subtle vandalism.",
 
@@ -70,6 +72,7 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "Image vandalism",
+				name: "image vandalism",
 				icon: "fas fa-image",
 				description: "Warning for image vandalism.",
 
@@ -90,6 +93,7 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "Sandbox",
+				name: "[[WP:BADSAND|inappropriate]] sandbox use",
 				icon: "fas fa-vial",
 				description: "Warning for vandalism, libelous, or defamatory content added to sandbox",
 
@@ -110,6 +114,7 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "Deliberate errors",
+				name: "deliberate errors",
 				icon: "fas fa-bug",
 				description: "Adding deliberate errors to articles.",
 
@@ -137,6 +142,7 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "Disruptive editing",
+				name: "[[WP:DE|disruptive editing]]",
 				icon: "fas fa-exclamation",
 				description: "Default warning for making disruptive edits but may be good faith.",
 
@@ -156,6 +162,7 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "Editing tests",
+				name: "editing tests",
 				icon: "fas fa-flask",
 				description: "Making test edits on live articles.",
 
@@ -175,10 +182,11 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "Commentary",
+				name: "commentary",
 				icon: "fas fa-comment-alt",
 				description: "Adding opinion or commentary to articles.",
 
-				summary: "Commentary / talking in article",
+				summary: "commentary / talking in article",
 
 				auto: defaultAuto,
 				templates: [
@@ -194,6 +202,7 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "Inappropriate jokes",
+				name: "inappropriate humor",
 				icon: "fas fa-grin-squint",
 				description: "Adding inappropriate humor to an article.",
 
@@ -214,6 +223,7 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "Deleting",
+				name: "unexplained deletion",
 				icon: "fas fa-trash",
 				description: "Used when a user does not explain deletion of part of an article.",
 
@@ -242,6 +252,7 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "Unsourced",
+				naame: "unsourced changes",
 				icon: "fas fa-question",
 				description: "Warning for unsourced content.",
 
@@ -265,6 +276,7 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "Unsourced (BLP)",
+				name: "unsourced [[WP:BLP|biographies of living persons']] changes",
 				icon: "fas fa-person-circle-question",
 				description: "Warning for unsourced BLP content.",
 
@@ -289,6 +301,7 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "Unsourced genre",
+				name: "unsourced genre changes",
 				icon: "fas fa-music",
 				description: "Warning for unsourced genre changes.",
 
@@ -309,6 +322,7 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "Original research",
+				name: "[[WP:OR|original research]]",
 				icon: "fas fa-lightbulb",
 				description: "Adding original research or synthesis.",
 
@@ -329,6 +343,7 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "POV",
+				name: "[[WP:NPOV|non-neutral changes]]",
 				icon: "fas fa-balance-scale-left",
 				description: "Adding content which violates the neutral point of view policy.",
 
@@ -348,6 +363,7 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "Censoring",
+				name: "[[WP:NOTCENSORED|censoring content]]",
 				icon: "fas fa-ban",
 				description: "Censoring topically-relevant content.",
 
@@ -368,6 +384,7 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "AI-generated",
+				name: "[[WP:LLM|AI-generated content]]",
 				icon: "fas fa-robot",
 				description: "Adding AI-generated content.",
 
@@ -391,6 +408,7 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "AI-generated (talk)",
+				name: "[[WP:LLM|AI-generated content]] in a discussion",
 				icon: "fas fa-robot",
 				description: "Writing an AI-generated comment.",
 
@@ -415,6 +433,7 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "MOS violation",
+				name: "[[WP:MOS|manual of style]] violation",
 				icon: "fas fa-spell-check",
 				description: "Not following the Manual of Style.",
 
@@ -434,12 +453,13 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "English variant",
+				name: "[[WP:ENGVAR|different English variant]]",
 				icon: "fas fa-globe",
 				description: "Content added in a different English variant than the rest of the article.",
 
-				summary: "different English variant",
-				auto: "notice",
+				summary: "[[WP:ENGVAR|different English variant]]",
 
+				auto: "notice",
 				templates: [
 					{ name: "notice", template: "uw-engvar" }
 				]
@@ -450,12 +470,13 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "Not English",
+				name: "non-English content",
 				icon: "fas fa-language",
 				description: "Content added in a language other than English.",
 
-				summary: "non-English",
-				auto: "notice",
+				summary: "non-English content",
 
+				auto: "notice",
 				templates: [
 					{ name: "notice", template: "uw-lang-noteng" }
 				]
@@ -474,6 +495,7 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "Personal attacks",
+				name: "[[WP:NPA|personal attacks]]",
 				icon: "fas fa-bomb",
 				description: "Personal attacks towards another user.",
 
@@ -494,6 +516,7 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "Harassment",
+				name: "[[WP:HARASS|harassment]]",
 				icon: "fas fa-shield-alt",
 				description: "Harassment of another user.",
 
@@ -515,6 +538,7 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "TPO",
+				name: "[[WP:TPO|removing or editing]] others' posts",
 				icon: "fas fa-hand-paper",
 				description: "Removing or editing others' posts.",
 
@@ -535,6 +559,7 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "Chatting",
+				name: "inappropriate use of article talk pages",
 				icon: "fas fa-comments",
 				description: "Using article talk pages for inappropriate discussion.",
 
@@ -558,6 +583,7 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "Owning",
+				name: "assuming [[WP:OWN|ownership of articles]]",
 				icon: "fas fa-user-shield",
 				description: "Assuming ownership of articles.",
 
@@ -577,6 +603,7 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "AfD removal",
+				name: "removing AfD templates or comments",
 				icon: "fas fa-gavel",
 				description: "Removing AfD templates or other users' comments from AfD discussions.",
 
@@ -596,6 +623,7 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "Edit warring",
+				name: "[[WP:EW|edit warring]]",
 				icon: "fas fa-jet-fighter",
 				description: "Engaging in edit warring.",
 
@@ -615,6 +643,7 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "Gaming the system",
+				name: "[[WP:GAME|gaming the system]]",
 				icon: "fas fa-chess-knight",
 				description: "Attempting to game Wikipedia's policies or guidelines.",
 
@@ -643,6 +672,7 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "Advertising",
+				name: "[[WP:PROMO|advertising or promotion]]",
 				icon: "fas fa-ad",
 				description: "Adding advertising or promotional content.",
 
@@ -663,6 +693,7 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "Spam links",
+				name: "adding [[WP:ELNO|inappropriate links]]",
 				icon: "fas fa-link",
 				description: "Adding spam or promotional links.",
 
@@ -684,6 +715,7 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "COI Edit",
+				name: "editing with a [[WP:COI|conflict of interest]]",
 				icon: "fas fa-user-tie",
 				description: "Editing with a conflict of interest.",
 
@@ -702,6 +734,7 @@ export const warnings = {
 				queueType: [ "logevent" ],
 
 				title: "COI Log",
+				name: "apparent [[WP:COI|conflict of interest]]",
 				icon: "fas fa-user-tie",
 				description: "Apparent conflict of interest.",
 
@@ -726,6 +759,7 @@ export const warnings = {
 				queueType: [ "abuselog" ],
 
 				title: "Attempt",
+				name: "triggering an edit filter",
 				icon: "fas fa-vial",
 				description: "Triggering an edit filter.",
 
@@ -756,6 +790,7 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "No edit summary",
+				name: "no [[WP:ES|edit summary]] provided",
 				icon: "fas fa-pen-nib",
 				description: "Making an edit without providing an edit summary.",
 
@@ -775,6 +810,7 @@ export const warnings = {
 				queueType: [ "edit", "logevent", "abuselog" ],
 
 				title: "Inappropriate edit summary",
+				name: "inappropriate [[WP:ES|edit summary]]",
 				icon: "fas fa-pen-alt",
 				description: "Using an inappropriate edit summary.",
 
@@ -795,6 +831,7 @@ export const warnings = {
 				queueType: [ "edit", "logevent", "abuselog" ],
 
 				title: "Misleading edit summary",
+				name: "misleading [[WP:ES|edit summary]]",
 				icon: "fas fa-mask",
 				description: "Using a misleading edit summary.",
 
@@ -815,6 +852,7 @@ export const warnings = {
 				queueType: [ "edit", "abuselog" ],
 
 				title: "Minor edit abuse",
+				name: "improper use of [[WP:ME|minor edit]] checkbox",
 				icon: "fas fa-minus",
 				description: "Non-minor edit marked as minor",
 

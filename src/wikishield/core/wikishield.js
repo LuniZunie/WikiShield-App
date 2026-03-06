@@ -275,7 +275,7 @@ export class WikiShield {
 		if (event.type === "keydown") {
 			const shortcut = buildShortcut(event);
 			for (const script of this.store.control_scripts)
-				if (script.keys.some(key => key === shortcut)) {
+				if (script.keys.every(key => key === shortcut)) {
 					event.preventDefault();
 					this.execute(script);
 				}
@@ -332,7 +332,7 @@ export class WikiShield {
 				updateProgress = (_) => { };
 		}
 
-		if (checker(script, item)) { // TODO, placing this randomly, add "send message to user" button
+		if (checker(script, item)) {
 			for (const action of script.actions) {
 				if (!("name" in action))
 					continue;

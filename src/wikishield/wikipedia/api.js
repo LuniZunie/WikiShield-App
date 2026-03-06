@@ -46,7 +46,7 @@ export class API {
     }
 
     summary(base, custom) {
-        const watermark = " ([[:en:WP:WikiShield|WS]])";
+        const watermark = " ([[en:WP:WikiShield|WS]])";
         const message = `${base}${custom ? `: ${custom}` : ""}`;
         return `${this.#ws.util.truncate(message, 500 - watermark.length)}${watermark}`;
     }
@@ -104,6 +104,10 @@ export class API {
     }
     async getGlobalUserInfo(username, bypass, serverOverride) {
         return await electron.mwapi("getGlobalUserInfo", username, bypass, serverOverride);
+    }
+
+    async markWatchlistSeen(page, id, bypass, serverOverride) {
+        return await electron.mwapi("markWatchlistSeen", page, id, bypass, serverOverride);
     }
 
     async append(title, section, content, summary, check, bypass, serverOverride) {
@@ -189,6 +193,9 @@ export class API {
 
     async areUsersBlocked(usernames, bypass, serverOverride) {
         return await electron.mwapi("areUsersBlocked", usernames, bypass, serverOverride);
+    }
+    async isUserGloballyLocked(username, bypass, serverOverride) {
+        return await electron.mwapi("isUserGloballyLocked", username, bypass, serverOverride);
     }
 
     async getContributions(username, limit, bypass, serverOverride) {

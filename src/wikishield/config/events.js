@@ -304,7 +304,7 @@ export const events = {
                     section,
                     monthSection,
                     newContent,
-                    ws.api.summary(summary, template.template)
+                    ws.api.summary(summary, `${warning.name} (${template.name})`)
                 );
 
                 if (result.valid) {
@@ -485,7 +485,7 @@ export const events = {
                 section,
                 monthSection,
                 newContent,
-                ws.api.summary(summary, template.template)
+                ws.api.summary(summary, `${warning.name} (${template.name})`)
             );
 
             if (result.valid) {
@@ -732,6 +732,83 @@ export const events = {
         },
         script: async (ws, item, params) => {
             return await ws.api.restoreEdit(item.page.title, item.id, ws.api.summary(`Restored revision ${ws.api.revision(item.id)} by ${ws.api.user(item.user.name)}`, params.summary));
+        }
+    },
+
+    "send-message-to-user-talk": {
+        title: "Send message to user talk page",
+        icon: "fas fa-comment",
+
+        parameters: (ws, item) => [
+            {
+                id: "heading",
+                title: "Section heading",
+
+                type: "text",
+            },
+            {
+                id: "message",
+                title: "Message (sign with ~~~~)",
+
+                type: "text",
+            }
+        ],
+
+        progress: "Sending message to user talk page",
+        valid: (ws, item, params) => {
+            if (!item)
+                return { valid: false, reason: "Message can only be sent when an item is selected." };
+            return { valid: true };
+        },
+        script: async (ws, item, params) => {
+            return await ws.api.editSection(
+                `User talk:${item.user.name}`,
+                "new",
+                params.heading,
+                params.message,
+                ws.api.summary(`Message from ${ws.api.username}: ${params.heading}`)
+            );
+        }
+    },
+    "send-message-to-page-talk": {
+        title: "Send message to page talk page",
+        icon: "fas fa-comment",
+
+        parameters: (ws, item) => [
+            {
+                id: "heading",
+                title: "Section heading",
+
+                type: "text",
+            },
+            {
+                id: "message",
+                title: "Message (sign with ~~~~)",
+
+                type: "text",
+            }
+        ],
+
+        progress: "Sending message to page talk page",
+        valid: (ws, item, params) => {
+            if (!item)
+                return { valid: false, reason: "Message can only be sent when an item is selected." };
+            return { valid: true };
+        },
+        script: async (ws, item, params) => {
+            const title = item.page.title.split(":");
+            let ns = "Talk";
+            if (title.length > 1)
+                ns = title[0].toLowerCase().includes("talk") ? title[0] : `${title[0]} talk`;
+
+            const page = `${ns}:${title.length === 1 ? title[0] : title.slice(1).join(":")}`;
+            return await ws.api.editSection(
+                page,
+                "new",
+                params.heading,
+                params.message,
+                ws.api.summary(`Message from ${ws.api.username}: ${params.heading}`)
+            );
         }
     },
 
@@ -1011,7 +1088,7 @@ export const events = {
                     === Global block for ${item.user.name} ===
                     {{Status|}} <!-- Do not remove this template -->
                     * {{Luxotool|${item.user.name}}}
-                    ${reason ? `${reason} ~~~~` : "~~~~"}
+                    ${reason ? `${reason} ([[en:WP:WikiShield|WS]]) ~~~~` : "([[en:WP:WikiShield|WS]]) ~~~~"}
                 `)}`,
                 ws.api.summary(`Requesting global block for ${item.user.name}`),
                 page => {
@@ -1516,7 +1593,8 @@ export const events = {
             if (title.length > 1)
                 ns = title[0].toLowerCase().includes("talk") ? title[0] : `${title[0]} talk`;
 
-            ws.open(ws.page(`${ns}:${title.length === 1 ? title[0] : title.slice(1).join(":")}`));
+            const page = ws.page(`${ns}:${title.length === 1 ? title[0] : title.slice(1).join(":")}`);
+            ws.open(page);
             return { valid: true };
         }
     },

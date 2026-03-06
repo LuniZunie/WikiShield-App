@@ -1,4 +1,5 @@
 import { Memory, Stack } from "../../../global/memory/script.esm.js";
+import { generateRandomUUID } from "../../../global/UUID/script.esm.js";
 import { profanity } from "../data/profanity.js";
 
 export class Queue {
@@ -906,7 +907,16 @@ export class Queue {
 						},
 						page: {
 							namespace: item.ns,
-							title: item.title
+							title: item.title,
+
+							history: [ ],
+							get watched() {
+								return false;
+							},
+
+							metadata: [ ],
+							categories: [ ],
+							protection: { },
 						},
 						user: {
 							name: user,
@@ -1156,6 +1166,8 @@ export class Queue {
 			} break;
 		}
 
+		result.forEach(object => object.UUID = generateRandomUUID());
+
 		return result;
 	}
 
@@ -1192,11 +1204,16 @@ export class Queue {
 						   Math.abs(new Date(leaving.timestamp).getTime() - new Date(item.timestamp).getTime()) < 10 * 1000 // 10 seconds
 				});
 
-				if (toRemove.length > 0) { // TODO, if we are going to fetch the revid here why not use it if it shouldn't be removed
+				if (toRemove.length > 0) {
 					Promise.allSettled(toRemove.map(async item => {
-						const revid = await this.ws.api.getAbuseLogRevid(item.id);
-						if (revid)
+						let revid = item.revid;
+						if (!revid)
+							revid = await this.ws.api.getAbuseLogRevid(item.id);
+
+						if (revid) {
+							item.revid = revid;
 							return { id: item.id, revid };
+						}
 						return null;
 					})).then(result => {
 						const remove = result.map(r => r.status === "fulfilled" ? r.value : null).filter(v => v);
@@ -1371,7 +1388,9 @@ export class Queue {
 			item.propagating = false;
 		} else
 			this.generate(item.type, [ item.origin ], false, { bypass }).then(([ loaded ]) => {
+				const revid = item.revid;
 				Object.assign(item, loaded);
+				item.revid = revid;
 			});
 	}
 

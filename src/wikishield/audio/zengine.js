@@ -263,7 +263,6 @@ export class Zengine {
         this.currentEnvironment = null;
         this.eventLoopInterval = null;
         this.activityLevel = 4;
-        this.atmosphericSounds = [ ];
         this.musicEngine = null;
     }
 
@@ -271,45 +270,13 @@ export class Zengine {
         this.musicEngine = new MusicEngine();
         this.musicEngine.init();
 
-        const response = await fetch('https://media.luni.me/data/bbc-sounds');
+        const response = await fetch('https://raw.githubusercontent.com/LuniZunie/WikiShield-App/refs/heads/main/data/bbc-sounds.json');
         const rawSounds = await response.json();
         this.sounds = this.categorizeSounds(rawSounds);
-        this.atmosphericSounds = this.getAtmosphericSounds();
 
         return this.sounds.length;
     }
 
-    getAtmosphericSounds() {
-        return [
-            {
-                id: 'atmos_light_rain',
-                url: 'https://cdn.freesound.org/previews/513/513947_3282760-lq.mp3',
-                duration: 120,
-                category: 'rain',
-                role: 'ambient',
-                weather: 'rain',
-                description: 'Light rain'
-            },
-            {
-                id: 'atmos_calm_waves',
-                url: 'https://cdn.freesound.org/previews/235/235549_1015240-lq.mp3',
-                duration: 120,
-                category: 'ocean',
-                role: 'ambient',
-                weather: 'clear',
-                description: 'Calm waves'
-            },
-            {
-                id: 'atmos_forest_stream',
-                url: 'https://cdn.freesound.org/previews/263/263765_4388723-lq.mp3',
-                duration: 120,
-                category: 'water-flow',
-                role: 'ambient',
-                weather: 'clear',
-                description: 'Forest stream'
-            }
-        ];
-    }
 
     categorizeSounds(rawSounds) {
         return rawSounds.map(sound => {
@@ -368,7 +335,6 @@ export class Zengine {
     getEnvironmentSounds(environment) {
         const allAmbient = [
             ...this.sounds.filter(s => s.role === 'ambient' && environment.requiredAmbient.includes(s.category)),
-            ...this.atmosphericSounds.filter(s => s.role === 'ambient' && environment.requiredAmbient.includes(s.category))
         ];
 
         const allEvents = this.sounds.filter(s =>
@@ -381,7 +347,7 @@ export class Zengine {
     async start() {
         if (this.isRunning) return;
 
-        if (this.sounds.length === 0 || this.atmosphericSounds.length === 0)
+        if (this.sounds.length === 0)
             await this.init();
 
         if (!this.musicEngine.isPlaying)

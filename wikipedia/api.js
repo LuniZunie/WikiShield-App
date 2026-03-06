@@ -91,7 +91,7 @@ class MediaWikiAPI {
     }
 
     summary(base, custom) {
-        const watermark = " ([[:en:WP:WikiShield|WS]])"; // tehehe
+        const watermark = " ([[en:WP:WikiShield|WS]])"; // tehehe
         const message = `${base}${custom ? `: ${custom}` : ""}`;
         return `${truncate(message, 500 - watermark.length)}${watermark}`;
     }
@@ -170,6 +170,16 @@ class MediaWikiAPI {
             }, bypass, serverOverride);
             return response.query?.globaluserinfo || { };
         } catch (err) { return void(Logger.error("Error fetching global user info:", err)) ?? { }; }
+    }
+
+    async markWatchlistSeen(page, id, bypass, serverOverride) {
+        try {
+            await this.postWithToken({
+                action: "setnotificationtimestamp",
+                titles: page,
+                newerthanrevid: id
+            }, "csrf", bypass, serverOverride);
+        } catch (err) { return void(Logger.error("Error marking watchlist item as seen:", err)) ?? { valid: false, reason: err.message }; }
     }
 
     async append(title, section, content, summary, check = null, bypass, serverOverride) {

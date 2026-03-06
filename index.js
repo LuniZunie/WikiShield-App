@@ -465,7 +465,7 @@ function UpdateMenu(options = { }) {
     Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
-function BuildTray() { // TODO
+function BuildTray() {
     const tray = new Tray(nativeImage.createFromPath(path.join(__dirname, "assets", "icon.png")));
     tray.setToolTip("WikiShield");
 
@@ -527,12 +527,33 @@ class BuildWindow {
         UpdateMenu({ });
 
         glob.windows.main.webContents.on("context-menu", (event, params) => {
+            if (!params.linkURL && params.selectionText)
+                try {
+                    params.linkURL = new URL(params.selectionText).href;
+                    params.linkText = params.selectionText;
+                } catch (e) { }
+
             const contextMenu = Menu.buildFromTemplate([
                 ...(params.editFlags.canCopy ? [ { role: "copy" } ] : [ ]),
                 ...(params.editFlags.canCut ? [ { role: "cut" } ] : [ ]),
                 ...(params.editFlags.canPaste ? [ { role: "paste" } ] : [ ]),
                 { type: "separator" },
                 { role: "selectAll" },
+                ...(params.linkURL ? [
+                    { type: "separator" },
+                    {
+                        label: "Copy Link Address",
+                        click: () => clipboard.writeText(params.linkURL)
+                    },
+                    {
+                        label: "Open Link in New Tab",
+                        click: () => glob.windows.main.webContents.send("open-url", params.linkURL)
+                    },
+                    {
+                        label: "Open Link in External Browser",
+                        click: () => Security.openExternal(params.linkURL)
+                    },
+                ] : [ ]),
                 ...(params.selectionText ? [
                     { type: "separator" },
                     {
@@ -851,6 +872,12 @@ class Popup {
         popup.webContents.on("did-attach-webview", (event, webContents) => {
             webContents.setBackgroundThrottling(false);
             webContents.on("context-menu", (e, params) => {
+                if (!params.linkURL && params.selectionText)
+                    try {
+                        params.linkURL = new URL(params.selectionText).href;
+                        params.linkText = params.selectionText;
+                    } catch (e) { }
+
                 const contextMenu = Menu.buildFromTemplate([
                     ...(params.editFlags.canCopy ? [ { role: "copy" } ] : [ ]),
                     ...(params.editFlags.canCut ? [ { role: "cut" } ] : [ ]),
@@ -859,13 +886,16 @@ class Popup {
                     { role: "selectAll" },
                     ...(params.linkURL ? [
                         { type: "separator" },
-                        { role: "copyLinkAddress" },
                         {
-                            label: "Open Link in New Tab",
-                            click: () => popup.webContents.send("open-link-in-new-tab", params.linkURL)
+                            label: "Copy Link Address",
+                            click: () => clipboard.writeText(params.linkURL)
                         },
                         {
-                            label: "Open Link in Browser",
+                            label: "Open Link in New Tab",
+                            click: () => glob.windows.main.webContents.send("open-url", params.linkURL)
+                        },
+                        {
+                            label: "Open Link in External Browser",
                             click: () => Security.openExternal(params.linkURL)
                         },
                     ] : [ ]),

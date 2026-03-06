@@ -9,6 +9,7 @@ class Tab {
         this.url = url;
         this.title = "New Tab";
         this.failedUrl = null;
+        this.pendingErrorPageUrl = null;
 
         this.#createElements();
         this.#attachWebviewListeners();
@@ -19,7 +20,7 @@ class Tab {
     }
 
     get isError() {
-        return this.url.includes("/error/index.html");
+        return this.url.includes("/error/index.html") || this.url.includes(Browser.INLINE_ERROR_FRAGMENT);
     }
 
     get displayUrl() {
@@ -77,12 +78,7 @@ class Tab {
         this.$webview.setAttribute("webpreferences", "backgroundThrottling=false, autoplayPolicy=no-user-gesture-required");
         this.$webview.setAttribute("partition", "persist:browser");
 
-        if (this.url === "about:blank")
-            this.$webview.src = `./about-blank/index.html?host=${serverHost}`;
-        else {
-            this.$webview.src = this.url;
-            this.browser.history.add(this.url);
-        }
+        this.$webview.src = `./about-blank/index.html?host=${serverHost}`;
     }
 
     #attachWebviewListeners() {
@@ -144,25 +140,39 @@ class Tab {
 
         if (this.browser.activeTabId === this.id)
             this.browser.elements.$refreshBtn.classList.remove("loading");
+
+        if (this.pendingErrorPageUrl && this.$webview?.isConnected) {
+            const nextUrl = this.pendingErrorPageUrl;
+            this.pendingErrorPageUrl = null;
+
+            this.$webview.loadURL(nextUrl).catch((error) => {
+                const message = String(error?.message || "");
+                if (!message.includes("ERR_ABORTED"))
+                    console.error("Failed to load inline error page:", error);
+            });
+        }
     }
 
     #handleLoadError(e) {
         // Ignore certain errors
-        if (e.errorCode === -3 || e.isMainFrame === false || e.validatedURL.includes("/about-blank/index.html") || e.validatedURL.includes("/error/index.html"))
+        if (e.errorCode === -3 || e.isMainFrame === false || e.validatedURL.includes("/about-blank/index.html") || e.validatedURL.includes("/error/index.html") || e.validatedURL.startsWith("data:text/html"))
+            return;
+
+        if (!this.$webview?.isConnected)
             return;
 
         this.failedUrl = e.validatedURL;
 
         const errorCode = Browser.getErrorCodeString(e.errorCode);
-        const errorUrl = encodeURIComponent(e.validatedURL);
-        const errorDesc = encodeURIComponent(e.errorDescription);
+        const errorDesc = e.errorDescription || errorCode;
 
-        this.$webview.src = `./error/index.html?code=${errorCode}&url=${errorUrl}&description=${errorDesc}`;
+        // Defer fallback until the failed navigation fully settles to avoid guest-view abort races.
+        this.pendingErrorPageUrl = Browser.buildInlineErrorPageUrl(errorCode, e.validatedURL, errorDesc);
     }
 
     #handleIPCMessage(event) {
         if (event.channel === "open-in-new-tab")
-            return void this.browser.createTab(event.args[0]);
+            return void(this.browser.createTab(event.args[0]));
 
         if (this.browser.activeTabId !== this.id)
             return;
@@ -177,6 +187,28 @@ class Tab {
         };
 
         actions[event.channel]?.();
+    }
+
+    #loadURLSafely(url) {
+        const resolvedUrl = url.startsWith("./")
+            ? new URL(url, window.location.href).toString()
+            : url;
+
+        this.$webview.loadURL(resolvedUrl).catch((error) => {
+            const message = String(error?.message || "");
+            const knownNavigationFailure = message.includes("ERR_ABORTED") ||
+                message.includes("ERR_NAME_NOT_RESOLVED") ||
+                message.includes("ERR_CONNECTION_REFUSED") ||
+                message.includes("ERR_CONNECTION_TIMED_OUT") ||
+                message.includes("ERR_INTERNET_DISCONNECTED") ||
+                message.includes("ERR_CERT_AUTHORITY_INVALID") ||
+                message.includes("ERR_CERT_DATE_INVALID") ||
+                message.includes("ERR_SSL_PROTOCOL_ERROR") ||
+                message.includes("ERR_FAILED");
+
+            if (!knownNavigationFailure)
+                console.error("Webview load failed:", error);
+        });
     }
 
     reload() {
@@ -213,7 +245,7 @@ class Tab {
 
     navigateTo(url) {
         this.#loaded = false;
-        this.$webview.src = url;
+        this.#loadURLSafely(url);
     }
 
     destroy() {
@@ -471,7 +503,7 @@ class AutocompleteManager {
             clearTimeout(this.#debounceTimer);
 
             if (!query)
-                return void this.hide();
+                return void(this.hide());
 
             this.#debounceTimer = setTimeout(() => this.show(query), 150);
         });
@@ -554,6 +586,8 @@ class AutocompleteManager {
 }
 
 class Browser {
+    static INLINE_ERROR_FRAGMENT = "#wikishield-inline-error";
+
     constructor() {
         this.tabs = new Map();
         this.activeTabId = null;
@@ -616,6 +650,11 @@ class Browser {
 
         this.tabs.set(tabId, tab);
         this.switchTab(tabId);
+
+        if (url !== "about:blank") {
+            tab.navigateTo(url);
+            this.history.add(url);
+        }
 
         return tabId;
     }
@@ -700,6 +739,314 @@ class Browser {
         };
 
         return errorMap[errorCode.toString()] || "ERR_FAILED";
+    }
+
+    static escapeHtml(value) {
+        return String(value)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll("\"", "&quot;")
+            .replaceAll("'", "&#39;");
+    }
+
+    static getErrorDisplayConfig(code) {
+        const configs = {
+            "ERR_NAME_NOT_RESOLVED": {
+                title: "Website Not Found",
+                icon: "fa-triangle-exclamation",
+                description: "The website address couldn't be found. This might be because the website doesn't exist or there's a typo in the address.",
+                suggestions: [
+                    "Check the web address for typos",
+                    "Verify your internet connection is working",
+                    "Try searching for the website instead",
+                    "The website might no longer exist"
+                ]
+            },
+            "ERR_CONNECTION_REFUSED": {
+                title: "Connection Refused",
+                icon: "fa-plug-circle-xmark",
+                description: "The website refused to connect. The server might be down or blocking connections.",
+                suggestions: [
+                    "The website server might be temporarily down",
+                    "Check if the website is accessible from other devices",
+                    "Try again later",
+                    "Contact the website administrator if this persists"
+                ]
+            },
+            "ERR_CONNECTION_TIMED_OUT": {
+                title: "Connection Timed Out",
+                icon: "fa-clock",
+                description: "The connection took too long to respond. The server might be slow or unreachable.",
+                suggestions: [
+                    "Check your internet connection",
+                    "The server might be experiencing high traffic",
+                    "Try refreshing the page",
+                    "Try again in a few minutes"
+                ]
+            },
+            "ERR_INTERNET_DISCONNECTED": {
+                title: "No Internet Connection",
+                icon: "fa-wifi-slash",
+                description: "You're not connected to the internet. Check your network connection.",
+                suggestions: [
+                    "Check if your device is connected to WiFi or Ethernet",
+                    "Try restarting your router",
+                    "Check if other devices can connect",
+                    "Contact your internet service provider if needed"
+                ]
+            },
+            "ERR_CERT_AUTHORITY_INVALID": {
+                title: "Security Certificate Invalid",
+                icon: "fa-shield-halved",
+                description: "The website's security certificate is not trusted. This might be a security risk.",
+                suggestions: [
+                    "The website's security certificate may have expired",
+                    "Your computer's date and time might be incorrect",
+                    "Avoid entering sensitive information",
+                    "Contact the website administrator"
+                ]
+            },
+            "ERR_CERT_DATE_INVALID": {
+                title: "Certificate Date Invalid",
+                icon: "fa-calendar-xmark",
+                description: "The website's security certificate has expired or is not yet valid.",
+                suggestions: [
+                    "Check your computer's date and time settings",
+                    "The website's certificate may have expired",
+                    "Avoid entering sensitive information",
+                    "Contact the website administrator"
+                ]
+            },
+            "ERR_SSL_PROTOCOL_ERROR": {
+                title: "SSL Protocol Error",
+                icon: "fa-lock-open",
+                description: "An error occurred during the secure connection process.",
+                suggestions: [
+                    "The website might not support secure connections properly",
+                    "Try clearing your browser cache",
+                    "Try accessing the website later",
+                    "Contact the website administrator"
+                ]
+            },
+            "ERR_ABORTED": {
+                title: "Connection Aborted",
+                icon: "fa-circle-xmark",
+                description: "The connection was aborted before the page could load.",
+                suggestions: [
+                    "Try refreshing the page",
+                    "Check your internet connection",
+                    "The request might have been blocked",
+                    "Try accessing the page again"
+                ]
+            },
+            "ERR_FAILED": {
+                title: "Connection Failed",
+                icon: "fa-circle-exclamation",
+                description: "The connection failed for an unknown reason.",
+                suggestions: [
+                    "Try refreshing the page",
+                    "Check your internet connection",
+                    "Clear your browser cache",
+                    "Try again later"
+                ]
+            }
+        };
+
+        return configs[code] || configs.ERR_FAILED;
+    }
+
+    static buildInlineErrorPageUrl(code, url, description) {
+        const normalizedCode = code || "ERR_FAILED";
+        const config = Browser.getErrorDisplayConfig(normalizedCode);
+
+        const safeTitle = Browser.escapeHtml(config.title);
+        const safeCode = Browser.escapeHtml(normalizedCode);
+        const safeUrl = Browser.escapeHtml(url || "");
+        const resolvedDescription = !description || description === normalizedCode
+            ? config.description
+            : description;
+        const safeDescription = Browser.escapeHtml(resolvedDescription);
+        const safeIconClass = Browser.escapeHtml(config.icon);
+        const suggestionsHtml = config.suggestions
+            .map((suggestion) => `<li>${Browser.escapeHtml(suggestion)}</li>`)
+            .join("");
+
+        const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100vw;
+            min-height: 100vh;
+            padding: 40px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, rgba(15, 12, 41, 1), rgba(25, 22, 50, 1), rgba(36, 36, 62, 1));
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .container {
+            max-width: 600px;
+            text-align: center;
+        }
+
+        #icon {
+            margin-bottom: 20px;
+            font-size: 64px;
+            color: rgba(240, 147, 251, 0.7);
+        }
+
+        #title {
+            margin-bottom: 10px;
+            font-size: 32px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.95);
+        }
+
+        #code {
+            margin-bottom: 24px;
+            font-size: 18px;
+            font-weight: 500;
+            color: rgba(102, 126, 234, 0.9);
+        }
+
+        #description {
+            margin-bottom: 16px;
+            font-size: 16px;
+            line-height: 1.5;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        #url {
+            margin-bottom: 24px;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 14px;
+            word-break: break-all;
+            background: rgba(255, 255, 255, 0.03);
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .suggestions {
+            margin: 32px 0;
+            padding: 24px;
+            border-radius: 12px;
+            border: 1px solid rgba(102, 126, 234, 0.1);
+            text-align: left;
+        }
+
+        .suggestions h3 {
+            margin-bottom: 16px;
+            font-size: 16px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .suggestions ul {
+            list-style: none;
+        }
+
+        .suggestions li {
+            position: relative;
+            padding: 8px 0 8px 24px;
+            line-height: 1.5;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .suggestions li::before {
+            content: "\\2022";
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 18px;
+            color: rgba(102, 126, 234, 0.7);
+        }
+
+        .actions {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .actions button {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s, transform 0.1s;
+        }
+
+        .actions button:active {
+            transform: scale(0.98);
+        }
+
+        .actions .primary {
+            background: rgba(102, 126, 234, 0.9);
+            color: rgba(255, 255, 255, 0.95);
+        }
+
+        .actions .primary:hover {
+            background: rgba(102, 126, 234, 1);
+        }
+
+        .actions .secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .actions .secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="icon"><i class="fas ${safeIconClass}"></i></div>
+        <h1 id="title">${safeTitle}</h1>
+        <div id="code">${safeCode}</div>
+        <div id="description">${safeDescription}</div>
+        ${safeUrl ? `<div id="url">${safeUrl}</div>` : ""}
+
+        <div class="suggestions">
+            <h3>Try the following:</h3>
+            <ul>${suggestionsHtml}</ul>
+        </div>
+
+        <div class="actions">
+            <button type="button" class="primary" onclick="location.reload()">
+                <i class="fas fa-rotate-right"></i>
+                Reload Page
+            </button>
+            <button type="button" class="secondary" onclick="history.back()">
+                <i class="fas fa-arrow-left"></i>
+                Go Back
+            </button>
+        </div>
+    </div>
+</body>
+</html>`;
+
+        return `data:text/html;charset=utf-8,${encodeURIComponent(html)}${Browser.INLINE_ERROR_FRAGMENT}`;
     }
 }
 
