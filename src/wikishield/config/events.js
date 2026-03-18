@@ -356,7 +356,7 @@ export const events = {
                     })();
 
                     if (!report.valid)
-                        return report;
+                        return { valid: true }; // invalid but everything worked so no need to throw an error
                     else {
                         ws.store.statistics.reports_filed.total++;
                         ws.store.statistics.reports_filed.AIV++;
@@ -528,7 +528,15 @@ export const events = {
                 id: "summary",
                 title: "Summary (optional)",
 
-                type: "text",
+                type: "text"
+            },
+            {
+                id: "hide_username",
+                title: "Hide username",
+
+                type: "choice",
+                options: [ "Yes", "No" ],
+                default: "No"
             }
         ],
 
@@ -564,7 +572,8 @@ export const events = {
             )
                 return { valid: false, reason: "Rollback cancelled by user." };
 
-            return await ws.api.rollbackEdit(item.page.title, item.user.name, ws.api.summary(`Reverted edits by ${ws.api.user(item.user.name)}`, params.summary));
+            const user = params.hide_username === "Yes" ? "" : ` by ${ws.api.user(item.user.name)}`;
+            return await ws.api.rollbackEdit(item.page.title, item.user.name, ws.api.summary(`Reverted edits${user}`, params.summary));
         },
         successful: (ws, item, params) => {
             ws.store.statistics.reverts_made.total++;
@@ -598,6 +607,14 @@ export const events = {
                 title: "Summary (optional)",
 
                 type: "text",
+            },
+            {
+                id: "hide_username",
+                title: "Hide username",
+
+                type: "choice",
+                options: [ "Yes", "No" ],
+                default: "No"
             }
         ],
 
@@ -633,7 +650,8 @@ export const events = {
             )
                 return { valid: false, reason: "Rollback cancelled by user." };
 
-            return await ws.api.rollbackEdit(item.page.title, item.user.name, ws.api.summary(`Reverted [[Wp:AGF|Good faith]] edits by ${ws.api.user(item.user.name)}`, params.summary));
+            const user = params.hide_username === "Yes" ? "" : ` by ${ws.api.user(item.user.name)}`;
+            return await ws.api.rollbackEdit(item.page.title, item.user.name, ws.api.summary(`Reverted [[Wp:AGF|Good faith]] edits${user}`, params.summary));
         },
         successful: (ws, item, params) => {
             ws.store.statistics.reverts_made.total++;
@@ -669,6 +687,14 @@ export const events = {
                 title: "Summary (optional)",
 
                 type: "text",
+            },
+            {
+                id: "hide_username",
+                title: "Hide username",
+
+                type: "choice",
+                options: [ "Yes", "No" ],
+                default: "No"
             }
         ],
 
@@ -704,7 +730,8 @@ export const events = {
             )
                 return { valid: false, reason: "Undo cancelled by user." };
 
-            return await ws.api.undoEdit(item.page.title, item.id, ws.api.summary(`Undid revision ${ws.api.revision(item.id)} by ${ws.api.user(item.user.name)}`, params.summary));
+            const user = params.hide_username === "Yes" ? "" : ` by ${ws.api.user(item.user.name)}`;
+            return await ws.api.undoEdit(item.page.title, item.id, ws.api.summary(`Undid revision ${ws.api.revision(item.id)}${user}`, params.summary));
         },
     },
     "restore-edit": {
@@ -825,8 +852,9 @@ export const events = {
                 options: [
                     "Vandalism past final warning",
                     "Vandalism-only account",
+                    "Vandalism after recent release of block",
+                    "Spambot or compromised account",
                     "Long-term abuse",
-                    "Spambot or compromised account"
                 ],
                 default: "Vandalism past final warning",
             },
@@ -1088,9 +1116,9 @@ export const events = {
                     === Global block for ${item.user.name} ===
                     {{Status|}} <!-- Do not remove this template -->
                     * {{Luxotool|${item.user.name}}}
-                    ${reason ? `${reason} ([[en:WP:WikiShield|WS]]) ~~~~` : "([[en:WP:WikiShield|WS]]) ~~~~"}
+                    ${reason ? `${reason} ` : ""} <small>([[:en:WP:WikiShield|WikiShield]])</small> ~~~~
                 `)}`,
-                ws.api.summary(`Requesting global block for ${item.user.name}`),
+                ws.api.summary(`Requesting global block for ${ws.api.user(item.user.name)}`),
                 page => {
                     let searching = false;
                     let sections = [ ];
@@ -1108,9 +1136,9 @@ export const events = {
                     return {
                         valid: !sections.some(section => {
                             const content = section.content;
-                            if (content.match(new RegExp(`{{Luxotool\\|\\s*${item.user.name}}}`, "i")))
+                            if (content.match(new RegExp(`{{Luxotool\\|\\s*${ws.util.escapeRegex(item.user.name)}}}`, "i")))
                                 return true;
-                            else if (content.match(new RegExp(`{{MultiLock\\|(?:[^|}]*\\|)*(?:\\d+=)?\\s*${item.user.name}(?:\\|hidename=1)?(?:\\||})`, "i")))
+                            else if (content.match(new RegExp(`{{MultiLock\\|(?:[^|}]*\\|)*(?:\\d+=)?\\s*${ws.util.escapeRegex(item.user.name)}(?:\\|hidename=1)?(?:\\||})`, "i")))
                                 return true;
                             return false;
                         }),
@@ -1151,6 +1179,14 @@ export const events = {
                 title: "Summary (optional)",
 
                 type: "text",
+            },
+            {
+                id: "hide_username",
+                title: "Hide username",
+
+                type: "choice",
+                options: [ "Yes", "No" ],
+                default: "No"
             }
         ],
 
@@ -1177,7 +1213,7 @@ export const events = {
                 return { valid: false, reason: "User is already globally locked." };
 
             const reason = params.reason === "Generic" ? params.summary : `${params.reason}. ${params.summary}`;
-            const user = params.reason === "Abusive-username" ? "" : ` for ${item.user.name}`;
+            const user = params.hide_username === "Yes" ? "" : ` for ${ws.api.centralAuthUser(item.user.name)}`;
 
             const page = (await ws.api.getPagesContent([ WikiShield.config.pages.SRG ], true, "meta.wikimedia.org"))[WikiShield.config.pages.SRG] || "";
             const sections = ws.util.getPageSections(page);
@@ -1188,8 +1224,8 @@ export const events = {
                 `\n${fullTrim(`
                     === Global lock${user} ===
                     {{Status|}} <!-- Do not remove this template -->
-                    * {{LockHide|${item.user.name}${params.reason === "Abusive-username" ? "|hidename=1" : ""}}}
-                    ${reason ? `${reason} ~~~~` : "~~~~"}
+                    * {{LockHide|${item.user.name}${params.hide_username === "Yes" ? "|hidename=1" : ""}}}
+                    ${reason ? `${reason} ` : ""} <small>([[:en:WP:WikiShield|WikiShield]])</small> ~~~~
                 `)}`,
                 ws.api.summary(`Requesting global lock${user}`),
                 page => {
@@ -1209,9 +1245,9 @@ export const events = {
                     return {
                         valid: !sections.some(section => {
                             const content = section.content;
-                            if (content.match(new RegExp(`{{LockHide|\\s*${item.user.name}(\\|hidename=1)?}}`, "i")))
+                            if (content.match(new RegExp(`{{LockHide\\|\\s*${ws.util.escapeRegex(item.user.name)}(\\|hidename=1)?}}`, "i")))
                                 return true;
-                            else if (content.match(new RegExp(`{{MultiLock\\|(?:[^|}]*\\|)*(?:\\d+=)?\\s*${item.user.name}(?:\\|hidename=1)?(?:\\||})`, "i")))
+                            else if (content.match(new RegExp(`{{MultiLock\\|(?:[^|}]*\\|)*(?:\\d+=)?\\s*${ws.util.escapeRegex(item.user.name)}(?:\\|hidename=1)?(?:\\||})`, "i")))
                                 return true;
                             return false;
                         }),
@@ -1372,7 +1408,7 @@ export const events = {
             return { valid: true };
         },
         script: (ws, item, params) => {
-            ws.store.whitelist.users.set(item.user.name, [ new Date(), ws.util.expiryToDate(ws.store.settings.expiry.whitelist.users) ]);
+            ws.store.whitelist.users.set(item.user.name, [ Date.now(), ws.util.expiryToDate(ws.store.settings.expiry.whitelist.users).valueOf() ]);
             ws.store.statistics.items_whitelisted.total++;
             ws.store.statistics.items_whitelisted.users++;
 
@@ -1408,7 +1444,7 @@ export const events = {
             return { valid: true };
         },
         script: (ws, item, params) => {
-            ws.store.whitelist.pages.set(item.page.title, [ new Date(), ws.util.expiryToDate(ws.store.settings.expiry.whitelist.pages) ]);
+            ws.store.whitelist.pages.set(item.page.title, [ Date.now(), ws.util.expiryToDate(ws.store.settings.expiry.whitelist.pages).valueOf() ]);
             ws.store.statistics.items_whitelisted.total++;
             ws.store.statistics.items_whitelisted.pages++;
 
@@ -1481,7 +1517,7 @@ export const events = {
             return { valid: true };
         },
         script: (ws, item, params) => {
-            ws.store.highlight.pages.set(item.page.title, [ new Date(), ws.util.expiryToDate(ws.store.settings.expiry.highlight.pages) ]);
+            ws.store.highlight.pages.set(item.page.title, [ Date.now(), ws.util.expiryToDate(ws.store.settings.expiry.highlight.pages).valueOf() ]);
             ws.store.statistics.items_highlighted.total++;
             ws.store.statistics.items_highlighted.pages++;
 
@@ -1707,7 +1743,7 @@ export const events = {
 
             const $container = document.querySelector("#revert-menu");
             $container.innerHTML = "";
-            ws.gui.createRevertMenu("reverts", $container, item);
+            ws.gui.createWarnMenu("reverts", $container, item);
 
             if ($button) {
                 const $trigger = $button.querySelector('.bottom-tool-trigger');
@@ -1744,7 +1780,7 @@ export const events = {
 
             const $container = document.querySelector("#warn-menu");
             $container.innerHTML = "";
-            ws.gui.createRevertMenu("warnings", $container, item);
+            ws.gui.createWarnMenu("warnings", $container, item);
 
             if ($button) {
                 const $trigger = $button.querySelector('.bottom-tool-trigger');

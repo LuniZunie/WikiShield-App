@@ -170,9 +170,9 @@ class Throttle {
 }
 
 class MediaWikiOAuth2 {
-    static get CLIENT() { return "21ac593b851ba4818474a0d7101f43e1"; }
+    static get CLIENT() { return "755b11ad2237fd8f02172edb56254c11"; }
     // it actually does not matter that this is public, see https://phabricator.wikimedia.org/T323855, since the client is not confidential, we can ship the secret
-    static get SECRET() { return "f9547c7a3b6e1165c81e2ff751fecd4e0764f5d6"; }
+    static get SECRET() { return "1e83fe860d1287476fda847153800e4a232c7d19"; }
 
     constructor(userAgent) {
         this.userAgent = userAgent;
@@ -247,6 +247,9 @@ class MediaWikiOAuth2 {
 
         if (this.expires && Date.now() >= (this.expires.getTime() - 30 * 60 * 1000)) // refresh 30 minutes before expiry
             await this.refresh();
+
+        if (this.throttle.count % 100 === 0)
+            Logger.info(`OAuth2 request count: ${this.throttle.count}, rate: ${this.throttle.per(60 * 1000)} rpm`);
 
         return await this.throttle.call(async () => {
             return await fetch(url, {

@@ -45,6 +45,10 @@ export class Utility {
 		this.ws = ws;
 	}
 
+	escapeRegex(string) {
+		return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	}
+
 	escape(text) {
 		const div = document.createElement("div");
 		div.textContent = text;
@@ -124,7 +128,7 @@ export class Utility {
 	}
 
 	timeAgo(timestamp, now = Date.now()) {
-		const difference = Date.now() - new Date(timestamp);
+		const difference = now - new Date(timestamp);
 		const seconds = Math.floor(difference / 1000);
 
 		if (seconds <= 0) {

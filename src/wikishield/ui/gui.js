@@ -38,6 +38,8 @@ export class GUI {
 	}
 
 	async build() {
+		document.documentElement.style.colorScheme = { light: "only light", auto: "light dark", dark: "only dark" }[this.ws.store.UI.theme.app] || "light dark";
+
 		const shhhhh = {
 			code: [ "ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a" ],
 			index: 0,
@@ -63,7 +65,11 @@ export class GUI {
 		document.querySelectorAll(".VERSION").forEach(elem => elem.textContent = WikiShield.config.version);
 
 		const controller = new AbortController();
-		this.ws.audio.playSound([ "startup" ], controller.signal);
+
+		let resolve;
+		const promise = new Promise(r => resolve = r);
+		this.ws.audio.playSound([ "startup" ], controller.signal, false, () => resolve());
+		await promise;
 
 		let animationFrame;
 		const startupPerformance = this.ws.store.settings.performance.startup;
@@ -329,7 +335,7 @@ export class GUI {
 
 				if ($href.dataset.multipleHrefs) {
 					try {
-						const [ type, values ] = $href.dataset.multipleHrefs.split(";");
+						const [ type, values = "" ] = $href.dataset.multipleHrefs.split(";");
 						const items = Object.fromEntries(values.split("&").map(keyValue => {
 							const [ key, value ] = keyValue.split("=");
 							return [ key, decodeURIComponent(value) ];
@@ -469,9 +475,8 @@ export class GUI {
 					} finally {
 						event.preventDefault();
 					}
-				} else {
+				} else
 					this.ws.open($href.getAttribute("href"), event.altKey);
-				}
 
 				event.preventDefault();
 			}
@@ -495,11 +500,11 @@ export class GUI {
 				switch ($item.dataset.menu) {
 					case "revert": {
 						$menu.innerHTML = "";
-						this.createRevertMenu("reverts", $menu, this.ws.queue.current.item);
+						this.createWarnMenu("reverts", $menu, this.ws.queue.current.item);
 					} break;
 					case "warn": {
 						$menu.innerHTML = "";
-						this.createRevertMenu("warnings", $menu, this.ws.queue.current.item);
+						this.createWarnMenu("warnings", $menu, this.ws.queue.current.item);
 					} break;
 					case "page": {
 						const item = this.ws.queue.current.item;
@@ -1163,7 +1168,7 @@ export class GUI {
 	}
 	clearQueueItems() {
 		document.querySelector("#queue-items").innerHTML = "";
-		this.updateQueueTabs();
+		this.renderQueue();
 	}
 
 	updateHiddenItems(item) {
@@ -1284,6 +1289,7 @@ export class GUI {
 		document.querySelector("#page-unwatch").classList.toggle("hidden", watched !== true);
 
 		document.querySelector("#user-report-uaa").classList.toggle("hidden", item?.user.anon);
+		document.querySelector("#user-request-global-lock").classList.toggle("hidden", item?.user.anon);
 
 		document.querySelector("#user-contribs-count").textContent = `${item.user.edits} edit${item.user.edits === 1 ? "" : "s"}`;
 
@@ -1551,6 +1557,15 @@ export class GUI {
 					requestAnimationFrame(() => $item.classList.remove("no-transition"));
 				}
 
+				if (item.page.cached_contributions) {
+					const cached = await item.page.cached_contributions;
+					if (signal.aborted)
+						return;
+
+					if (contributions.some((rev, i) => rev.id !== cached[i]?.id))
+						delete item.page.cached_contributions;
+				}
+
 				if (!item.user.cached_contributions)
 					item.user.cached_contributions = this.ws.queue.generate("edit", contributions, true);
 
@@ -1769,6 +1784,15 @@ export class GUI {
 					$history.appendChild($item);
 
 					requestAnimationFrame(() => $item.classList.remove("no-transition"));
+				}
+
+				if (item.page.cached_history) {
+					const cached = await item.page.cached_history;
+					if (signal.aborted)
+						return;
+
+					if (history.some((rev, i) => rev.id !== cached[i]?.id))
+						delete item.page.cached_history;
 				}
 
 				if (!item.page.cached_history)
@@ -2013,6 +2037,26 @@ export class GUI {
 			case "logevent": {
 				switch (item.type) {
 					case "users": {
+						const $comment = document.querySelector("#middle-top .middle-top-comment");
+						{
+							$comment.innerHTML = "";
+
+							const $icon = document.createElement("span");
+							$icon.classList.add("fa", "fa-comment-dots");
+							$comment.appendChild($icon);
+
+							const $summary = document.createElement("span");
+							$summary.classList.add("summary");
+							$summary.dataset.tooltip = item.comment;
+							if (item.comment)
+								$summary.textContent = this.ws.util.truncate(item.comment, 100);
+							else
+								$summary.innerHTML = "<em>No summary provided</em>";
+							$comment.appendChild($summary);
+
+							this.addTooltipListener($summary);
+						}
+
 						$diff.innerHTML = "";
 
 						const evaluation = item.user.profanity;
@@ -2360,7 +2404,6 @@ export class GUI {
 			$assessment.className = `assessment ${analysis.assessment.toLowerCase().replace(/\s+/g, "-")}`;
 
 			$analysis.querySelector(":scope > .header > .confidence").textContent = `${Math.round((analysis.confidence || 0) * 100)}% confidence`;
-			console.log("Raw explanation:", analysis.explanation);
 			const explanationHtml = this.#sanitizeInlineHtml(analysis.explanation || "No explanation provided.");
 			$analysis.querySelector(":scope > .explanation").innerHTML = explanationHtml;
 
@@ -3115,7 +3158,7 @@ export class GUI {
 		return $item;
 	}
 
-	createRevertMenu(type, $container, item) {
+	createWarnMenu(type, $container, item) {
 		document.querySelectorAll(".levels-menu").forEach($menu => $menu.remove());
 		document.querySelectorAll(".warning-submenu").forEach($submenu => $submenu.remove());
 

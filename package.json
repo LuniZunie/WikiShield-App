@@ -48,6 +48,7 @@
     "electron-winstaller": "^5.4.0"
   },
   "dependencies": {
+    "discord-rpc": "^4.0.1",
     "electron-log": "^5.4.3",
     "electron-squirrel-startup": "^1.0.1",
     "electron-store": "^8.2.0",

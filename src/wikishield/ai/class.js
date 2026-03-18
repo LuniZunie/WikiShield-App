@@ -98,7 +98,6 @@ export class AI {
                     analysis.abortController.abort("Edit analysis canceled by user");
                     this.analysis["edit"].delete(id);
                 }
-
             }
         },
         username: (id) => {
@@ -288,9 +287,8 @@ export class Ollama extends AI {
     async models() {
         try {
             const response = await fetch(`${this.config.server}/api/tags`, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
-            if (!response.ok) {
+            if (!response.ok)
                 throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
-            }
 
             const data = await response.json();
             return data.models || [ ];
@@ -324,33 +322,24 @@ export class Ollama extends AI {
 
 			fetchOptions.body = JSON.stringify(body);
 
-			if (signal) {
+			if (signal)
 				fetchOptions.signal = signal;
-			}
 
             let response;
             try {
                 response = await fetch(`${this.config.server}/api/generate`, fetchOptions);
 
-                if (!response.ok) {
+                if (!response.ok)
                     throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
-                }
 
                 const data = await response.json();
 
-                if (!data.response) {
+                if (!data.response)
                     throw new Error('Empty response from Ollama');
-                }
 
                 return JSON.parse(data.response);
-            } catch (err) {
-                console.error(`Ollama ${type} analysis failed:`, err);
-                return { error: err.message || "Ollama request failed" };
-            }
-		} catch (error) {
-			console.error(`Ollama ${type} analysis error:`, error);
-			return { error: error.message || "Ollama request failed" };
-		}
+            } catch (err) { return { error: err.message || "Ollama request failed" }; }
+		} catch (error) { return { error: error.message || "Ollama request failed" }; }
 	}
 }
 

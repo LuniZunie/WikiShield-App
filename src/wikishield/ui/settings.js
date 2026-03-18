@@ -36,6 +36,10 @@ export class Settings {
 	constructor(ws) {
 		this.ws = ws;
 
+		this.ws.api.getTags().then(tags => {
+			this.wikipediaTags = tags;
+		});
+
 		electron.onImportSettingsFromClipboard(async () => {
 			const b64 = await electron.getClipboardText();
 			try {
@@ -212,23 +216,22 @@ export class Settings {
 	}
 
 	start() {
-		let cockBlock = 0;
-
 		electron.onOpenSettings(this.open.bind(this));
 		electron.onOpenChangelog(() => void(this.open()) ?? this.changelog());
 
+		let cockBlock = 0;
 		document.querySelector("#settings-container").addEventListener("click", e => {
 			if (e.target.id === "settings-container" && !(cockBlock = Math.max(0, cockBlock)))
 				this.close();
 		});
 
 		document.querySelector("#settings-general-button").addEventListener("click", this.general.bind(this));
-		document.querySelector("#settings-performance-button").addEventListener("click", this.performance.bind(this));
 		document.querySelector("#settings-audio-button").addEventListener("click", this.audio.bind(this));
 		document.querySelector("#settings-controls-button").addEventListener("click", this.controls.bind(this));
-
-		document.querySelector("#settings-queue-button").addEventListener("click", this.queue.bind(this));
 		document.querySelector("#settings-zen-button").addEventListener("click", this.zen.bind(this));
+
+		document.querySelector("#settings-app-button").addEventListener("click", this.app.bind(this));
+		document.querySelector("#settings-queue-button").addEventListener("click", this.queue.bind(this));
 		document.querySelector("#settings-accessibility-button").addEventListener("click", this.accessibility.bind(this));
 
 		document.querySelector("#settings-AI-button").addEventListener("click", this.AI.bind(this));
@@ -366,34 +369,6 @@ export class Settings {
 		}
 
 		{
-			const $performance = document.querySelector("#settings-startup-performance");
-
-			document.querySelectorAll("#settings-startup-performance .selected").forEach($el => $el.classList.remove("selected"));
-			document.querySelector(`#settings-startup-performance [data-value=${this.ws.store.settings.performance.startup}]`).classList.add("selected");
-
-			const $off = $performance.querySelector("[data-value=always_off]");
-			$off.addEventListener("click", () => {
-				$performance.querySelectorAll(".selected").forEach($el => $el.classList.remove("selected"));
-				$off.classList.add("selected");
-				this.ws.store.settings.performance.startup = "always_off";
-			});
-
-			const $adaptive = $performance.querySelector("[data-value=adaptive]");
-			$adaptive.addEventListener("click", () => {
-				$performance.querySelectorAll(".selected").forEach($el => $el.classList.remove("selected"));
-				$adaptive.classList.add("selected");
-				this.ws.store.settings.performance.startup = "adaptive";
-			});
-
-			const $on = $performance.querySelector("[data-value=always_on]");
-			$on.addEventListener("click", () => {
-				$performance.querySelectorAll(".selected").forEach($el => $el.classList.remove("selected"));
-				$on.classList.add("selected");
-				this.ws.store.settings.performance.startup = "always_on";
-			});
-		}
-
-		{
 			const $ores = document.querySelector("#settings-ORES-alert-toggle");
 			$ores.value = this.ws.store.settings.audio.ores_alert.enabled;
 			$ores.addEventListener("change", e => {
@@ -480,13 +455,125 @@ export class Settings {
 		}
 
 		{
+			const $zen = document.querySelector("#settings-zen-mode");
+			$zen.value = this.ws.store.settings.zen_mode.enabled;
+			$zen.addEventListener("change", e => {
+				this.ws.store.settings.zen_mode.enabled = $zen.value;
+				this.ws.gui.updateZenMode();
+			});
+
+			const $sound = document.querySelector("#settings-zen-mode-sound");
+			$sound.value = this.ws.store.settings.zen_mode.sound.enabled;
+			$sound.addEventListener("change", e => {
+				this.ws.store.settings.zen_mode.sound.enabled = $sound.value;
+				this.ws.gui.updateZenMode();
+			});
+
+			const $music = document.querySelector("#settings-zen-mode-music");
+			$music.value = this.ws.store.settings.zen_mode.music.enabled;
+			$music.addEventListener("change", e => {
+				this.ws.store.settings.zen_mode.music.enabled = $music.value;
+				this.ws.gui.updateZenMode();
+			});
+
+			const $alerts = document.querySelector("#settings-zen-mode-alerts");
+			$alerts.value = this.ws.store.settings.zen_mode.alerts.enabled;
+			$alerts.addEventListener("change", e => {
+				this.ws.store.settings.zen_mode.alerts.enabled = $alerts.value;
+				this.ws.gui.updateZenMode();
+			});
+
+			const $messages = document.querySelector("#settings-zen-mode-messages");
+			$messages.value = this.ws.store.settings.zen_mode.messages.enabled;
+			$messages.addEventListener("change", e => {
+				this.ws.store.settings.zen_mode.messages.enabled = $messages.value;
+				this.ws.gui.updateZenMode();
+			});
+
+			const $toasts = document.querySelector("#settings-zen-mode-toasts");
+			$toasts.value = this.ws.store.settings.zen_mode.toasts.enabled;
+			$toasts.addEventListener("change", e => {
+				this.ws.store.settings.zen_mode.toasts.enabled = $toasts.value;
+				this.ws.gui.updateZenMode();
+			});
+
+			const $badges = document.querySelector("#settings-zen-mode-badges");
+			$badges.value = this.ws.store.settings.zen_mode.badges.enabled;
+			$badges.addEventListener("change", e => {
+				this.ws.store.settings.zen_mode.badges.enabled = $badges.value;
+				this.ws.gui.updateZenMode();
+			});
+		}
+
+		{
+			{
+				const $theme = document.querySelector("#settings-app-theme");
+
+				document.querySelectorAll("#settings-app-theme .selected").forEach($el => $el.classList.remove("selected"));
+				document.querySelector(`#settings-app-theme [data-value=${this.ws.store.UI.theme.app}]`).classList.add("selected");
+
+				const $light = $theme.querySelector("[data-value=light]");
+				$light.addEventListener("click", () => {
+					$theme.querySelectorAll(".selected").forEach($el => $el.classList.remove("selected"));
+					$light.classList.add("selected");
+					this.ws.store.UI.theme.app = "light";
+					document.documentElement.style.colorScheme = "only light";
+				});
+
+				const $auto = $theme.querySelector("[data-value=auto]");
+				$auto.addEventListener("click", () => {
+					$theme.querySelectorAll(".selected").forEach($el => $el.classList.remove("selected"));
+					$auto.classList.add("selected");
+					this.ws.store.UI.theme.app = "auto";
+					document.documentElement.style.colorScheme = "light dark";
+				});
+
+				const $dark = $theme.querySelector("[data-value=dark]");
+				$dark.addEventListener("click", () => {
+					$theme.querySelectorAll(".selected").forEach($el => $el.classList.remove("selected"));
+					$dark.classList.add("selected");
+					this.ws.store.UI.theme.app = "dark";
+					document.documentElement.style.colorScheme = "only dark";
+				});
+			}
+
+			{
+				const $performance = document.querySelector("#settings-startup-performance");
+
+				document.querySelectorAll("#settings-startup-performance .selected").forEach($el => $el.classList.remove("selected"));
+				document.querySelector(`#settings-startup-performance [data-value=${this.ws.store.settings.performance.startup}]`).classList.add("selected");
+
+				const $off = $performance.querySelector("[data-value=always_off]");
+				$off.addEventListener("click", () => {
+					$performance.querySelectorAll(".selected").forEach($el => $el.classList.remove("selected"));
+					$off.classList.add("selected");
+					this.ws.store.settings.performance.startup = "always_off";
+				});
+
+				const $adaptive = $performance.querySelector("[data-value=adaptive]");
+				$adaptive.addEventListener("click", () => {
+					$performance.querySelectorAll(".selected").forEach($el => $el.classList.remove("selected"));
+					$adaptive.classList.add("selected");
+					this.ws.store.settings.performance.startup = "adaptive";
+				});
+
+				const $on = $performance.querySelector("[data-value=always_on]");
+				$on.addEventListener("click", () => {
+					$performance.querySelectorAll(".selected").forEach($el => $el.classList.remove("selected"));
+					$on.classList.add("selected");
+					this.ws.store.settings.performance.startup = "always_on";
+				});
+			}
+
 			const $tools = document.querySelector("#settings-dynamic-bottom-menus");
 			$tools.value = this.ws.store.UI.hide_tools;
 			$tools.addEventListener("change", e => {
 				this.ws.store.UI.hide_tools = $tools.value;
 				this.ws.gui.updateHiddenItems();
 			});
+		}
 
+		{
 			const $queue = document.querySelector("#settings-queues");
 			Queue.types
 				.map(type => ({ type, data: this.ws.store.settings.queue[type] }))
@@ -560,57 +647,6 @@ export class Settings {
 				});
 				pen.putImageData(imgData, 0, 0);
 				$preview.appendChild(paper);
-			});
-		}
-
-		{
-			const $zen = document.querySelector("#settings-zen-mode");
-			$zen.value = this.ws.store.settings.zen_mode.enabled;
-			$zen.addEventListener("change", e => {
-				this.ws.store.settings.zen_mode.enabled = $zen.value;
-				this.ws.gui.updateZenMode();
-			});
-
-			const $sound = document.querySelector("#settings-zen-mode-sound");
-			$sound.value = this.ws.store.settings.zen_mode.sound.enabled;
-			$sound.addEventListener("change", e => {
-				this.ws.store.settings.zen_mode.sound.enabled = $sound.value;
-				this.ws.gui.updateZenMode();
-			});
-
-			const $music = document.querySelector("#settings-zen-mode-music");
-			$music.value = this.ws.store.settings.zen_mode.music.enabled;
-			$music.addEventListener("change", e => {
-				this.ws.store.settings.zen_mode.music.enabled = $music.value;
-				this.ws.gui.updateZenMode();
-			});
-
-			const $alerts = document.querySelector("#settings-zen-mode-alerts");
-			$alerts.value = this.ws.store.settings.zen_mode.alerts.enabled;
-			$alerts.addEventListener("change", e => {
-				this.ws.store.settings.zen_mode.alerts.enabled = $alerts.value;
-				this.ws.gui.updateZenMode();
-			});
-
-			const $messages = document.querySelector("#settings-zen-mode-messages");
-			$messages.value = this.ws.store.settings.zen_mode.messages.enabled;
-			$messages.addEventListener("change", e => {
-				this.ws.store.settings.zen_mode.messages.enabled = $messages.value;
-				this.ws.gui.updateZenMode();
-			});
-
-			const $toasts = document.querySelector("#settings-zen-mode-toasts");
-			$toasts.value = this.ws.store.settings.zen_mode.toasts.enabled;
-			$toasts.addEventListener("change", e => {
-				this.ws.store.settings.zen_mode.toasts.enabled = $toasts.value;
-				this.ws.gui.updateZenMode();
-			});
-
-			const $badges = document.querySelector("#settings-zen-mode-badges");
-			$badges.value = this.ws.store.settings.zen_mode.badges.enabled;
-			$badges.addEventListener("change", e => {
-				this.ws.store.settings.zen_mode.badges.enabled = $badges.value;
-				this.ws.gui.updateZenMode();
 			});
 		}
 
@@ -1014,9 +1050,21 @@ export class Settings {
 		}
 
 		{
+			document.querySelector("#settings-zen-mode").value = this.ws.store.settings.zen_mode.enabled;
+			document.querySelector("#settings-zen-mode-sound").value = this.ws.store.settings.zen_mode.sound.enabled;
+			document.querySelector("#settings-zen-mode-music").value = this.ws.store.settings.zen_mode.music.enabled;
+			document.querySelector("#settings-zen-mode-alerts").value = this.ws.store.settings.zen_mode.alerts.enabled;
+			document.querySelector("#settings-zen-mode-messages").value = this.ws.store.settings.zen_mode.messages.enabled;
+			document.querySelector("#settings-zen-mode-toasts").value = this.ws.store.settings.zen_mode.toasts.enabled;
+			document.querySelector("#settings-zen-mode-badges").value = this.ws.store.settings.zen_mode.badges.enabled;
+		}
+
+		{
 			document.querySelectorAll("#settings-startup-performance .selected").forEach($el => $el.classList.remove("selected"));
 			document.querySelector(`#settings-startup-performance [data-value=${this.ws.store.settings.performance.startup}]`).classList.add("selected");
+		}
 
+		{
 			const $queue = document.querySelector("#settings-queues");
 			$queue.clearItems();
 			Queue.types
@@ -1039,16 +1087,6 @@ export class Settings {
 			document.querySelectorAll(".palette-option").forEach($el => {
 				$el.classList.toggle("selected", $el.dataset.palette === this.ws.store.UI.theme.palette);
 			});
-		}
-
-		{
-			document.querySelector("#settings-zen-mode").value = this.ws.store.settings.zen_mode.enabled;
-			document.querySelector("#settings-zen-mode-sound").value = this.ws.store.settings.zen_mode.sound.enabled;
-			document.querySelector("#settings-zen-mode-music").value = this.ws.store.settings.zen_mode.music.enabled;
-			document.querySelector("#settings-zen-mode-alerts").value = this.ws.store.settings.zen_mode.alerts.enabled;
-			document.querySelector("#settings-zen-mode-messages").value = this.ws.store.settings.zen_mode.messages.enabled;
-			document.querySelector("#settings-zen-mode-toasts").value = this.ws.store.settings.zen_mode.toasts.enabled;
-			document.querySelector("#settings-zen-mode-badges").value = this.ws.store.settings.zen_mode.badges.enabled;
 		}
 
 		{
@@ -1230,7 +1268,11 @@ export class Settings {
 									$select.appendChild($option);
 								}
 
-								if ("default" in param) {
+								if (condition.params[param.id] !== undefined) {
+									$select.value = condition.params[param.id];
+									for (const cb of dependencyMap.get(param.id) || [])
+										cb();
+								} else if ("default" in param) {
 									$select.value = _default;
 									condition.params[param.id] = _default;
 								}
@@ -1272,7 +1314,11 @@ export class Settings {
 								$input.dataset.paramid = param.id;
 								$param.appendChild($input);
 
-								if ("default" in param) {
+								if (condition.params[param.id] !== undefined) {
+									$input.value = condition.params[param.id];
+									for (const cb of dependencyMap.get(param.id) || [])
+										cb();
+								} else if ("default" in param) {
 									$input.value = _default;
 									condition.params[param.id] = _default;
 								}
@@ -1289,7 +1335,11 @@ export class Settings {
 								$input.dataset.paramid = param.id;
 								$param.appendChild($input);
 
-								if ("default" in param) {
+								if (condition.params[param.id] !== undefined) {
+									$input.checked = condition.params[param.id];
+									for (const cb of dependencyMap.get(param.id) || [])
+										cb();
+								} else if ("default" in param) {
 									$input.checked = _default;
 									condition.params[param.id] = _default;
 								}
@@ -1308,7 +1358,11 @@ export class Settings {
 								if ("max" in param) $input.max = param.max;
 								$param.appendChild($input);
 
-								if ("default" in param) {
+								if (condition.params[param.id] !== undefined) {
+									$input.value = condition.params[param.id];
+									for (const cb of dependencyMap.get(param.id) || [])
+										cb();
+								} else if ("default" in param) {
 									$input.value = _default;
 									condition.params[param.id] = _default;
 								}
@@ -1374,7 +1428,11 @@ export class Settings {
 									$select.appendChild($option);
 								}
 
-								if ("default" in param) {
+								if (action.params[param.id] !== undefined) {
+									$select.value = action.params[param.id];
+									for (const cb of dependencyMap.get(param.id) || [])
+										cb();
+								} else if ("default" in param) {
 									$select.value = _default;
 									action.params[param.id] = _default;
 								}
@@ -1416,7 +1474,11 @@ export class Settings {
 								$input.dataset.paramid = param.id;
 								$param.appendChild($input);
 
-								if ("default" in param) {
+								if (action.params[param.id] !== undefined) {
+									$input.value = action.params[param.id];
+									for (const cb of dependencyMap.get(param.id) || [])
+										cb();
+								} else if ("default" in param) {
 									$input.value = _default;
 									action.params[param.id] = _default;
 								}
@@ -1433,7 +1495,11 @@ export class Settings {
 								$input.dataset.paramid = param.id;
 								$param.appendChild($input);
 
-								if ("default" in param) {
+								if (action.params[param.id] !== undefined) {
+									$input.checked = action.params[param.id];
+									for (const cb of dependencyMap.get(param.id) || [])
+										cb();
+								} else if ("default" in param) {
 									$input.checked = _default;
 									action.params[param.id] = _default;
 								}
@@ -1449,7 +1515,11 @@ export class Settings {
 								$input.dataset.paramid = param.id;
 								$param.appendChild($input);
 
-								if ("default" in param) {
+								if (action.params[param.id] !== undefined) {
+									$input.value = action.params[param.id];
+									for (const cb of dependencyMap.get(param.id) || [])
+										cb();
+								} else if ("default" in param) {
 									$input.value = _default;
 									action.params[param.id] = _default;
 								}
@@ -1709,18 +1779,24 @@ export class Settings {
 			duplicates();
 		}
 	}
-
-	queue() {
-		this.deselect();
-
-		document.querySelector("#settings-queue-button").classList.add("selected");
-		document.querySelector("#settings-container > .settings > .settings-right > .queue").classList.remove("hidden");
-	}
 	zen() {
 		this.deselect();
 
 		document.querySelector("#settings-zen-button").classList.add("selected");
 		document.querySelector("#settings-container > .settings > .settings-right > .zen").classList.remove("hidden");
+	}
+
+	app() {
+		this.deselect();
+
+		document.querySelector("#settings-app-button").classList.add("selected");
+		document.querySelector("#settings-container > .settings > .settings-right > .app").classList.remove("hidden");
+	}
+	queue() {
+		this.deselect();
+
+		document.querySelector("#settings-queue-button").classList.add("selected");
+		document.querySelector("#settings-container > .settings > .settings-right > .queue").classList.remove("hidden");
 	}
 	accessibility() {
 		this.deselect();
@@ -1764,17 +1840,33 @@ export class Settings {
 				const value = $input.value.trim();
 				if (value) {
 					$input.value = "";
-					this.ws.execute({
-						actions: [
-							{
-								name: `whitelist-${type}`
-							}
-						]
-					}, void 0, void 0, { user: { name: value } });
-				}
+					this.ws.store.whitelist[`${type}s`].set(value, [ Date.now(), this.ws.util.expiryToDate(this.ws.store.settings.expiry.whitelist[`${type}s`]).valueOf() ]);
+					this.ws.store.statistics.items_whitelisted.total++;
+            		this.ws.store.statistics.items_whitelisted[`${type}s`]++;
+					this.ws.gui.renderQueue();
 
-				this.whitelist(type);
+					this.whitelist(type);
+				}
 			};
+			if (type === "tag")
+				if (this.wikipediaTags) {
+					const tags = this.wikipediaTags.map(tag => tag.name).sort();
+					for (const tag of tags) {
+						const $option = document.createElement("option");
+						$option.value = tag;
+						$option.textContent = tag;
+						$input.appendChild($option);
+					}
+					$input.setAttribute("list", $input.id + "-datalist");
+					const $datalist = document.createElement("datalist");
+					$datalist.id = $input.id + "-datalist";
+					$input.parentElement.appendChild($datalist);
+					for (const tag of tags) {
+						const $option = document.createElement("option");
+						$option.value = tag;
+						$datalist.appendChild($option);
+					}
+				}
 
 			document.querySelector(`#settings-whitelist-${type}s-add-button`).addEventListener("click", add);
 			$input.addEventListener("keydown", e => {
@@ -1815,13 +1907,8 @@ export class Settings {
 					<button class="add-action-button remove-button" title="Remove from whitelisted list"><span class="fa fa-trash"></span></button>
 				`;
 				$item.querySelector(".remove-button").addEventListener("click", () => {
-					this.ws.execute({
-						actions: [
-							{
-								name: `unwhitelist-${type}`
-							}
-						]
-					}, void 0, void 0, { user: { name: value } });
+					this.ws.store.whitelist[`${type}s`].delete(value);
+					this.ws.gui.renderQueue();
 
 					this.whitelist(type);
 				});
@@ -1849,17 +1936,33 @@ export class Settings {
 				const value = $input.value.trim();
 				if (value) {
 					$input.value = "";
-					this.ws.execute({
-						actions: [
-							{
-								name: `highlight-${type}`
-							}
-						]
-					}, void 0, void 0, { user: { name: value } });
+					this.ws.store.highlight[`${type}s`].set(value, [ Date.now(), this.ws.util.expiryToDate(this.ws.store.settings.expiry.highlight[`${type}s`]).valueOf() ]);
+					this.ws.store.statistics.items_highlighted.total++;
+            		this.ws.store.statistics.items_highlighted[`${type}s`]++;
+					this.ws.gui.renderQueue();
 
 					this.highlight(type);
 				}
 			};
+			if (type === "tag")
+				if (this.wikipediaTags) {
+					const tags = this.wikipediaTags.map(tag => tag.name).sort();
+					for (const tag of tags) {
+						const $option = document.createElement("option");
+						$option.value = tag;
+						$option.textContent = tag;
+						$input.appendChild($option);
+					}
+					$input.setAttribute("list", $input.id + "-datalist");
+					const $datalist = document.createElement("datalist");
+					$datalist.id = $input.id + "-datalist";
+					$input.parentElement.appendChild($datalist);
+					for (const tag of tags) {
+						const $option = document.createElement("option");
+						$option.value = tag;
+						$datalist.appendChild($option);
+					}
+				}
 
 			document.querySelector(`#settings-highlight-${type}s-add-button`).addEventListener("click", add);
 			$input.addEventListener("keydown", e => {
@@ -1901,13 +2004,8 @@ export class Settings {
 					<button class="add-action-button remove-button" title="Remove from highlighted list"><span class="fa fa-trash"></span></button>
 				`;
 				$item.querySelector(".remove-button").addEventListener("click", () => {
-					this.ws.execute({
-						actions: [
-							{
-								name: `unhighlight-${type}`
-							}
-						]
-					}, void 0, void 0, { user: { name: value } });
+					this.ws.store.highlight[`${type}s`].delete(value);
+					this.ws.gui.renderQueue();
 
 					this.highlight(type);
 				});

@@ -226,7 +226,7 @@ export class Dialog {
 					event.preventDefault();
 					event.stopPropagation();
 
-					closeModal(input.value);
+					closeModal($input.value);
 
 					return false;
 				} else if (event.key === "Escape") {

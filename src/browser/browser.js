@@ -1,5 +1,6 @@
 const params = new URLSearchParams(window.location.search);
 const serverHost = params.get("host") || "en.wikipedia.org";
+const isPopupMode = params.get("popup") === "true";
 class Tab {
     #loaded = false;
 
@@ -10,6 +11,7 @@ class Tab {
         this.title = "New Tab";
         this.failedUrl = null;
         this.pendingErrorPageUrl = null;
+        this.pendingNavigationUrl = null;
 
         this.#createElements();
         this.#attachWebviewListeners();
@@ -78,7 +80,10 @@ class Tab {
         this.$webview.setAttribute("webpreferences", "backgroundThrottling=false, autoplayPolicy=no-user-gesture-required");
         this.$webview.setAttribute("partition", "persist:browser");
 
-        this.$webview.src = `./about-blank/index.html?host=${serverHost}`;
+        if (this.url === "about:blank")
+            this.$webview.src = `./about-blank/index.html?host=${serverHost}`;
+        else
+            this.$webview.src = "about:blank";
     }
 
     #attachWebviewListeners() {
@@ -101,6 +106,13 @@ class Tab {
         this.$webview.addEventListener("did-stop-loading", () => this.#onStopLoading());
         this.$webview.addEventListener("dom-ready", () => {
             this.#loaded = true;
+
+            if (this.pendingNavigationUrl) {
+                const pendingUrl = this.pendingNavigationUrl;
+                this.pendingNavigationUrl = null;
+                this.#loadURLSafely(pendingUrl);
+            }
+
             if (this.browser.activeTabId === this.id) {
                 this.browser.navigation.updateButtons();
                 this.browser.hideLoadingOverlay();
@@ -115,6 +127,10 @@ class Tab {
     }
 
     #handleNavigation(e) {
+        const isBootstrapBlankNav = this.pendingNavigationUrl && (e.url === "about:blank" || e.url.includes("/about-blank/index.html"));
+        if (isBootstrapBlankNav)
+            return;
+
         this.url = e.url;
 
         // Clear failedUrl when navigating away from the error page
@@ -144,12 +160,7 @@ class Tab {
         if (this.pendingErrorPageUrl && this.$webview?.isConnected) {
             const nextUrl = this.pendingErrorPageUrl;
             this.pendingErrorPageUrl = null;
-
-            this.$webview.loadURL(nextUrl).catch((error) => {
-                const message = String(error?.message || "");
-                if (!message.includes("ERR_ABORTED"))
-                    console.error("Failed to load inline error page:", error);
-            });
+            this.#loadURLSafely(nextUrl);
         }
     }
 
@@ -171,17 +182,25 @@ class Tab {
     }
 
     #handleIPCMessage(event) {
-        if (event.channel === "open-in-new-tab")
-            return void(this.browser.createTab(event.args[0]));
+        if (event.channel === "open-in-new-tab") {
+            if (isPopupMode) {
+                const activeTab = this.browser.getActiveTab();
+                if (activeTab)
+                    activeTab.navigateTo(event.args[0]);
+            } else {
+                this.browser.createTab(event.args[0]);
+            }
+            return;
+        }
 
         if (this.browser.activeTabId !== this.id)
             return;
 
         const actions = {
             "close-tab": () => this.browser.closeTab(this.id),
-            "new-tab": () => this.browser.createTab("about:blank"),
-            "next-tab": () => this.browser.switchToNextTab(),
-            "prev-tab": () => this.browser.switchToPrevTab(),
+            "new-tab": () => isPopupMode ? null : this.browser.createTab("about:blank"),
+            "next-tab": () => isPopupMode ? null : this.browser.switchToNextTab(),
+            "prev-tab": () => isPopupMode ? null : this.browser.switchToPrevTab(),
             "refresh": () => this.reload(),
             "focus-url-bar": () => this.browser.navigation.focusUrlBar(),
         };
@@ -190,6 +209,17 @@ class Tab {
     }
 
     #loadURLSafely(url) {
+        if (!this.$webview?.isConnected)
+            return;
+
+        try {
+            this.$webview.getWebContentsId();
+        } catch {
+            // WebContents is not available yet (usually before first dom-ready).
+            this.pendingNavigationUrl = url;
+            return;
+        }
+
         const resolvedUrl = url.startsWith("./")
             ? new URL(url, window.location.href).toString()
             : url;
@@ -619,6 +649,16 @@ class Browser {
 
         this.#attachListeners();
         this.#initialize();
+
+        electron.onGetTabUrls(() => {
+            const urls = [];
+            for (const [, tab] of this.tabs) {
+                const url = tab.displayUrl || tab.url;
+                if (url && url !== "about:blank" && !url.includes("/about-blank/index.html"))
+                    urls.push(url);
+            }
+            return urls;
+        });
     }
 
     showLoadingOverlay() {
@@ -630,12 +670,24 @@ class Browser {
     }
 
     #attachListeners() {
-        this.elements.$newTabBtn.addEventListener("click", () => this.createTab("about:blank"));
+        if (!isPopupMode)
+            this.elements.$newTabBtn.addEventListener("click", () => this.createTab("about:blank"));
 
-        electron.onOpenLinkInNewTab((url) => this.createTab(url));
+        electron.onOpenLinkInNewTab((url) => {
+            if (isPopupMode) {
+                const activeTab = this.getActiveTab();
+                if (activeTab)
+                    activeTab.navigateTo(url);
+            } else {
+                this.createTab(url);
+            }
+        });
     }
 
     #initialize() {
+        if (isPopupMode)
+            document.getElementById("tabs-bar").style.display = "none";
+
         const urlParams = new URLSearchParams(window.location.search);
         const initialUrl = urlParams.get("url") || "";
         this.createTab(initialUrl.trim() || "about:blank");

@@ -45,7 +45,7 @@ export class EventManager {
 		if ($el.dataset.eventId === id)
 			for (const param of event.parameters?.(this.ws, this.ws.queue.current.item) || []) {
 				const $input = $el.querySelector(`[data-paramid="${param.id}"]`);
-				cachedParams[param.id] = $input.value;
+				cachedParams[param.id] = $input.type === "checkbox" ? $input.checked : $input.value;
 			}
 		else
 			$el.dataset.eventId = id;

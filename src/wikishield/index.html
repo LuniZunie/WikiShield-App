@@ -7,9 +7,9 @@
 
         <title>WikiShield</title>
 
-        <link href="https://fonts.cdnfonts.com/css/open-dyslexic" rel="stylesheet">
-
+        <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/open-dyslexic">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.0/css/all.min.css">
+
         <link rel="stylesheet" href="../common/style.css">
         <link rel="stylesheet" href="style.css">
 
@@ -399,14 +399,14 @@
                             <div class="settings-left-menu-item" id="settings-general-button">
                                 <span><i class="fas fa-gear"></i>General</span>
                             </div>
-                            <div class="settings-left-menu-item" id="settings-performance-button">
-                                <span><i class="fas fa-tachometer-alt"></i>Performance</span>
-                            </div>
                             <div class="settings-left-menu-item" id="settings-audio-button">
                                 <span><i class="fas fa-volume-high"></i>Audio</span>
                             </div>
                             <div class="settings-left-menu-item" id="settings-controls-button">
                                 <span><i class="fas fa-keyboard"></i>Controls</span>
+                            </div>
+                            <div class="settings-left-menu-item" id="settings-zen-button">
+                                <span><i class="fas fa-spa"></i>Zen Mode</span>
                             </div>
                         </div>
 
@@ -414,11 +414,11 @@
                             <div class="settings-category-header">
                                 <span>APPEARANCE</span>
                             </div>
+                            <div class="settings-left-menu-item" id="settings-app-button">
+                                <span><i class="fas fa-palette"></i>App</span>
+                            </div>
                             <div class="settings-left-menu-item" id="settings-queue-button">
                                 <span><i class="fas fa-list"></i>Queue</span>
-                            </div>
-                            <div class="settings-left-menu-item" id="settings-zen-button">
-                                <span><i class="fas fa-spa"></i>Zen Mode</span>
                             </div>
                             <div class="settings-left-menu-item" id="settings-accessibility-button">
                                 <span><i class="fas fa-universal-access"></i>Accessibility</span>
@@ -545,17 +545,6 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="performance hidden">
-                            <div class="settings-section">
-                                <div class="settings-section-title">Startup animation</div>
-                                <div class="settings-section-desc">Enable or disable the startup animation when launching WikiShield.</div>
-                                <div id="settings-startup-performance" class="settings-radio-group">
-                                    <div class="settings-radio-option" data-value="always_off">Always off</div>
-                                    <div class="settings-radio-option selected" data-value="adaptive">Adaptive (recommended)</div>
-                                    <div class="settings-radio-option" data-value="always_on">Always on</div>
-                                </div>
-                            </div>
-                        </div>
                         <div class="audio hidden">
                             <div class="settings-toggles-section">
                                 <div class="settings-section-header">
@@ -595,30 +584,6 @@
                                 <div class="settings-section-title">Keyboard shortcuts</div>
                                 <div class="settings-section-desc">Customize keyboard shortcuts for various actions in WikiShield.</div>
                                 <button type="button" id="settings-new-control-script" class="add-action-button new-control-script"><span class="fa fa-plus"></span> Add new action</button>
-                            </div>
-                        </div>
-
-                        <div class="queue hidden">
-                            <div class="settings-section compact inline">
-                                <div class="settings-section-content">
-                                    <div class="settings-section-title">Dynamically hide bottom tool menus</div>
-                                    <div class="settings-section-desc">Automatically hide bottom tool menus when not needed to reduce clutter.</div>
-                                </div>
-                                <toggle-input id="settings-dynamic-bottom-menus" value="true"></toggle-input>
-                            </div>
-                            <div class="settings-section">
-                                <div class="settings-section-title">Queues</div>
-                                <div class="settings-section-desc">Enable or disable different edit queues, and customize their order.</div>
-                                <draggable-order-list id="settings-queues">
-                                    <!-- Queue items will be populated here -->
-                                </draggable-order-list>
-                            </div>
-                            <div class="settings-section">
-                                <div class="settings-section-title">Color palette</div>
-                                <div class="settings-section-desc">Select the color palette used for highlighting users and pages.</div>
-                                <div id="settings-palette-selector" class="palette-selector">
-
-                                </div>
                             </div>
                         </div>
                         <div class="zen hidden">
@@ -666,6 +631,50 @@
                                         <div class="settings-section-desc">Show badges in Zen Mode.</div>
                                         <toggle-input id="settings-zen-mode-badges" value="true"></toggle-input>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="app hidden">
+                            <div class="settings-section">
+                                <div class="settings-section-title">App theme</div>
+                                <div class="settings-section-desc">Choose between light mode, dark mode, or automatic switching based on system settings.</div>
+                                <div id="settings-app-theme" class="settings-radio-group">
+                                    <div class="settings-radio-option" data-value="light">Light mode</div>
+                                    <div class="settings-radio-option selected" data-value="auto">Auto</div>
+                                    <div class="settings-radio-option" data-value="dark">Dark mode</div>
+                                </div>
+                            </div>
+                            <div class="settings-section">
+                                <div class="settings-section-title">Startup animation</div>
+                                <div class="settings-section-desc">Enable or disable the startup animation when launching WikiShield.</div>
+                                <div id="settings-startup-performance" class="settings-radio-group">
+                                    <div class="settings-radio-option" data-value="always_off">Always off</div>
+                                    <div class="settings-radio-option selected" data-value="adaptive">Adaptive (recommended)</div>
+                                    <div class="settings-radio-option" data-value="always_on">Always on</div>
+                                </div>
+                            </div>
+                            <div class="settings-section compact inline">
+                                <div class="settings-section-content">
+                                    <div class="settings-section-title">Dynamically hide bottom tool menus</div>
+                                    <div class="settings-section-desc">Automatically hide bottom tool menus when not needed to reduce clutter.</div>
+                                </div>
+                                <toggle-input id="settings-dynamic-bottom-menus" value="true"></toggle-input>
+                            </div>
+                        </div>
+                        <div class="queue hidden">
+                            <div class="settings-section">
+                                <div class="settings-section-title">Queues</div>
+                                <div class="settings-section-desc">Enable or disable different edit queues, and customize their order.</div>
+                                <draggable-order-list id="settings-queues">
+                                    <!-- Queue items will be populated here -->
+                                </draggable-order-list>
+                            </div>
+                            <div class="settings-section">
+                                <div class="settings-section-title">Color palette</div>
+                                <div class="settings-section-desc">Select the color palette used for highlighting users and pages.</div>
+                                <div id="settings-palette-selector" class="palette-selector">
+
                                 </div>
                             </div>
                         </div>

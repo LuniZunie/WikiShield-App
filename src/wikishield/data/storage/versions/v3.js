@@ -194,6 +194,7 @@ Version.v3 = class V3 extends Version {
             UI: {
                 hide_tools: true,
                 theme: {
+                    app: "auto",
                     palette: "traffic",
                 },
                 queue: {
@@ -583,6 +584,7 @@ Version.v3 = class V3 extends Version {
             UI: {
                 hide_tools: defaults.UI.hide_tools,
                 theme: {
+                    app: defaults.UI.theme.app,
                     palette: this.sanitize([ "UI", "theme", "palette" ], defaults.UI.theme.palette, value => {
                         return [ "traffic", "heat", "natural", "cool" ][value] || defaults.UI.theme.palette;
                     })
@@ -736,9 +738,27 @@ Version.v3 = class V3 extends Version {
                                     case "unwhitelistPage": { action.name = "unhighlight-page"; } break;
                                     case "thankUser": { action.name = "thank-user"; } break;
                                     case "warn": { action.name = "warn-user"; } break;
-                                    case "rollback": { action.name = "rollback-edit"; } break;
-                                    case "rollbackGoodFaith": { action.name = "rollback-goodfaith-edit"; } break;
-                                    case "undo": { action.name = "undo-edit"; } break;
+                                    case "rollback": {
+                                        action.name = "rollback-edit";
+                                        if (!isObject(action.params))
+                                            return true;
+
+                                        action.params.hide_username = "No";
+                                    } break;
+                                    case "rollbackGoodFaith": {
+                                        action.name = "rollback-goodfaith-edit";
+                                        if (!isObject(action.params))
+                                            return true;
+
+                                        action.params.hide_username = "No";
+                                    } break;
+                                    case "undo": {
+                                        action.name = "undo-edit";
+                                        if (!isObject(action.params))
+                                            return true;
+
+                                        action.params.hide_username = "No";
+                                    } break;
                                     case "reportToAIV": {
                                         action.name = "report-user-to-aiv";
                                         if (!isObject(action.params))
@@ -1357,6 +1377,11 @@ Version.v3 = class V3 extends Version {
                 const scope = root.UI.theme;
                 this.restrictObject(scope, "UI", "theme");
 
+                { // root.UI.theme.app
+                    const value = root.UI.theme.app;
+                    if (![ "light", "dark", "auto" ].includes(value))
+                        this.reset("UI", "theme", "app");
+                }
                 { // root.UI.theme.palette
                     const value = root.UI.theme.palette;
                     if (!(value in GUI.palettes))

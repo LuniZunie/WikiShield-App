@@ -1,14 +1,3 @@
-
-// Wikipedia namespace configurations
-
-/*
-TODO: for all talk pages:
-
-edit: "Flag edits that do not discuss the relevant page. Flag personal attacks against other users. Flag removals and edits of signed comments if the username does not match the signature.",
-username: "Check whether the username is insulting, inappropriate, misleading, or another way in violation of Wikipedia's username policies."
-
-*/
-
 export const namespaces = [
 	{
 		name: "Main",

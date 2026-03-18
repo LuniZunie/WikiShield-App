@@ -304,9 +304,8 @@ body {
     font-size: clamp(14px, 3vw, 16px);
 
     /* Theme dependent */
-    color: var(--body-color);
-
-    background: var(--body-background);
+    color: light-dark(rgba(20, 22, 36, 1), rgba(241, 245, 255, 1));
+    background: light-dark(rgba(241, 245, 255, 1), rgba(20, 20, 30, 1));
 
     &.dyslexia-font {
         font-family: "Open-Dyslexic", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -839,10 +838,10 @@ body {
                             user-select: none;
 
                     display: flex;
+                    flex-wrap: wrap;
                     align-items: center;
                     justify-content: space-around;
                     gap: 8px;
-                    height: 60px;
 
                     position: relative;
                     z-index: 2;
@@ -2427,6 +2426,13 @@ body {
                         width: 100%;
 
                         font-size: .9em;
+                    }
+
+                    & > input[type=checkbox] {
+                        cursor: pointer;
+
+                        width: 18px;
+                        height: 18px;
                     }
 
                     & > .bottom-subcontent-button {

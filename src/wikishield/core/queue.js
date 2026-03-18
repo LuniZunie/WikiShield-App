@@ -1,5 +1,4 @@
 import { Memory, Stack } from "../../../global/memory/script.esm.js";
-import { generateRandomUUID } from "../../../global/UUID/script.esm.js";
 import { profanity } from "../data/profanity.js";
 
 export class Queue {
@@ -61,6 +60,10 @@ export class Queue {
 		this.talks = new Memory({ size: 1000 });
 		this.warnings = new Memory({ size: 10000, timeout: 24 * 60 * 60 * 1000 }); // 1 day
 		this.noWelcome = new Memory({ timeout: 60 * 60 * 1000 }); // 1 hour
+		this.histories = new Memory({ size: 1000 });
+		this.contributions = new Memory({ size: 1000 });
+		this.blocks = new Memory({ size: 1000 });
+		this.blocked = new Memory({ size: 10000 });
 
 		this.playedSound = {
 			mention: new Memory({ timeout: 60 * 1000 })
@@ -505,24 +508,22 @@ export class Queue {
 						return 1;
 
 					let aScore = a.ores;
+					if (mentions && a.mentions.has)
+						aScore += 200;
 					if (highlight.users.has(a.user.name))
 						aScore += 100;
 					if (highlight.pages.has(a.page.title))
 						aScore += 75;
 					aScore += a.tags.filter(tag => highlight.tags.has(tag)).length * 50;
 
-					if (mentions && a.mentions.has)
-						aScore += 200;
-
 					let bScore = b.ores;
+					if (mentions && b.mentions.has)
+						bScore += 200;
 					if (highlight.users.has(b.user.name))
 						bScore += 100;
 					if (highlight.pages.has(b.page.title))
 						bScore += 75;
 					bScore += b.tags.filter(tag => highlight.tags.has(tag)).length * 50;
-
-					if (mentions && b.mentions.has)
-						bScore += 200;
 
 					if (aScore === bScore)
 						return b.id - a.id;
@@ -538,11 +539,16 @@ export class Queue {
 					else if (b.history)
 						return -1;
 
-					const aScore = mentions && a.mentions.has;
-					const bScore = mentions && b.mentions.has;
+					let aScore = (a.user.profanity.clamped || 0) * 100;
+					if (mentions && a.mentions.has)
+						aScore += 200;
+
+					let bScore = (b.user.profanity.clamped || 0) * 100;
+					if (mentions && b.mentions.has)
+						bScore += 200;
 
 					if (aScore === bScore)
-						return a.id - b.id;
+						return b.id - a.id;
 					return bScore - aScore;
 				});
 			} break;
@@ -574,7 +580,7 @@ export class Queue {
 						bScore += 200;
 
 					if (aScore === bScore)
-						return a.id - b.id;
+						return b.id - a.id;
 					return bScore - aScore;
 				});
 			} break;
@@ -655,6 +661,12 @@ export class Queue {
 
 					this.watchlist.set(item.title, data.page.watched);
 
+					this.histories.set(item.title, data.page.history);
+					this.contributions.set(item.user, data.user.contributions);
+
+					this.blocks.set(item.user, data.user.blocks);
+					this.blocked.set(item.user, data.user.blocked);
+
 					const levels = [ "0", "1", "2", "3", "4", "4im" ];
 					const warning = this.getWarningLevel(data.user.talk || "");
                 	if (levels.indexOf(warning) > levels.indexOf(this.warnings.get(item.user) || "0"))
@@ -684,14 +696,14 @@ export class Queue {
 								const $user = document.createElement("div");
 								$user.className = "username";
 								$user.classList.toggle("queue-highlight", ws.store.highlight.users.has(item.user));
-								$user.classList.toggle("queue-user-empty-talk", data.user.talk === undefined);
+								$user.classList.toggle("queue-user-empty-talk", (ws.queue.talks.get(item.user) ?? data.user.talk) === undefined);
 
 								const $icon = document.createElement("span");
 								$icon.className = "fa fa-user queue-user-icon";
 								$user.appendChild($icon);
 
 								const $text = document.createElement("a");
-								$text.classList.toggle("user-blocked", data.user.blocked);
+								$text.classList.toggle("user-blocked", ws.queue.blocked.get(item.user) ?? data.user.blocked);
 								$text.href = ws.util.pageLink(`User:${item.user}`);
 								$text.dataset.tooltip = item.user;
 								$text.dataset.multipleHrefs = `user;name=${encodeURIComponent(item.user)}`;
@@ -721,7 +733,9 @@ export class Queue {
 							namespace: item.ns,
 							title: item.title,
 
-							history: data.page.history,
+							get history() {
+								return ws.queue.histories.get(item.title) ?? data.page.history;
+							},
 							get watched() {
 								return ws.queue.watchlist.get(item.title) ?? data.page.watched;
 							},
@@ -737,13 +751,19 @@ export class Queue {
 							anon: ws.util.isIPAddress(item.user) || ws.util.isTempAccount(item.user),
 
 							edits: Math.max(data.user.edits, data.user.contributions?.length || 0),
-							contributions: data.user.contributions,
+							get contributions() {
+								return ws.queue.contributions.get(item.user) ?? data.user.contributions;
+							},
 
 							warning: this.getWarningLevel(data.user.talk || ""),
 							warnings: this.getWarningHistory(data.user.talk || ""),
 
-							blocked: data.user.blocked,
-							blocks: data.user.blocks,
+							get blocked() {
+								return ws.queue.blocked.get(item.user) ?? data.user.blocked;
+							},
+							get blocks() {
+								return ws.queue.blocks.get(item.user) ?? data.user.blocks;
+							},
 
 							get talk() {
 								return ws.queue.talks.get(item.user) ?? data.user.talk;
@@ -835,6 +855,14 @@ export class Queue {
 							mentions.comment = ws.util.match(username, item.comment);
 					}
 
+					this.contributions.set(user, data.user.contributions);
+					this.contributions.set(item.user, performer.user.contributions);
+
+					this.blocks.set(user, data.user.blocks);
+					this.blocks.set(item.user, performer.user.blocks);
+					this.blocked.set(user, data.user.blocked);
+					this.blocked.set(item.user, performer.user.blocked);
+
 					const levels = [ "0", "1", "2", "3", "4", "4im" ];
 					const warning = this.getWarningLevel(data.user.talk || "");
                 	if (levels.indexOf(warning) > levels.indexOf(this.warnings.get(user) || "0"))
@@ -868,14 +896,14 @@ export class Queue {
 								const $user = document.createElement("div");
 								$user.className = "username";
 								$user.classList.toggle("queue-highlight", ws.store.highlight.users.has(user));
-								$user.classList.toggle("queue-user-empty-talk", data.user.talk === undefined);
+								$user.classList.toggle("queue-user-empty-talk", (ws.queue.talks.get(user) ?? data.user.talk) === undefined);
 
 								const $icon = document.createElement("span");
 								$icon.className = "fa fa-user queue-user-icon";
 								$user.appendChild($icon);
 
 								const $text = document.createElement("a");
-								$text.classList.toggle("user-blocked", data.user.blocked);
+								$text.classList.toggle("user-blocked", ws.queue.blocked.get(user) ?? data.user.blocked);
 								$text.href = ws.util.pageLink(`User:${user}`);
 								$text.dataset.tooltip = user;
 								$text.dataset.multipleHrefs = `user;name=${encodeURIComponent(user)}`;
@@ -888,14 +916,14 @@ export class Queue {
 								const $user = document.createElement("div");
 								$user.className = "username";
 								$user.classList.toggle("queue-highlight", ws.store.highlight.users.has(item.user));
-								$user.classList.toggle("queue-user-empty-talk", performer.user.talk === undefined);
+								$user.classList.toggle("queue-user-empty-talk", (ws.queue.talks.get(item.user) ?? performer.user.talk) === undefined);
 
 								const $icon = document.createElement("span");
 								$icon.className = "fa fa-user queue-user-icon";
 								$user.appendChild($icon);
 
 								const $text = document.createElement("a");
-								$text.classList.toggle("user-blocked", performer.user.blocked);
+								$text.classList.toggle("user-blocked", ws.queue.blocked.get(item.user) ?? performer.user.blocked);
 								$text.href = ws.util.pageLink(`User:${item.user}`);
 								$text.dataset.tooltip = item.user;
 								$text.dataset.multipleHrefs = `user;name=${encodeURIComponent(item.user)}`;
@@ -925,13 +953,19 @@ export class Queue {
 							anon: ws.util.isIPAddress(user) || ws.util.isTempAccount(user),
 
 							edits: Math.max(data.user.edits, data.user.contributions?.length || 0),
-							contributions: data.user.contributions,
+							get contributions() {
+								return ws.queue.contributions.get(user) ?? data.user.contributions;
+							},
 
 							warning: this.getWarningLevel(data.user.talk || ""),
 							warnings: this.getWarningHistory(data.user.talk || ""),
 
-							blocked: data.user.blocked,
-							blocks: data.user.blocks,
+							get blocked() {
+								return ws.queue.blocked.get(user) ?? data.user.blocked;
+							},
+							get blocks() {
+								return ws.queue.blocks.get(user) ?? data.user.blocks;
+							},
 
 							get talk() {
 								return ws.queue.talks.get(user) ?? data.user.talk;
@@ -946,13 +980,19 @@ export class Queue {
 							anon: ws.util.isIPAddress(item.user) || ws.util.isTempAccount(item.user),
 
 							edits: Math.max(performer.user.edits, performer.user.contributions?.length || 0),
-							contributions: performer.user.contributions,
+							get contributions() {
+								return ws.queue.contributions.get(item.user) ?? performer.user.contributions;
+							},
 
 							warning: this.getWarningLevel(performer.user.talk || ""),
 							warnings: this.getWarningHistory(performer.user.talk || ""),
 
-							blocked: performer.user.blocked,
-							blocks: performer.user.blocks,
+							get blocked() {
+								return ws.queue.blocked.get(item.user) ?? performer.user.blocked;
+							},
+							get blocks() {
+								return ws.queue.blocks.get(item.user) ?? performer.user.blocks;
+							},
 
 							get talk() {
 								return ws.queue.talks.get(item.user) ?? performer.user.talk;
@@ -1014,6 +1054,12 @@ export class Queue {
 
 					this.watchlist.set(item.title, data.page.watched);
 
+					this.histories.set(item.title, data.page.history);
+					this.contributions.set(item.user, data.user.contributions);
+
+					this.blocks.set(item.user, data.user.blocks);
+					this.blocked.set(item.user, data.user.blocked);
+
 					const levels = [ "0", "1", "2", "3", "4", "4im" ];
 					const warning = this.getWarningLevel(data.user.talk || "");
                 	if (levels.indexOf(warning) > levels.indexOf(this.warnings.get(item.user) || "0"))
@@ -1043,14 +1089,14 @@ export class Queue {
 								const $user = document.createElement("div");
 								$user.className = "username";
 								$user.classList.toggle("queue-highlight", ws.store.highlight.users.has(item.user));
-								$user.classList.toggle("queue-user-empty-talk", data.user.talk === undefined);
+								$user.classList.toggle("queue-user-empty-talk", (ws.queue.talks.get(item.user) ?? data.user.talk) === undefined);
 
 								const $icon = document.createElement("span");
 								$icon.className = "fa fa-user queue-user-icon";
 								$user.appendChild($icon);
 
 								const $text = document.createElement("a");
-								$text.classList.toggle("user-blocked", data.user.blocked);
+								$text.classList.toggle("user-blocked", ws.queue.blocked.get(item.user) ?? data.user.blocked);
 								$text.href = ws.util.pageLink(`User:${item.user}`);
 								$text.dataset.tooltip = item.user;
 								$text.dataset.multipleHrefs = `user;name=${encodeURIComponent(item.user)}`;
@@ -1080,7 +1126,9 @@ export class Queue {
 							namespace: item.ns,
 							title: item.title,
 
-							history: data.page.history,
+							get history() {
+								return ws.queue.histories.get(item.title) ?? data.page.history;
+							},
 							get watched() {
 								return ws.queue.watchlist.get(item.title) ?? data.page.watched;
 							},
@@ -1096,13 +1144,19 @@ export class Queue {
 							anon: ws.util.isIPAddress(item.user) || ws.util.isTempAccount(item.user),
 
 							edits: Math.max(data.user.edits, data.user.contributions?.length || 0),
-							contributions: data.user.contributions,
+							get contributions() {
+								return ws.queue.contributions.get(item.user) ?? data.user.contributions;
+							},
 
 							warning: this.getWarningLevel(data.user.talk || ""),
 							warnings: this.getWarningHistory(data.user.talk || ""),
 
-							blocked: data.user.blocked,
-							blocks: data.user.blocks,
+							get blocked() {
+								return ws.queue.blocked.get(item.user) ?? data.user.blocked;
+							},
+							get blocks() {
+								return ws.queue.blocks.get(item.user) ?? data.user.blocks;
+							},
 
 							get talk() {
 								return ws.queue.talks.get(item.user) ?? data.user.talk;
@@ -1165,8 +1219,6 @@ export class Queue {
 				}
 			} break;
 		}
-
-		result.forEach(object => object.UUID = generateRandomUUID());
 
 		return result;
 	}

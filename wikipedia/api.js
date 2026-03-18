@@ -56,7 +56,6 @@ class MediaWikiAPI {
         this.server = server;
         this.username = username;
 
-        this.tags = __tags__.has(server) ? "WikiShield script" : "";
         this.tokens = { };
 
         MediaWikiAPI.cache[server] ??= {
@@ -74,9 +73,9 @@ class MediaWikiAPI {
         return MediaWikiAPI.cache[this.server];
     }
 
-    build(opts = { }) {
+    build(opts = { }, serverOverride = null) {
         return {
-            "tags": this.tags,
+            "tags": __tags__.has(serverOverride ?? this.server) ? "WikiShield script" : "",
             "assertuser": this.username,
             "discussiontoolsautosubscribe": "no",
             ...opts
@@ -89,16 +88,19 @@ class MediaWikiAPI {
     revision(revid) {
         return `[[Special:Diff/${revid}|${revid}]]`;
     }
+    centralAuthUser(username) {
+        return `[[Special:CentralAuth/${username}|${username}]]`;
+    }
 
     summary(base, custom) {
-        const watermark = " ([[en:WP:WikiShield|WS]])"; // tehehe
+        const watermark = " ([[:en:WP:WikiShield|WS]])"; // tehehe
         const message = `${base}${custom ? `: ${custom}` : ""}`;
         return `${truncate(message, 500 - watermark.length)}${watermark}`;
     }
 
     async post(params, bypass = false, serverOverride = null) {
         try {
-            const data = await this.oauth.fetch(`https://${serverOverride || this.server}/w/api.php`, this.build({ ...params, format: "json", formatversion: 2 }), undefined, "POST", bypass, serverOverride);
+            const data = await this.oauth.fetch(`https://${serverOverride || this.server}/w/api.php`, this.build({ ...params, format: "json", formatversion: 2 }, serverOverride), undefined, "POST", bypass, serverOverride);
             if (data.error) {
                 if (data.error.code === "alreadyrolled" || data.error.code === "editconflict")
                     return "editconflict";
@@ -310,6 +312,14 @@ class MediaWikiAPI {
         } catch (err) { return void(Logger.error("Error parsing wikitext:", err)) ?? ""; }
     }
 
+    async getTags(bypass, serverOverride) {
+        try {
+            return (await this.continuous({
+                action: "query", list: "tags", tglimit: "max"
+            }, undefined, bypass, serverOverride)).responses.flatMap(r => r.query?.tags || [ ]);
+        } catch (err) { return void(Logger.error("Error fetching revisions between IDs:", err)) ?? [ ]; }
+    }
+
     async getPagesContent(titles, bypass, serverOverride) {
         titles = MediaWikiAPI.paramify(titles);
         try {
@@ -396,7 +406,7 @@ class MediaWikiAPI {
         usernames = MediaWikiAPI.paramify(usernames);
         try {
             const promises = await Promise.allSettled(MediaWikiAPI.chunk(usernames, 500).map(async chunk => {
-                return await this.post({ action: "query", list: "blocks", bkusers: MediaWikiAPI.join(chunk), bkprop: "id|by|reason|expiry" }, bypass, serverOverride);
+                return await this.post({ action: "query", list: "blocks", bkusers: MediaWikiAPI.join(chunk), bkprop: "id|user|by|reason|expiry" }, bypass, serverOverride);
             }));
 
             const users = { };

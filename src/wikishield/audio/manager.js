@@ -139,7 +139,7 @@ export class AudioManager {
         this.zengine.setMasterVolume(this.ws.store.settings.audio.volume["master.music.zen_mode"]);
     }
 
-    async playSound(soundPath, signal, preview = false) {
+    async playSound(soundPath, signal, preview = false, callback) {
         if (!preview) {
             const zenMode = this.ws.store.settings.zen_mode;
             if (zenMode.enabled && !zenMode.sound.enabled)
@@ -219,6 +219,15 @@ export class AudioManager {
 
                 this.previews.delete(audio);
             }
+        };
+
+        let played = false;
+        audio.onplay = () => {
+            if (played) return;
+            played = true;
+
+            if (callback)
+                callback();
         };
 
         signal?.addEventListener('abort', () => {

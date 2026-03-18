@@ -1176,7 +1176,8 @@ class Profanity {
         {
             term: "igga",
             severity: 0.7,
-            note: "Potential variant of racial slur."
+            note: "Potential variant of racial slur.",
+            ignore: [ "1994", "ig94" ]
         },
         {
             term: "igger",
@@ -1335,15 +1336,46 @@ class Profanity {
         const segment = text.substring(Math.max(0, start - 8), Math.min(text.length, end + 8)).toLowerCase();
 
         const legitimatePatterns = [
-            /pass(word|phrase|port|enger|ion|ive|ed|ing|es|key|code)/i,
-            /class(room|mate|ified|es|ic|y)/i,
+            /pass(word|phrase|port|enger|ion|ive|ed|ing|es|key|code|over|by|able)/i,
+            /class(room|mate|ified|es|ic|y|ification)/i,
             /grass(land|hopper|y|es)/i,
             /bass(ist|oon|line|es)/i,
             /mass(ive|acre|age|es|achusetts)/i,
             /assign(ment|ed|ing|s|ee|or)/i,
             /assess(ment|ed|ing|or|s)/i,
-            /assemble|assembly|assertion|asset|assist|assume|assure/i,
-            /brass|crass|harass|morass|surpass|trespass|compass/i,
+            /assemble|assembly|assertion|asset|assist|assume|assure|associate|association/i,
+            /brass|crass|harass|morass|surpass|trespass|compass|embassy|embarrass/i,
+            /cock(pit|tail|roach|ade|atoo|le|ney)/i,
+            /scunthorpe|penistone|shitterton|lightwater|middlesex|sussex|essex|wessex/i,
+            /dick(ens|inson|son|ey|ie)/i,
+            /analyst|analytics|analyze|canal|banal/i,
+            /therapist|therapeutic|therapy/i,
+            /cumul(ative|us|at)|circum(stance|ference|cise|vent|navigate|scribe)/i,
+            /butter(cup|fly|milk|scotch|fingers|nut)|buttress|button|rebuttal/i,
+            /count(ry|er|ess|down|ing|ed|able|enance|erfeit|erpart)/i,
+            /grape|drape|scrape|landscape|escapade/i,
+            /shell(fish|fire|ter|ed)|eggshell|nutshell|bombshell|seashell/i,
+            /whole(sale|some|hearted)/i,
+            /exchange|exchequer/i,
+            /title|titled|subtitle|entitle/i,
+            /sextant|sextet|bisect|insect|intersect|section|sector/i,
+            /cocktail|peacock|hancock|hitchcock|babcock|woodcock/i,
+            /niger(ia|ian)|montenegro/i,
+            /penisten|penetrat|penal(ty|ize|ise)|penchant|pencil|pendant|penguin|peninsula/i,
+            /manslaughter|slaughterhouse/i,
+            /shitake|shiitake/i,
+            /arsenic|arsenal/i,
+            /cummings|scumble/i,
+            /smother|another|mother(board|land|hood)/i,
+            /wanton|wanting|wanted|warrant/i,
+            /trigger|bigger|digger|jigger|rigger|vigor|figure/i,
+            /ballad|ball(room|park|istic|oon|et|ot|ard|ast)/i,
+            /grape(fruit|vine|shot)/i,
+            /raptor|rapport|rapid|rapier|rapture/i,
+            /killed|killer|skill(ed|ful|s)|killjoy|kiln|kilo(gram|meter|byte|watt)/i,
+            /bomb(ard|astic|shell|er|ing|ay)/i,
+            /hellenic|hello|shell|othello/i,
+            /crack(down|le|ed|ing|erjack)|firecracker/i,
         ];
 
         for (const pattern of legitimatePatterns)
@@ -1560,13 +1592,13 @@ class Profanity {
                     let matchConfidence = this.calculateMatchConfidence(matchedText, term);
 
                     if (obfuscation < -0.5)
-                        matchConfidence *= Math.max(0.01, 1 + obfuscation * 3);
+                        matchConfidence *= Math.max(0.01, 1 + obfuscation * 4);
                     else if (obfuscation < -0.2)
-                        matchConfidence *= Math.max(0.1, 1 + obfuscation * 2);
-                    else if (obfuscation > 0.3)
-                        matchConfidence = Math.min(1, matchConfidence + obfuscation * 0.3);
+                        matchConfidence *= Math.max(0.05, 1 + obfuscation * 2.5);
+                    else if (obfuscation > 0.5)
+                        matchConfidence = Math.min(1, matchConfidence + obfuscation * 0.08);
 
-                    const threshold = Math.max(0.02, 0.15 - (term.length * 0.02));
+                    const threshold = Math.max(0.05, 0.2 - (term.length * 0.015));
 
                     if (matchConfidence >= threshold) {
                         const originalSegment = raw.substring(originalStart, originalEnd);
@@ -1658,78 +1690,55 @@ class Profanity {
     }
 
     calculateMatchConfidence(matchedString, originalWord) {
-        let actualChars = 0;
+        const fillerPattern = /[\*#_\-]/;
+
+        let genuineChars = 0;
         let fillerChars = 0;
         let consecutiveFillers = 0;
         let maxConsecutiveFillers = 0;
 
-        const fillerPattern = /[\*#_\-]/;
-
-        for (let i = 0; i < matchedString.length; i++) {
-            const char = matchedString[i];
+        for (const char of matchedString) {
             if (fillerPattern.test(char)) {
                 fillerChars++;
                 consecutiveFillers++;
                 maxConsecutiveFillers = Math.max(maxConsecutiveFillers, consecutiveFillers);
             } else {
-                actualChars++;
+                genuineChars++;
                 consecutiveFillers = 0;
             }
         }
 
-        const totalChars = actualChars + fillerChars;
+        const totalChars = genuineChars + fillerChars;
         if (totalChars === 0) return 0;
 
-        const charQuality = actualChars / totalChars;
+        const genuineRatio = genuineChars / totalChars;
 
-        const lengthDeviation = totalChars / originalWord.length;
-        const lengthPenalty = Math.max(0, 1 - (lengthDeviation - 1) * 0.4);
+        // Hard cutoffs: matches dominated by wildcard/filler chars are noise
+        if (genuineRatio < 0.3) return 0;
+        if (genuineRatio < 0.5) return genuineRatio * 0.1;
 
-        const clusterPenalty = maxConsecutiveFillers > 2 ?
-              1 - Math.min(0.5, (maxConsecutiveFillers - 2) * 0.1) : 1;
+        // Consecutive filler clusters — runs of wildcards indicate noise
+        const clusterPenalty = maxConsecutiveFillers > 1 ?
+            Math.max(0.2, 1 - maxConsecutiveFillers * 0.2) : 1;
 
+        // Character repetition in genuine chars
         const charCounts = {};
         for (const char of matchedString)
             if (!fillerPattern.test(char))
                 charCounts[char] = (charCounts[char] || 0) + 1;
 
-        let totalRepetition = 0;
-        let repetitionInstances = 0;
+        let repetitionPenalty = 1;
         for (const count of Object.values(charCounts))
-            if (count > 2) {
-                totalRepetition += count - 2;
-                repetitionInstances++;
-            }
+            if (count > 2)
+                repetitionPenalty *= Math.max(0.4, 1 - (count - 2) * 0.15);
 
-        const repetitionRatio = actualChars > 0 ? totalRepetition / actualChars : 0;
-        const repetitionPenalty = Math.max(0.3, 1 - (repetitionRatio * 0.8));
+        // Length inflation — match significantly longer than the term is suspicious
+        const lengthRatio = totalChars / originalWord.length;
+        const lengthPenalty = lengthRatio > 1.5 ?
+            Math.max(0.2, 1 - (lengthRatio - 1) * 0.4) : 1;
 
-        let patternScore = 0;
-        let originalIndex = 0;
-        for (let i = 0; i < matchedString.length && originalIndex < originalWord.length; i++)
-            if (!fillerPattern.test(matchedString[i])) {
-                if (matchedString[i] === originalWord[originalIndex])
-                    patternScore++;
-                originalIndex++;
-            }
-        const patternAccuracy = originalWord.length > 0 ? patternScore / originalWord.length : 0;
-
-        const weights = {
-            charQuality: 0.25,
-            lengthPenalty: 0.20,
-            clusterPenalty: 0.15,
-            repetitionPenalty: 0.25,
-            patternAccuracy: 0.15
-        };
-
-        const finalScore =
-            (charQuality * weights.charQuality) +
-            (lengthPenalty * weights.lengthPenalty) +
-            (clusterPenalty * weights.clusterPenalty) +
-            (repetitionPenalty * weights.repetitionPenalty) +
-            (patternAccuracy * weights.patternAccuracy);
-
-        return Math.max(0, Math.min(1, finalScore));
+        // Genuine ratio is the dominant confidence signal
+        return Math.max(0, Math.min(1, genuineRatio * clusterPenalty * repetitionPenalty * lengthPenalty));
     }
 
     score(raw) {
@@ -1773,42 +1782,47 @@ class Profanity {
         let highConfidenceMatches = 0;
         let mediumConfidenceMatches = 0;
         let lowConfidenceMatches = 0;
-        let weightedScore = 0;
+        let totalConfidence = 0;
         let totalObfuscation = 0;
-        let severityScore = 0;
+        let weightedSeverity = 0;
         const uniqueMatches = new Set();
 
         for (const match of matches) {
-            const matchSeverity = match.severity || 0.5;
+            const severity = match.severity || 0.5;
+            const conf = match.confidence;
 
-            const weightedMatch = match.confidence * matchSeverity;
-            weightedScore += match.confidence;
-            severityScore += weightedMatch;
+            // Use confidence^1.5 so low-confidence matches contribute very little
+            const effectiveConf = Math.pow(conf, 1.5);
+
+            totalConfidence += conf;
+            weightedSeverity += effectiveConf * severity;
             totalObfuscation += match.obfuscation || 0;
             uniqueMatches.add(match.name);
 
-            if (match.confidence >= 0.7)
+            if (conf >= 0.7)
                 highConfidenceMatches++;
-            else if (match.confidence >= 0.4)
+            else if (conf >= 0.4)
                 mediumConfidenceMatches++;
             else
                 lowConfidenceMatches++;
         }
 
-        const averageConfidence = weightedScore / matches.length;
+        const averageConfidence = totalConfidence / matches.length;
         const averageObfuscation = totalObfuscation / matches.length;
-        const averageSeverity = severityScore / weightedScore;
+        const averageSeverity = totalConfidence > 0 ? weightedSeverity / totalConfidence : 0;
 
+        // Base score: tier weights emphasize high-confidence matches
         const baseScore =
-              (highConfidenceMatches * averageSeverity * 1.0) +
-              (mediumConfidenceMatches * averageSeverity * 0.5) +
-              (lowConfidenceMatches * averageSeverity * 0.2);
+              (highConfidenceMatches * 1.0) +
+              (mediumConfidenceMatches * 0.35) +
+              (lowConfidenceMatches * 0.08);
 
+        // Text density penalty
         const textLength = str.length;
         const matchDensity = matches.length / Math.max(textLength / 5, 1);
         const densityPenalty = Math.tanh(matchDensity * 0.3) * 0.6;
 
-
+        // Character repetition penalty
         const charFrequency = {};
         for (const char of str)
             if (/[a-z0-9]/.test(char))
@@ -1822,45 +1836,45 @@ class Profanity {
 
         const repetitionPenalty = Math.min(0.8, repetitionScore * 2);
 
+        // Diversity bonus — more unique terms is more concerning
         const uniqueMatchRatio = uniqueMatches.size / matches.length;
         const diversityBonus = uniqueMatchRatio > 0.6 ?
-              (uniqueMatchRatio - 0.6) * 1.5 : 0;
+              (uniqueMatchRatio - 0.6) * 1.0 : 0;
 
+        // Length modifier
         const lengthModifier = Math.max(0.5, Math.min(1.5,
             1 + Math.log10(Math.max(10, textLength)) / 10
         ));
 
-        const confidenceVariance = matches.reduce((variance, match) => {
-            return variance + Math.pow(match.confidence - averageConfidence, 2);
-        }, 0) / matches.length;
+        // Obfuscation penalty — high obfuscation means less certainty, not more
+        const obfuscationPenalty = averageObfuscation > 0.4 ?
+              (averageObfuscation - 0.4) * 0.5 :
+              averageObfuscation < -0.2 ?
+              Math.abs(averageObfuscation) * 0.4 : 0;
 
-        const consistencyBonus = averageConfidence > 0.5 && confidenceVariance < 0.1 ? 0.3 : 0;
+        // Critical patterns only count if backed by decent confidence
+        const criticalPatterns = matches.filter(
+            m => (m.severity >= 1.0 && m.confidence >= 0.5) || m.confidence >= 0.9
+        ).length;
+        const criticalBonus = criticalPatterns * 0.8;
 
-        const criticalPatterns = matches.filter(m => m.severity >= 1.0 || m.confidence >= 0.9).length;
-        const criticalBonus = criticalPatterns * 1.2;
+        // Compose final score
+        const weightedBase = baseScore * averageSeverity * lengthModifier;
+        const penalties = densityPenalty + repetitionPenalty + obfuscationPenalty;
 
-        const obfuscationModifier = averageObfuscation > 0.3 ?
-              averageObfuscation * 1.2 : averageObfuscation * 0.5;
+        let finalScore = weightedBase + (weightedSeverity * 0.5) + diversityBonus + criticalBonus - penalties;
 
-        const baseComponents = (
-            (baseScore * lengthModifier) +
-            (severityScore * 0.8) +
-            (weightedScore * 0.1) +
-            diversityBonus +
-            consistencyBonus +
-            obfuscationModifier -
-            densityPenalty -
-            repetitionPenalty
-        );
+        // Confidence gate: if average confidence is low, scale everything down
+        if (averageConfidence < 0.5)
+            finalScore *= Math.max(0.1, averageConfidence * 1.5);
 
-        const severityMultiplier = Math.pow(averageSeverity, 1.5);
-        let finalScore = (baseComponents * severityMultiplier) + criticalBonus;
+        // Soft cap
         if (finalScore > 3)
             finalScore = 3 + Math.log10(finalScore - 2) * 1.5;
         else if (finalScore > 1.5)
             finalScore = 1.5 + Math.sqrt(finalScore - 1.5) * 0.8;
 
-        finalScore = Math.max(0.1, finalScore);
+        finalScore = Math.max(0, finalScore);
 
         let risk = "No";
         if (finalScore >= 4 || criticalPatterns >= 2)
@@ -1879,8 +1893,8 @@ class Profanity {
             matches: matches,
             details: {
                 baseScore: Math.round(baseScore * 100) / 100,
-                weightedScore: Math.round(weightedScore * 100) / 100,
-                severityScore: Math.round(severityScore * 100) / 100,
+                weightedScore: Math.round(weightedBase * 100) / 100,
+                severityScore: Math.round(weightedSeverity * 100) / 100,
                 matchCount: matches.length,
                 uniqueMatches: uniqueMatches.size,
                 averageConfidence: Math.round(averageConfidence * 100) / 100,
@@ -1891,13 +1905,11 @@ class Profanity {
                 repetitionPenalty: Math.round(repetitionPenalty * 100) / 100,
                 diversityBonus: Math.round(diversityBonus * 100) / 100,
                 lengthModifier: Math.round(lengthModifier * 100) / 100,
-                consistencyBonus: Math.round(consistencyBonus * 100) / 100,
-                obfuscationModifier: Math.round(obfuscationModifier * 100) / 100,
+                obfuscationPenalty: Math.round(obfuscationPenalty * 100) / 100,
                 criticalPatterns: criticalPatterns,
                 highConfidenceMatches: highConfidenceMatches,
                 mediumConfidenceMatches: mediumConfidenceMatches,
-                lowConfidenceMatches: lowConfidenceMatches,
-                confidenceVariance: Math.round(confidenceVariance * 1000) / 1000
+                lowConfidenceMatches: lowConfidenceMatches
             }
         };
     }

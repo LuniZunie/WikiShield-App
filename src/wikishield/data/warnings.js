@@ -252,7 +252,7 @@ export const warnings = {
 				queueType: [ "edit" ],
 
 				title: "Unsourced",
-				naame: "unsourced changes",
+				name: "unsourced changes",
 				icon: "fas fa-question",
 				description: "Warning for unsourced content.",
 
@@ -267,7 +267,7 @@ export const warnings = {
 				],
 
 				show(edit) {
-					return !edit?.page.categories.includes("Category:Living people");
+					return !edit?.page?.categories?.includes("Category:Living people");
 				}
 			},
 			{
@@ -292,7 +292,7 @@ export const warnings = {
 				],
 
 				show(edit) {
-					return edit?.page.categories.includes("Category:Living people");
+					return edit?.page?.categories?.includes("Category:Living people");
 				}
 			},
 			{
@@ -399,7 +399,7 @@ export const warnings = {
 				],
 
 				show(edit) {
-					return edit?.page.namespace % 2 === 0;
+					return edit?.page?.namespace % 2 === 0;
 				}
 			},
 			{
@@ -423,7 +423,7 @@ export const warnings = {
 				],
 
 				show(edit) {
-					return edit?.page.namespace % 2 === 1;
+					return edit?.page?.namespace % 2 === 1;
 				}
 			},
 
@@ -574,7 +574,7 @@ export const warnings = {
 				],
 
 				show(edit) {
-					return edit?.page.namespace % 2 === 1;
+					return edit?.page?.namespace % 2 === 1;
 				}
 			},
 			{

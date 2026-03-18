@@ -4,7 +4,7 @@ const { spawn } = require("child_process");
 
 const {
     app, BrowserWindow, Menu, Tray, Notification, nativeImage,
-    screen, ipcMain, dialog, globalShortcut, clipboard, crashReporter
+    screen, ipcMain, dialog, globalShortcut, clipboard, crashReporter, net
 } = require("electron/main");
 const Store = require("electron-store");
 const Logger = require("electron-log");
@@ -17,10 +17,12 @@ const { CreateBadgeIcon } = require("./app/badge.js");
 const { MediaWikiOAuth2 } = require("./wikipedia/oauth2.js");
 const { MediaWikiAPI } = require("./wikipedia/api.js");
 
+const DiscordRPC = require("discord-rpc");
+
 // constants
 const __dev__ = process.env.NODE_ENV === "development" || process.env.ELECTRON_ENV === "development" || !app.isPackaged;
 const __servers__ = require("./servers.js");
-const __userAgent__ = `WikiShield-Bot/${app.getVersion()} (https://en.wikipedia.org/wiki/Wikipedia:WikiShield; lunizunie@gmail.com)`;
+const __userAgent__ = `WikiShield-App/${app.getVersion()} (https://en.wikipedia.org/wiki/Wikipedia:WikiShield; lunizunie@gmail.com)`;
 
 // global references
 const glob = {
@@ -46,6 +48,7 @@ const glob = {
     account: null,
     rememberAccounts: false,
 
+    discordRPC: false,
     notifications: true,
 
     python: null,
@@ -98,7 +101,7 @@ if (process.platform === "win32") {
     }
 }
 
-// GPU / media flags for smooth video playback in webviews
+// GPU / media flags
 app.commandLine.appendSwitch("enable-gpu-rasterization");
 app.commandLine.appendSwitch("enable-accelerated-video-decode");
 app.commandLine.appendSwitch("enable-features", "VaapiVideoDecoder,VaapiVideoEncoder,CanvasOopRasterization");
@@ -149,6 +152,7 @@ const store = new Store({
         account: null,
         rememberAccounts: false,
 
+        discordRPC: false,
         notifications: true,
     }
 });
@@ -157,8 +161,10 @@ glob.window = store.get("window", { width: null, height: null, isMaximized: true
 
 glob.server = store.get("server", __servers__[0].host);
 
-glob.notifications = store.get("notifications", true);
 glob.rememberAccounts = store.get("rememberAccounts", false);
+
+glob.discordRPC = store.get("discordRPC", false);
+glob.notifications = store.get("notifications", true);
 
 // crash reporter
 crashReporter.start({ uploadToServer: false });
@@ -196,6 +202,72 @@ autoUpdater.on("update-downloaded", info =>
         body: `Version ${info.version} has been downloaded and will be installed on quit.`,
     })
 );
+
+// external apps
+const DISCORD_RPC_CLIENT_ID = "1479626156545147131";
+
+let RPC = null;
+let quittingAfterRPCShutdown = false;
+
+async function setDiscordRPCActivity(client) {
+    if (!client)
+        return;
+
+    await client.setActivity({
+        startTimestamp: Date.now(),
+        largeImageKey: "icon",
+        largeImageText: "WikiShield",
+    });
+}
+
+async function enableDiscordRPC() {
+    if (RPC)
+        return;
+
+    const client = new DiscordRPC.Client({ transport: "ipc" });
+    RPC = client;
+
+    client.on("ready", () => {
+        if (RPC !== client)
+            return;
+
+        setDiscordRPCActivity(client).catch(err => Logger.error(`Failed to set Discord RPC activity: ${err.stack || err}`));
+    });
+
+    client.on("error", err => Logger.error(`Discord RPC error: ${err.stack || err}`));
+
+    try {
+        await client.login({ clientId: DISCORD_RPC_CLIENT_ID });
+    } catch (err) {
+        if (RPC === client)
+            RPC = null;
+
+        throw err;
+    }
+}
+
+async function disableDiscordRPC() {
+    const client = RPC;
+    RPC = null;
+
+    if (!client)
+        return;
+
+    try {
+        await client.clearActivity();
+    } catch (err) {
+        Logger.error(`Failed to clear Discord RPC activity: ${err.stack || err}`);
+    }
+
+    try {
+        await client.destroy();
+    } catch (err) {
+        Logger.error(`Failed to disconnect from Discord RPC: ${err.stack || err}`);
+    }
+}
+
+if (glob.discordRPC)
+    enableDiscordRPC().catch(err => Logger.error(`Failed to connect to Discord RPC: ${err.stack || err}`));
 
 // windows
 function UpdateMenu(options = { }) {
@@ -290,39 +362,53 @@ function UpdateMenu(options = { }) {
             ]
         },
         {
-            label: 'Settings',
+            label: "Settings",
             submenu: [
                 {
-                    label: 'Notifications',
-                    type: 'checkbox',
+                    label: "Notifications",
+                    type: "checkbox",
                     click() {
                         glob.notifications = !glob.notifications;
                         store.set("notifications", glob.notifications);
                     },
                     checked: glob.notifications
                 },
-                { type: 'separator' },
                 {
-                    label: 'Preferences',
+                    label: "Discord Activity",
+                    type: "checkbox",
+                    click() {
+                        glob.discordRPC = !glob.discordRPC;
+                        store.set("discordRPC", glob.discordRPC);
+
+                        if (glob.discordRPC) {
+                            enableDiscordRPC().catch(err => Logger.error(`Failed to connect to Discord RPC: ${err.stack || err}`));
+                        } else
+                            disableDiscordRPC();
+                    },
+                    checked: glob.discordRPC
+                },
+                { type: "separator" },
+                {
+                    label: "Preferences",
                     click() {
                         if (glob.windows.main)
                             glob.windows.main.webContents.send("open-settings");
                     },
                     enabled: options?.settings?.preferences ?? false
                 },
-                { type: 'separator' },
+                { type: "separator" },
                 {
-                    label: 'Import',
+                    label: "Import",
                     submenu: [
                         {
-                            label: 'From Clipboard',
+                            label: "From Clipboard",
                             click() {
                                 if (glob.windows.main)
                                     glob.windows.main.webContents.send("import-settings-from-clipboard");
                             }
                         },
                         {
-                            label: 'From Input',
+                            label: "From Input",
                             click() {
                                 if (glob.windows.main)
                                     glob.windows.main.webContents.send("import-settings-from-input");
@@ -331,10 +417,10 @@ function UpdateMenu(options = { }) {
                     ],
                 },
                 {
-                    label: 'Export',
+                    label: "Export",
                     submenu: [
                         {
-                            label: 'To Clipboard',
+                            label: "To Clipboard",
                             click() {
                                 if (glob.windows.main)
                                     glob.windows.main.webContents.send("export-settings-to-clipboard");
@@ -389,10 +475,88 @@ function UpdateMenu(options = { }) {
         },
         {
             label: "Browser",
-            click() {
-                if (glob.windows.main)
-                    glob.windows.main.webContents.send("open-browser");
-            },
+            submenu: [
+                {
+                    label: "Home",
+                    click() {
+                        if (glob.windows.main)
+                            glob.windows.main.webContents.send("open-browser");
+                    }
+                },
+                { type: "separator" },
+                {
+                    label: "Wikipedia",
+                    click() {
+                        if (glob.windows.main)
+                            glob.windows.main.webContents.send("open-url", `https://${glob.server}/wiki/Main_Page`);
+                    }
+                },
+                {
+                    label: "AIV",
+                    click() {
+                        if (glob.windows.main)
+                            glob.windows.main.webContents.send("open-url", `https://${glob.server}/wiki/Wikipedia:Administrator_intervention_against_vandalism`);
+                    }
+                },
+                {
+                    label: "UAA",
+                    click() {
+                        if (glob.windows.main)
+                            glob.windows.main.webContents.send("open-url", `https://${glob.server}/wiki/Wikipedia:Usernames_for_administrator_attention`);
+                    }
+                },
+                {
+                    label: "RFPP",
+                    click() {
+                        if (glob.windows.main)
+                            glob.windows.main.webContents.send("open-url", `https://${glob.server}/wiki/Wikipedia:Requests_for_page_protection`);
+                    }
+                },
+                { type: "separator" },
+                {
+                    label: "Recent Changes",
+                    click() {
+                        if (glob.windows.main)
+                            glob.windows.main.webContents.send("open-url", `https://${glob.server}/wiki/Special:RecentChanges`);
+                    }
+                },
+                {
+                    label: "Watchlist",
+                    click() {
+                        if (glob.windows.main)
+                            glob.windows.main.webContents.send("open-url", `https://${glob.server}/wiki/Special:Watchlist`);
+                    }
+                },
+                {
+                    label: "Logs",
+                    click() {
+                        if (glob.windows.main)
+                            glob.windows.main.webContents.send("open-url", `https://${glob.server}/wiki/Special:Logs`);
+                    }
+                },
+                { type: "separator" },
+                {
+                    label: "User Page",
+                    click() {
+                        if (glob.windows.main)
+                            glob.windows.main.webContents.send("open-url", `https://${glob.server}/wiki/Special:MyPage`);
+                    }
+                },
+                {
+                    label: "Talk Page",
+                    click() {
+                        if (glob.windows.main)
+                            glob.windows.main.webContents.send("open-url", `https://${glob.server}/wiki/Special:MyTalk`);
+                    }
+                },
+                {
+                    label: "Contributions",
+                    click() {
+                        if (glob.windows.main)
+                            glob.windows.main.webContents.send("open-url", `https://${glob.server}/wiki/Special:MyContributions`);
+                    }
+                },
+            ],
             enabled: options?.browser ?? false
         },
         {
@@ -402,14 +566,14 @@ function UpdateMenu(options = { }) {
                     label: "Email oversight",
                     click() {
                         if (glob.windows.main)
-                            glob.windows.main.webContents.send("open-url", "https://en.wikipedia.org/wiki/Special:EmailUser/Oversight");
+                            glob.windows.main.webContents.send("open-url", `https://en.wikipedia.org/wiki/Special:EmailUser/Oversight`);
                     }
                 },
                 {
                     label: "Email emergency",
                     click() {
                         if (glob.windows.main)
-                            glob.windows.main.webContents.send("open-url", "https://en.wikipedia.org/wiki/Special:EmailUser/Emergency");
+                            glob.windows.main.webContents.send("open-url", `https://en.wikipedia.org/wiki/Special:EmailUser/Emergency`);
                     }
                 }
             ],
@@ -840,19 +1004,21 @@ class BuildWindow {
 
 class Popup {
     static windows = new Map();
+    static lastTabs = [];
 
-    static create(url) {
+    static create(url, { isPopup = false } = {}) {
         const id = generateRandomUUID();
         const { width, height } = screen.getPrimaryDisplay().workAreaSize;
 
         const popup = new BrowserWindow({
             parent: glob.windows.main,
-            width: Math.floor(width * 0.8),
-            height: Math.floor(height * 0.8),
-            frame: false,
-            resizable: false,
-            maximizable: false,
-            minimizable: false,
+            width: Math.floor(width * (isPopup ? 0.6 : 0.8)),
+            height: Math.floor(height * (isPopup ? 0.6 : 0.8)),
+            frame: isPopup ? true : false,
+            autoHideMenuBar: isPopup,
+            resizable: isPopup ? true : false,
+            maximizable: isPopup ? true : false,
+            minimizable: isPopup ? true : false,
             backgroundColor: "#1e1e1e",
             icon: nativeImage.createFromPath(path.join(__dirname, "assets", "icon.png")),
             webPreferences: {
@@ -869,8 +1035,30 @@ class Popup {
         });
         Popup.windows.set(id, popup);
 
+        if (isPopup)
+            popup.removeMenu();
+
         popup.webContents.on("did-attach-webview", (event, webContents) => {
             webContents.setBackgroundThrottling(false);
+
+            if (isPopup) {
+                webContents.on("page-title-updated", (e, title) => {
+                    if (!popup.isDestroyed())
+                        popup.setTitle(title);
+                });
+                webContents.on("page-favicon-updated", async (e, favicons) => {
+                    if (!popup.isDestroyed() && favicons?.length > 0) {
+                        try {
+                            const response = await net.fetch(favicons[0]);
+                            const buffer = Buffer.from(await response.arrayBuffer());
+                            const img = nativeImage.createFromBuffer(buffer);
+                            if (!img.isEmpty() && !popup.isDestroyed())
+                                popup.setIcon(img);
+                        } catch {}
+                    }
+                });
+            }
+
             webContents.on("context-menu", (e, params) => {
                 if (!params.linkURL && params.selectionText)
                     try {
@@ -979,7 +1167,7 @@ class Popup {
         });
 
         const browser = path.join(__dirname, "src", "browser", "index.html");
-        popup.loadFile(browser, { query: { url: url, host: glob.server } });
+        popup.loadFile(browser, { query: { url: url, host: glob.server, ...(isPopup ? { popup: "true" } : {}) } });
 
         const attached = new Set();
         popup.webContents.on("did-attach-webview", (event, webContents) => {
@@ -987,12 +1175,18 @@ class Popup {
             webContents.on("destroyed", () => attached.delete(webContents));
 
             webContents.setWindowOpenHandler(({ url }) => {
-                popup.webContents.send("open-link-in-new-tab", url);
+                Popup.create(url, { isPopup: true });
                 return { action: "deny" };
             });
         });
 
         popup.on("close", () => {
+            if (!isPopup && !popup.webContents.isDestroyed()) {
+                try {
+                    popup.webContents.send("get-tab-urls");
+                } catch (e) { }
+            }
+
             for (const webContents of attached)
                 if (!webContents.isDestroyed() && webContents.isDevToolsOpened())
                     webContents.closeDevTools();
@@ -1003,8 +1197,19 @@ class Popup {
         });
         popup.on("closed", () => {
             Popup.windows.delete(id);
-            if (glob.windows.main?.webContents && !glob.windows.main.isDestroyed())
+            if (glob.windows.main?.webContents && !glob.windows.main.isDestroyed()) {
                 glob.windows.main.webContents.send("popup-closed", id);
+
+                // On Windows, closing an owned child window can minimize the parent
+                // and all sibling windows. Explicitly restore focus to prevent this.
+                if (process.platform === "win32") {
+                    const remaining = Array.from(Popup.windows.values()).find(p => !p.isDestroyed());
+                    if (remaining)
+                        remaining.focus();
+                    else if (!glob.windows.main.isDestroyed())
+                        glob.windows.main.focus();
+                }
+            }
         });
 
         return id;
@@ -1298,11 +1503,26 @@ app.whenReady().then(async () => {
             });
         });
         app.on("before-quit", async event => {
-            if (promises.length > 0) {
-                event.preventDefault();
-                await Promise.allSettled(promises);
-            }
+            glob.quitting = true;
 
+            if (quittingAfterRPCShutdown)
+                return;
+
+            const pending = [ ];
+
+            if (promises.length > 0)
+                pending.push(Promise.allSettled(promises));
+
+            if (RPC)
+                pending.push(disableDiscordRPC());
+
+            if (pending.length === 0)
+                return;
+
+            event.preventDefault();
+
+            await Promise.allSettled(pending);
+            quittingAfterRPCShutdown = true;
             app.exit(0);
         });
     }
@@ -1320,6 +1540,11 @@ app.whenReady().then(async () => {
             app.quit();
         })
     }
+
+    ipcMain.on("tab-urls-reply", (event, urls) => {
+        if (Array.isArray(urls) && urls.length > 0)
+            Popup.lastTabs = urls;
+    });
 
     ipcMain.on("close-popup", async (event, id) => {
         const popup = Popup.windows.get(id);
@@ -1357,11 +1582,10 @@ app.whenReady().then(async () => {
             glob.windows.translation = null;
         }
     });
-    ipcMain.on("close-browser-window", () => {
-        Popup.windows.forEach(popup => {
-            if (popup && !popup.isDestroyed())
-                popup.close();
-        });
+    ipcMain.on("close-browser-window", (event) => {
+        const senderWindow = BrowserWindow.fromWebContents(event.sender);
+        if (senderWindow && !senderWindow.isDestroyed())
+            senderWindow.close();
     });
 
     ipcMain.on("quit", () => {

@@ -1,5 +1,7 @@
 const serversWithPendingChanges = new Set([ ]);
 
+import { truncate } from "../../../global/truncate/script.esm.js";
+
 export class API {
     static chunk(array, size = 50) {
         const chunks = [ ];
@@ -29,7 +31,6 @@ export class API {
 
     constructor(ws, server, username, pendingChangesServers) {
         this.#ws = ws;
-
         this.#server = server;
         this.#account = username;
 
@@ -46,9 +47,9 @@ export class API {
     }
 
     summary(base, custom) {
-        const watermark = " ([[en:WP:WikiShield|WS]])";
+        const watermark = " ([[:en:WP:WikiShield|WS]])";
         const message = `${base}${custom ? `: ${custom}` : ""}`;
-        return `${this.#ws.util.truncate(message, 500 - watermark.length)}${watermark}`;
+        return `${truncate(message, 500 - watermark.length)}${watermark}`;
     }
 
     user(username) {
@@ -56,6 +57,9 @@ export class API {
     }
     revision(revid) {
         return `[[Special:Diff/${revid}|${revid}]]`;
+    }
+    centralAuthUser(username) {
+        return `[[Special:CentralAuth/${username}|${username}]]`;
     }
 
     async post(params, bypass, serverOverride) {
@@ -173,6 +177,10 @@ export class API {
 
     async parse(wikitext, bypass, serverOverride) {
         return await electron.mwapi("parse", wikitext, bypass, serverOverride);
+    }
+
+    async getTags(bypass, serverOverride) {
+        return await electron.mwapi("getTags", bypass, serverOverride);
     }
 
     async getPagesContent(titles, bypass, serverOverride) {
