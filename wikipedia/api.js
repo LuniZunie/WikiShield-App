@@ -1,10 +1,9 @@
-// have fun reading this!!!
-
 const Logger = require("electron-log");
 
 const { convertToUTCString } = require("../global/utc-string/script.com.js");
 const { truncate } = require("../global/truncate/script.com.js");
 const { Memory } = require("../global/memory/script.com.js");
+const { Trie } = require("../global/trie/script.com.js");
 const { ORES } = require("./ores.js");
 
 const __servers__ = require("../servers.js");
@@ -59,7 +58,7 @@ class MediaWikiAPI {
         this.tokens = { };
 
         MediaWikiAPI.cache[server] ??= {
-            parse: new Memory({ size: 1000 }),
+            parse: new Trie({ size: 1000 }),
 
             pending: new Memory({ size: 2500, timeout: 60 * 60 * 1000 }),
             abuse: new Memory({ size: 2500, timeout: 15 * 60 * 1000 }),
@@ -301,13 +300,22 @@ class MediaWikiAPI {
         } catch (err) { return void(Logger.error("Error unwatching page:", err)) ?? { valid: false, reason: err.message }; }
     }
 
-    async parse(wt, bypass, serverOverride) {
-        try {
-            if (this.cache.parse.has(wt))
-                return this.cache.parse.get(wt);
+    async parse(wt, title, bypass, serverOverride) {
+        title ??= undefined;
+        const cacheKey = [ title, wt ].filter(item => item !== undefined);
 
-            const text = (await this.post({ action: "parse", prop: "text", text: wt }, bypass, serverOverride))?.parse?.text || "";
-            this.cache.parse.set(wt, text);
+        if (this.cache.parse.has(...cacheKey))
+            return this.cache.parse.get(...cacheKey);
+
+        try {
+            const text = (await this.post({
+                action: "parse",
+                prop: "text",
+                text: wt,
+                title,
+                contentmodel: "wikitext"
+            }, bypass, serverOverride))?.parse?.text || "";
+            this.cache.parse.set(...cacheKey, text);
             return text;
         } catch (err) { return void(Logger.error("Error parsing wikitext:", err)) ?? ""; }
     }

@@ -565,7 +565,7 @@ export class Settings {
 				});
 			}
 
-			const $tools = document.querySelector("#settings-dynamic-bottom-menus");
+			const $tools = document.querySelector("#settings-dynamic-toolbar");
 			$tools.value = this.ws.store.UI.hide_tools;
 			$tools.addEventListener("change", e => {
 				this.ws.store.UI.hide_tools = $tools.value;

@@ -20,7 +20,7 @@ export const buildShortcut = event => {
 
 	const key = event.key.toLowerCase();
 	if (controls.has(key))
-		parts.push(key === " " ? "space" : key);
+		parts.push(key);
 
 	return parts.join("+");
 };

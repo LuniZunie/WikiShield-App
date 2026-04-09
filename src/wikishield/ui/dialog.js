@@ -466,4 +466,56 @@ export class Dialog {
     confirm(title, message, username = null, hideUAA = false, child = false) {
         return this.#enqueue(() => this.#confirm(title, message, username, hideUAA), child);
     }
+
+    #show(title, message) {
+        return new Promise(resolve => {
+            const $overlay = document.createElement("div");
+            $overlay.classList.add("confirmation-modal-overlay");
+            document.body.querySelector("#app").appendChild($overlay);
+
+            const $dialog = document.createElement("div");
+            $dialog.classList.add("confirmation-modal");
+            $overlay.appendChild($dialog);
+
+            const $header = document.createElement("div");
+            $header.classList.add("confirmation-modal-header");
+            $header.textContent = title;
+            $dialog.appendChild($header);
+
+            const $content = document.createElement("div");
+            $content.classList.add("confirmation-modal-body");
+            $content.innerHTML = message;
+            $dialog.appendChild($content);
+
+            const closeModal = () => {
+                document.removeEventListener("keydown", keyHandler, true);
+
+                $overlay.classList.add("closing");
+                $dialog.classList.add("closing");
+
+                setTimeout(() => {
+                    $overlay.remove();
+                    resolve();
+                }, 200);
+            };
+
+            const keyHandler = event => {
+                if (event.key === "Escape") {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    closeModal();
+                    return false;
+                }
+            };
+            document.addEventListener("keydown", keyHandler, true);
+
+            $overlay.addEventListener("click", e => {
+                if (e.target === $overlay)
+                    closeModal();
+            });
+        });
+    }
+    show(title, message) {
+        return this.#enqueue(() => this.#show(title, message));
+    }
 }

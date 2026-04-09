@@ -175,8 +175,8 @@ export class API {
         return await electron.mwapi("unwatchPage", title, bypass, serverOverride);
     }
 
-    async parse(wikitext, bypass, serverOverride) {
-        return await electron.mwapi("parse", wikitext, bypass, serverOverride);
+    async parse(wikitext, title, bypass, serverOverride) {
+        return await electron.mwapi("parse", wikitext, title, bypass, serverOverride);
     }
 
     async getTags(bypass, serverOverride) {

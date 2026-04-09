@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld("electron", {
     onFocusWindow: callback => ipcRenderer.on("signin-focus-window", callback),
     onBlurWindow: callback => ipcRenderer.on("signin-blur-window", callback),
 
+    getOauthVersion: () => ipcRenderer.invoke("get-oauth-version"),
     getAccounts: () => ipcRenderer.invoke("get-accounts"),
     setRememberAccounts: remember => ipcRenderer.send("set-remember-accounts", remember),
 

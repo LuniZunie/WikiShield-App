@@ -127,47 +127,23 @@ export class Utility {
 		return delta > 0 ? "+" + delta : (delta === 0 ? "0" : `&ndash;${Math.abs(delta).toString()}`);
 	}
 
-	timeAgo(timestamp, now = Date.now()) {
-		const difference = now - new Date(timestamp);
-		const seconds = Math.floor(difference / 1000);
+	formatNotificationTime(date, now = new Date()) {
+		if (now <= date)
+			return "Now";
 
-		if (seconds <= 0) {
-			return "just now";
-		}
-
-		if (seconds >= 60) {
-			if (seconds >= 60 * 60) {
-				if (seconds >= 60 * 60 * 24) {
-					const v = Math.floor(seconds / 60 / 60 / 24);
-					return `${v} day${v !== 1 ? "s" : ""} ago`;
-				}
-				const v = Math.floor(seconds / 60 / 60);
-				return `${v} hour${v !== 1 ? "s" : ""} ago`;
-			}
-			const v = Math.floor(seconds / 60);
-			return `${v} minute${v !== 1 ? "s" : ""} ago`;
-		}
-		return `${seconds} second${seconds !== 1 ? "s" : ""} ago`;
-	}
-
-	formatNotificationTime(date, now = Date.now()) {
-		const diff = Math.floor((now - date) / 1000); // seconds
-
-		if (diff < 0)
-			return "0s";
-
-		if (diff < 60)
-			return `${diff}s`;
-		else if (diff < 3600) {
-			const mins = Math.floor(diff / 60);
-			return `${mins}m`;
-		} else if (diff < 86400) {
-			const hours = Math.floor(diff / 3600);
-			return `${hours}h`;
-		}
-
-		const days = Math.floor(diff / 86400);
-		return `${days}d`;
+		if (now.getFullYear() !== date.getFullYear())
+			return `${now.getFullYear() - date.getFullYear()}y ago`;
+		else if (now.getMonth() !== date.getMonth())
+			return `${now.getMonth() - date.getMonth()}mo ago`;
+		else if (now.getDate() !== date.getDate())
+			return `${now.getDate() - date.getDate()}d ago`;
+		else if (now.getHours() !== date.getHours())
+			return `${now.getHours() - date.getHours()}h ago`;
+		else if (now.getMinutes() !== date.getMinutes())
+			return `${now.getMinutes() - date.getMinutes()}m ago`;
+		else if (now.getSeconds() !== date.getSeconds())
+			return `${now.getSeconds() - date.getSeconds()}s ago`;
+		return "Now";
 	}
 
 	match(needle, haystack) {

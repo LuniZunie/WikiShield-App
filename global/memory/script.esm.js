@@ -1,5 +1,5 @@
 class Memory {
-	constructor(options = {}) {
+	constructor(options = { }) {
 		this.order = [ ];
 		this.store = new Map();
 		this.timeouts = new Map();
@@ -11,7 +11,7 @@ class Memory {
 	}
 
 	clear() {
-		this.order = [];
+		this.order = [ ];
 		this.store.clear();
 		this.timeouts.clear();
 	}
@@ -38,10 +38,8 @@ class Memory {
 		if (this.timeout !== undefined)
 			this.timeouts.set(key, setTimeout(() => { this.delete(key); }, this.timeout));
 
-		if (this.maxSize !== undefined && this.store.size > this.maxSize) {
-			const oldestKey = this.order.shift();
-			this.delete(oldestKey);
-		}
+		if (this.maxSize !== undefined && this.store.size > this.maxSize)
+			this.delete(this.order.shift());
 	}
     add(key) {
         if (!this.store.has(key))
@@ -49,6 +47,10 @@ class Memory {
     }
 
 	delete(key) {
+		const index = this.order.indexOf(key);
+		if (index !== -1)
+			this.order.splice(index, 1);
+
 		this.store.delete(key);
 
 		clearTimeout(this.timeouts.get(key));
@@ -60,44 +62,4 @@ class Memory {
 	}
 }
 
-class Stack {
-	constructor(maxSize = 50) {
-		this.items = [];
-		this.maxSize = maxSize;
-	}
-
-	push(item) {
-		this.items.push(item);
-		if (this.items.length > this.maxSize)
-			this.items.shift();
-	}
-	pop() {
-		return this.items.pop();
-	}
-
-	unshift(item) {
-		this.items.unshift(item);
-		if (this.items.length > this.maxSize)
-			this.items.pop();
-	}
-	shift() {
-		return this.items.shift();
-	}
-
-	peek() {
-		return this.items[this.items.length - 1];
-	}
-
-	clear() {
-		this.items = [];
-	}
-
-	get length() {
-		return this.items.length;
-	}
-	set length(v) {
-		this.items.length = Math.min(v, this.maxSize);
-	}
-}
-
-export { Memory, Stack };
+export { Memory };

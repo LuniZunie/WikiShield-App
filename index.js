@@ -135,6 +135,27 @@ app.on("second-instance", (event, argv) => {
     }
 });
 
+// memory
+function logMemoryUsage() {
+    const memoryUsage = process.memoryUsage();
+    Logger.debug('Memory Usage (Main Process):', {
+        rss: `${(memoryUsage.rss / 1024 / 1024).toFixed(2)} MB`,
+        heapTotal: `${(memoryUsage.heapTotal / 1024 / 1024).toFixed(2)} MB`,
+        heapUsed: `${(memoryUsage.heapUsed / 1024 / 1024).toFixed(2)} MB`,
+        external: `${(memoryUsage.external / 1024 / 1024).toFixed(2)} MB`,
+    });
+}
+
+  setInterval(() => {
+    const memory = process.memoryUsage();
+    Logger.debug("Memory Usage (Main Process):", {
+        rss: `${(memory.rss / 1024 / 1024).toFixed(2)} MB`,
+        heapTotal: `${(memory.heapTotal / 1024 / 1024).toFixed(2)} MB`,
+        heapUsed: `${(memory.heapUsed / 1024 / 1024).toFixed(2)} MB`,
+        external: `${(memory.external / 1024 / 1024).toFixed(2)} MB`,
+    });
+  }, 10000);
+
 // storage
 const store = new Store({
     clearInvalidConfig: true,
@@ -342,8 +363,8 @@ function UpdateMenu(options = { }) {
                 {
                     label: "Logout",
                     click: () => {
-                        glob.account = null;
                         delete glob.accounts[glob.account.username];
+                        glob.account = null;
                         if (glob.rememberAccounts) {
                             store.set("account", null);
                             store.set("accounts", Security.encryptAccounts(glob.accounts));
@@ -684,7 +705,7 @@ class BuildWindow {
                 sandbox: true,
                 v8CacheOptions: "code",
                 disableBlinkFeatures: "Auxclick",
-                backgroundThrottling: false
+                backgroundThrottling: false,
             }
         });
 
@@ -789,6 +810,9 @@ class BuildWindow {
             store.set("window", glob.window);
 
             event.preventDefault();
+
+            Popup.closeAll();
+            glob.windows.translation?.close();
 
             ipcMain.once("unloaded", () => {
                 if (!glob.windows.main)
@@ -1005,6 +1029,13 @@ class BuildWindow {
 class Popup {
     static windows = new Map();
     static lastTabs = [];
+
+    static closeAll() {
+        for (const popup of Popup.windows.values())
+            if (!popup.isDestroyed())
+                popup.close();
+        Popup.windows.clear();
+    }
 
     static create(url, { isPopup = false } = {}) {
         const id = generateRandomUUID();
@@ -1260,6 +1291,14 @@ async function CreateAPI(username = null, api = true) {
     if (!oauth)
         return null;
 
+    if (oauth.version !== MediaWikiOAuth2.CLIENT) {
+        oauth.valid = false;
+        if (glob.rememberAccounts)
+            store.set("accounts", Security.encryptAccounts(glob.accounts));
+
+        return null;
+    }
+
     const mw = new MediaWikiOAuth2(__userAgent__);
     mw.set(oauth.accessToken, oauth.refreshToken, new Date(oauth.expires));
     try {
@@ -1305,11 +1344,12 @@ app.whenReady().then(async () => {
 
     ipcMain.handle("get-language", async () => __servers__.find(server => server.host === glob.server) ?? __servers__[0]);
 
+    ipcMain.handle("get-oauth-version", async () => MediaWikiOAuth2.CLIENT);
     ipcMain.handle("get-account", async () => glob.account);
     ipcMain.handle("get-accounts", async () => [
         glob.rememberAccounts,
         Object.entries(glob.accounts).map(([ username, account ]) => ({
-            username, valid: account.valid, lastUsed: account.lastUsed
+            username, valid: account.valid, lastUsed: account.lastUsed, version: account.version
         }))
     ]);
     ipcMain.on("set-remember-accounts", (event, remember) => {
@@ -1372,7 +1412,8 @@ app.whenReady().then(async () => {
                 refreshToken: data.refreshToken,
                 expires: data.expires.toISOString(),
                 valid: true,
-                lastUsed: new Date().toISOString()
+                lastUsed: new Date().toISOString(),
+                version: MediaWikiOAuth2.CLIENT
             };
 
             glob.account = glob.accounts[username];

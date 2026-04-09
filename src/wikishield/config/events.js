@@ -208,6 +208,8 @@ export const events = {
             return { valid: true };
         },
         script: async (ws, item, params) => {
+            const warning = getWarningFromLookup(params.warning);
+
             await ws.gui.settings.waitForClose();
             if (
                 (item.user.name === ws.api.username && await ws.gui.dialog.confirm(

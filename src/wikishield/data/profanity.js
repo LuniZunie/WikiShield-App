@@ -199,8 +199,6 @@ class Profanity {
             multiWord: true,
             note: "Well-known sockpuppeteer on Wikipedia."
         },
-        { term: "ass", severity: 0.4, ignore: [ "456", "465", "a62", "a56", "a62", "a65", "a26", "a25", "4s2", "4s5", "4s6", "42s", "45s", "46s", "466", "422", "455", "a22" ] },
-        { term: "arse", severity: 0.6 },
         { term: "anal", severity: 0.7 },
         { term: "anus", severity: 0.5 },
         { term: "sex", severity: 0.3 },
@@ -573,12 +571,6 @@ class Profanity {
             note: "Intentional misspelling of 'sucks'."
         },
         {
-            term: "swallow",
-            severity: 0.5,
-            note: "Sexual innuendo or legitimate word."
-        },
-        { term: "tit", severity: 0.5 },
-        {
             term: "vagina",
             severity: 0.5,
             note: "Anatomical term, inappropriate in usernames."
@@ -649,12 +641,6 @@ class Profanity {
             term: "taliban",
             severity: 0.7,
             note: "Terrorist organization reference."
-        },
-        {
-            term: "isis",
-            severity: 0.7,
-            note: "Terrorist organization reference, though also Egyptian goddess.",
-            ignore: [ "1212", "i2i2", "1s1s", "is12", "12is", "121s", "1s12", "i212", "12i2" ]
         },
         { term: "antisemit", severity: 1.0 },
         {
@@ -806,17 +792,6 @@ class Profanity {
             note: "Cannabis reference with complex legal status."
         },
         {
-            term: "lsd",
-            severity: 0.2,
-            note: "Drug abbreviation with multiple meanings.",
-            ignore: [ "166", "l66", "i66" ]
-        },
-        {
-            term: "acid",
-            severity: 0.3,
-            note: "Drug slang or chemistry term."
-        },
-        {
             term: "crack",
             severity: 0.5,
             note: "Drug reference or legitimate verb."
@@ -839,11 +814,6 @@ class Profanity {
             note: "Drug class, medical term."
         },
         {
-            term: "pcp",
-            severity: 0.2,
-            note: "Drug abbreviation with multiple meanings."
-        },
-        {
             term: "ketamine",
             severity: 0.5,
             note: "Drug reference or medical use."
@@ -852,16 +822,6 @@ class Profanity {
             term: "rohypnol",
             severity: 0.7,
             note: "Date rape drug reference."
-        },
-        {
-            term: "you",
-            severity: 0.1,
-            note: "Common word but flagged to detect targeted harassment patterns."
-        },
-        {
-            term: "minor",
-            severity: 0.3,
-            note: "Can refer to age or be innocent context like music or size."
         },
         {
             term: "i like",
@@ -885,16 +845,6 @@ class Profanity {
             term: "young",
             severity: 0.2,
             note: "Age reference with legitimate uses but flagged in combination."
-        },
-        {
-            term: "children",
-            severity: 0.1,
-            note: "Legitimate word but flagged for context analysis."
-        },
-        {
-            term: "child",
-            severity: 0.2,
-            note: "Legitimate word but tracked for concerning patterns."
         },
         {
             term: "underage",
@@ -1376,6 +1326,8 @@ class Profanity {
             /bomb(ard|astic|shell|er|ing|ay)/i,
             /hellenic|hello|shell|othello/i,
             /crack(down|le|ed|ing|erjack)|firecracker/i,
+            /jewel{1,2}/i,
+            /skill/i
         ];
 
         for (const pattern of legitimatePatterns)

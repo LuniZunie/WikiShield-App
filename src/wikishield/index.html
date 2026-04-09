@@ -3,12 +3,14 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta http-equiv="Content-Security-Policy" content="script-src 'self'">
+        <meta http-equiv="Content-Security-Policy">
 
         <title>WikiShield</title>
 
         <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/open-dyslexic">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.0/css/all.min.css">
+
+        <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 
         <link rel="stylesheet" href="../common/style.css">
         <link rel="stylesheet" href="style.css">
@@ -16,6 +18,9 @@
         <script type="module" src="script.js"></script>
     </head>
     <body>
+        <div id="loading">
+            <img class="icon" src="https://raw.githubusercontent.com/LuniZunie/WikiShield-App/refs/heads/main/src/assets/icon.png" alt="WikiShield Logo">
+        </div>
         <div id="initial" class="hidden">
 			<canvas id="dots-canvas"></canvas>
 			<div id="welcome-container" class="shimmer shimmer-border">
@@ -31,7 +36,7 @@
 						<img src="https://raw.githubusercontent.com/LuniZunie/WikiShield-App/refs/heads/main/src/assets/icon.png" alt="WikiShield Logo">
 					</div>
 				</div>
-				<h1>Welcome to WikiShield</h1>
+				<h1>Welcome to <span id="wikishield-sikiwhield">WikiShield</span></h1>
 				<div class="about-links">
 					<a rel="noopener" href="https://en.wikipedia.org/wiki/Wikipedia:WikiShield" target="_blank" class="about-link">About</a>
 					<a rel="noopener" href="https://en.wikipedia.org/wiki/Wikipedia talk:WikiShield" target="_blank" class="about-link">Discuss</a>
@@ -429,14 +434,17 @@
                             <div class="settings-category-header">
                                 <span>TOOLS</span>
                             </div>
-                            <div class="settings-left-menu-item" id="settings-AI-button">
-                                <span><i class="fas fa-robot"></i>AI Analysis</span>
+                            <div class="settings-left-menu-item" id="settings-toolbar-button">
+                                <span><i class="fas fa-tools"></i>Toolbar</span>
                             </div>
                             <div class="settings-left-menu-item" id="settings-auto-reporting-button">
                                 <span><i class="fas fa-flag"></i>Auto Reporting</span>
                             </div>
                             <div class="settings-left-menu-item" id="settings-gadgets-button">
                                 <span><i class="fas fa-toolbox"></i>Gadgets</span>
+                            </div>
+                            <div class="settings-left-menu-item" id="settings-AI-button">
+                                <span><i class="fas fa-robot"></i>AI Analysis</span>
                             </div>
                         </div>
 
@@ -654,13 +662,6 @@
                                     <div class="settings-radio-option" data-value="always_on">Always on</div>
                                 </div>
                             </div>
-                            <div class="settings-section compact inline">
-                                <div class="settings-section-content">
-                                    <div class="settings-section-title">Dynamically hide bottom tool menus</div>
-                                    <div class="settings-section-desc">Automatically hide bottom tool menus when not needed to reduce clutter.</div>
-                                </div>
-                                <toggle-input id="settings-dynamic-bottom-menus" value="true"></toggle-input>
-                            </div>
                         </div>
                         <div class="queue hidden">
                             <div class="settings-section">
@@ -707,6 +708,75 @@
                             </div>
                         </div>
 
+                        <div class="toolbar hidden">
+                            <div class="settings-section compact inline">
+                                <div class="settings-section-content">
+                                    <div class="settings-section-title">Dynamically hide toolbar</div>
+                                    <div class="settings-section-desc">Automatically hide toolbar when not needed to reduce clutter.</div>
+                                </div>
+                                <toggle-input id="settings-dynamic-toolbar" value="true"></toggle-input>
+                            </div>
+                        </div>
+                        <div class="auto-reporting hidden">
+                            <div class="settings-section">
+                                <div class="settings-section-title">Enable Auto Reporting</div>
+                                <div class="settings-section-desc">Automatically report edits that receive certain warnings.</div>
+                                <div class="settings-section compact inline">
+                                    <div class="settings-section-content">
+                                        <div class="settings-section-title">Auto Reporting</div>
+                                        <div class="settings-section-desc">When enabled, edits that trigger selected warnings will be automatically reported.</div>
+                                    </div>
+                                    <toggle-input id="settings-auto-reporting-toggle" value="false"></toggle-input>
+                                </div>
+                            </div>
+                            <div class="settings-section">
+                                <div class="settings-section-title">Auto Reporting Warnings</div>
+                                <div class="settings-section-desc">Select which warnings should trigger automatic reporting.</div>
+                                <div id="settings-auto-reporting-warnings-container" class="checkbox-container">
+                                    <!-- Warning checkboxes will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                        <div class="gadgets hidden">
+                            <div class="settings-toggles-section">
+                                <div class="settings-section-title">Gadgets</div>
+                                <div class="settings-section-desc">Toggle various Wikishield features.</div>
+                                <div class="settings-section compact inline" id="auto-welcome-toggle">
+                                    <div class="settings-section-content">
+                                        <div class="settings-section-title">Automatic welcoming of new users</div>
+                                        <div class="settings-section-desc">Automatically welcome new users with empty talk pages when moving past their constructive edits</div>
+                                    </div>
+                                    <toggle-input id="settings-auto-welcome-toggle" value="true"></toggle-input>
+                                </div>
+                                <div class="settings-section compact inline" id="wikipedia-popups-toggle">
+                                    <div class="settings-section-content">
+                                        <div class="settings-section-title">Popups</div>
+                                        <div class="settings-section-desc">When enabled, links will be opened in a new window. Otherwise, they will be opened in your default browser. (Not supported by Opera or Safari browsers)</div>
+                                    </div>
+                                    <toggle-input id="settings-wikipedia-popups-toggle" value="true"></toggle-input>
+                                </div>
+                            </div>
+                            <div class="settings-toggles-section">
+                                <div class="settings-section-title">Username Highlighting</div>
+                                <div class="settings-section compact inline" id="username-highlighting-toggle">
+                                    <div class="settings-section-content">
+                                        <div class="settings-section-title">Enable username highlighting</div>
+                                        <div class="settings-section-desc">Highlights usernames in edit summaries, edit diffs, and user creation logs.</div>
+                                    </div>
+                                    <toggle-input id="settings-username-highlighting-toggle" value="true"></toggle-input>
+                                </div>
+                                <div class="settings-section compact inline" id="username-highlighting-mode-toggle">
+                                    <div class="settings-section-content">
+                                        <div class="settings-section-title">Toggle fuzzy matching mode</div>
+                                        <div class="settings-section-desc">
+                                            When enabled, highlights similar usernames. Not recommended for users with short usernames.<br/>
+                                            <strong>NOTE:</strong> This may cause performance issues for those with long usernames, or users on weaker devices.
+                                        </div>
+                                    </div>
+                                    <toggle-input id="settings-username-highlighting-fuzzy-toggle" value="false"></toggle-input>
+                                </div>
+                            </div>
+                        </div>
                         <div class="AI hidden">
                             <div class="settings-section">
                                 <div class="settings-section-title">AI Analysis</div>
@@ -798,66 +868,6 @@
                                         Then run:
                                         <pre>source ~/.bashrc && ollama serve</pre>
                                     </details>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="auto-reporting hidden">
-                            <div class="settings-section">
-                                <div class="settings-section-title">Enable Auto Reporting</div>
-                                <div class="settings-section-desc">Automatically report edits that receive certain warnings.</div>
-                                <div class="settings-section compact inline">
-                                    <div class="settings-section-content">
-                                        <div class="settings-section-title">Auto Reporting</div>
-                                        <div class="settings-section-desc">When enabled, edits that trigger selected warnings will be automatically reported.</div>
-                                    </div>
-                                    <toggle-input id="settings-auto-reporting-toggle" value="false"></toggle-input>
-                                </div>
-                            </div>
-                            <div class="settings-section">
-                                <div class="settings-section-title">Auto Reporting Warnings</div>
-                                <div class="settings-section-desc">Select which warnings should trigger automatic reporting.</div>
-                                <div id="settings-auto-reporting-warnings-container" class="checkbox-container">
-                                    <!-- Warning checkboxes will be populated here -->
-                                </div>
-                            </div>
-                        </div>
-                        <div class="gadgets hidden">
-                            <div class="settings-toggles-section">
-                                <div class="settings-section-title">Gadgets</div>
-                                <div class="settings-section-desc">Toggle various Wikishield features.</div>
-                                <div class="settings-section compact inline" id="auto-welcome-toggle">
-                                    <div class="settings-section-content">
-                                        <div class="settings-section-title">Automatic welcoming of new users</div>
-                                        <div class="settings-section-desc">Automatically welcome new users with empty talk pages when moving past their constructive edits</div>
-                                    </div>
-                                    <toggle-input id="settings-auto-welcome-toggle" value="true"></toggle-input>
-                                </div>
-                                <div class="settings-section compact inline" id="wikipedia-popups-toggle">
-                                    <div class="settings-section-content">
-                                        <div class="settings-section-title">Popups</div>
-                                        <div class="settings-section-desc">When enabled, links will be opened in a new window. Otherwise, they will be opened in your default browser. (Not supported by Opera or Safari browsers)</div>
-                                    </div>
-                                    <toggle-input id="settings-wikipedia-popups-toggle" value="true"></toggle-input>
-                                </div>
-                            </div>
-                            <div class="settings-toggles-section">
-                                <div class="settings-section-title">Username Highlighting</div>
-                                <div class="settings-section compact inline" id="username-highlighting-toggle">
-                                    <div class="settings-section-content">
-                                        <div class="settings-section-title">Enable username highlighting</div>
-                                        <div class="settings-section-desc">Highlights usernames in edit summaries, edit diffs, and user creation logs.</div>
-                                    </div>
-                                    <toggle-input id="settings-username-highlighting-toggle" value="true"></toggle-input>
-                                </div>
-                                <div class="settings-section compact inline" id="username-highlighting-mode-toggle">
-                                    <div class="settings-section-content">
-                                        <div class="settings-section-title">Toggle fuzzy matching mode</div>
-                                        <div class="settings-section-desc">
-                                            When enabled, highlights similar usernames. Not recommended for users with short usernames.<br/>
-                                            <strong>NOTE:</strong> This may cause performance issues for those with long usernames, or users on weaker devices.
-                                        </div>
-                                    </div>
-                                    <toggle-input id="settings-username-highlighting-fuzzy-toggle" value="false"></toggle-input>
                                 </div>
                             </div>
                         </div>

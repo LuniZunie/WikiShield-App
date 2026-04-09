@@ -173,7 +173,9 @@ Version.v2 = class V2 extends Version {
                     badges: {
                         enabled: false,
                     },
-                }
+                },
+
+                repeat_control_scripts: true
             },
             UI: {
                 theme: {
@@ -569,7 +571,9 @@ Version.v2 = class V2 extends Version {
                     badges: {
                         enabled: this.sanitize([ "settings", "zen_mode", "badges", "enabled" ], defaults.settings.zen_mode.badges.enabled),
                     },
-                }
+                },
+
+                repeat_control_scripts: defaults.settings.repeat_control_scripts
             },
             UI: {
                 theme: {
@@ -1145,6 +1149,12 @@ Version.v2 = class V2 extends Version {
                             this.reset("settings", "zen_mode", "badges", "enabled");
                     }
                 }
+            }
+
+            { // root.settings.repeat_control_scripts
+                const value = root.settings.repeat_control_scripts;
+                if (typeof value !== "boolean")
+                    this.reset("settings", "repeat_control_scripts");  // TODO, deal with in v3, and the other option the own in new tab thing on startup
             }
         }
 

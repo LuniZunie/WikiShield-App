@@ -1,10 +1,12 @@
+@import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
+
 :root {
 	--max-z-index: 2147483647;
 
     --body-color: rgba(241, 245, 255, 1);
     --body-background: rgba(20, 20, 30, 1);
 
-    font-family: "Montserrat", sans-serif;
+    font-family: 'Inter', sans-serif;
   	font-optical-sizing: auto;
      -webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;

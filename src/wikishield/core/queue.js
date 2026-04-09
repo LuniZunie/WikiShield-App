@@ -1,4 +1,5 @@
-import { Memory, Stack } from "../../../global/memory/script.esm.js";
+import { Memory } from "../../../global/memory/script.esm.js";
+import { Stack } from "../../../global/stack/script.esm.js";
 import { profanity } from "../data/profanity.js";
 
 export class Queue {
@@ -872,6 +873,7 @@ export class Queue {
                 	if (levels.indexOf(performerWarning) > levels.indexOf(this.warnings.get(item.user) || "0"))
                     	this.warnings.set(item.user, performerWarning);
 
+					const userProfanity = profanity.evaluate(user);
 					const object = {
 						display: {
 							get title() {
@@ -971,7 +973,7 @@ export class Queue {
 								return ws.queue.talks.get(user) ?? data.user.talk;
 							},
 
-							profanity: profanity.evaluate(user)
+							profanity: userProfanity
 						},
 						performer: {
 							name: item.user,
@@ -1010,6 +1012,9 @@ export class Queue {
 
 						timestamp: item.timestamp,
 						comment: item.comment,
+
+						ores: userProfanity.clamped || 0,
+						filters: userProfanity.matches.map(match => match.name),
 
 						propagating: false,
 						reviewed: false,
@@ -1064,6 +1069,15 @@ export class Queue {
 					const warning = this.getWarningLevel(data.user.talk || "");
                 	if (levels.indexOf(warning) > levels.indexOf(this.warnings.get(item.user) || "0"))
                     	this.warnings.set(item.user, warning);
+
+					const results = [ "disallow", "warn", "showcaptcha", "tag", "none" ];
+					const len = results.length;
+					let action = len - 1;
+					for (let i = 0; i < len; i++)
+						if (item.result.has(results[i])) {
+							action = i;
+							break;
+						}
 
 					const object = {
 						display: {
@@ -1181,6 +1195,7 @@ export class Queue {
 						diff: data.edit.diff,
 						sizediff: item.diff?.size,
 
+						ores: +(1 - action / (len - 1)).toFixed(2),
 						filters: item.entries.map(entry => ({ id: entry?.filter_id || "-1", filter: entry?.filter })) || [ ],
 
 						reverts: data.page.reverts,

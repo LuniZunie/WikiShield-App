@@ -1,3 +1,6 @@
+import { generateRandomUUID } from "../../../global/UUID/script.esm.js";
+import { CreateDOMElement } from "../../../global/create-dom-element/script.esm.js";
+
 import { WikiShield } from "../core/wikishield.js";
 
 import { Dialog } from "./dialog.js";
@@ -5,7 +8,6 @@ import { EventManager } from "../core/event-manager.js";
 import { Settings } from "./settings.js";
 import { Queue } from "../core/queue.js";
 import { warnings, warningsLookup, warningTemplateColors, getWarningFromLookup } from "../data/warnings.js";
-import { generateRandomUUID } from "../../../global/UUID/script.esm.js";
 import { BuildPalette } from "../utilities/build-palette.js";
 import { AutoScroll } from "./auto-scroll.js";
 
@@ -63,6 +65,8 @@ export class GUI {
 
 		document.querySelector("#initial").classList.remove("hidden");
 		document.querySelectorAll(".VERSION").forEach(elem => elem.textContent = WikiShield.config.version);
+		if (Math.random() < .01)
+			document.querySelector("#wikishield-sikiwhield").textContent = "SikiWhield";
 
 		const controller = new AbortController();
 
@@ -163,7 +167,7 @@ export class GUI {
 				});
 			};
 			resizeCanvas();
-			addEventListener('resize', resizeCanvas);
+			addEventListener("resize", resizeCanvas);
 
 			const GRID_SIZE = 160;
 
@@ -481,13 +485,15 @@ export class GUI {
 				event.preventDefault();
 			}
 		});
+
+		document.querySelector("#loading").classList.add("hidden");
 	}
 
 	async start() {
 		this.settings.start();
 
-		document.querySelector("#initial").classList.add("hidden");
 		document.querySelector("#app").classList.remove("hidden");
+		document.querySelector("#initial").classList.add("hidden");
 
 		document.querySelectorAll(".bottom-tool-trigger").forEach($trigger => {
 			$trigger.addEventListener("click", (e) => {
@@ -815,15 +821,12 @@ export class GUI {
 
 	update() {
 		try {
-			const now = Date.now();
+			const now = new Date();
 			document.querySelectorAll("[data-time]").forEach($el => {
 				const timestamp = new Date($el.dataset.time);
 				switch ($el.dataset.timeFormat) {
-					case "time-ago": {
-						$el.textContent = this.ws.util.timeAgo(timestamp, now);
-					} break;
 					case "notification": {
-						$el.textContent = this.ws.util.formatNotificationTime(timestamp, now);
+						$el.textContent = this.ws.util.formatNotificationTime(timestamp, now) + ($el.dataset.timePostfix || "");
 					} break;
 				}
 			});
@@ -833,251 +836,241 @@ export class GUI {
 	}
 
 	generateItemHTML(item) {
-		const highlight = this.ws.store.highlight;
+		const oresColor = this.getORESColor(item.ores);
+		const diffColor = "sizediff" in item ? this.ws.util.getChangeColor(item.sizediff) : undefined;
 
-		const $item = document.createElement("div");
+		const $item = CreateDOMElement("div");
 
-		const $content = document.createElement("div");
-		$content.classList.add("queue-item-content");
-		$item.appendChild($content);
-
-		const $user = document.createElement("div");
 		{
-			$user.classList.add("queue-item-user");
-			$user.classList.toggle("queue-highlight", highlight.users.has(item.user.name));
-			$user.classList.toggle("queue-user-empty-talk", item.user.talk === undefined);
-			$user.dataset.tooltip = item.user.name;
-			$user.dataset.tooltipDelay = 500;
-			$content.appendChild($user);
-
-			const $icon = document.createElement("span");
-			$icon.classList.add("fa", "fa-user", "queue-item-icon");
-			$user.prepend($icon);
-
-			const $name = document.createElement("span");
-			$name.classList.toggle("user-blocked", item.user.blocked ?? false);
-			$name.textContent = item.user.name;
-			$user.appendChild($name);
+			const $color = CreateDOMElement("div", {
+				class: "item-color",
+				style: {
+					"--ores-color": oresColor,
+				},
+				dataset: {
+					ores: item.ores
+				}
+			});
+			$item.appendChild($color);
 		}
 
-		const $time = document.createElement("div");
 		{
-			$time.classList.add("queue-item-time");
-			$time.dataset.tooltip = new Date(item.timestamp).toLocaleString();
-			$time.dataset.tooltipDelay = 500;
-			$content.appendChild($time);
+			const $body = CreateDOMElement("div", {
+				class: "item-body",
+				style: {
+					"--ores-color": oresColor,
+					"--diff-color": diffColor,
+				},
+				datset: {
+					ores: item.ores
+				}
+			});
+			$item.appendChild($body);
 
-			const $icon = document.createElement("span");
-			$icon.classList.add("fa", "fa-clock", "queue-item-icon");
-			$time.prepend($icon);
-
-			const $relative = document.createElement("span");
-			$relative.dataset.time = item.timestamp;
-			$relative.dataset.timeFormat = "time-ago";
-			$relative.textContent = this.ws.util.timeAgo(item.timestamp);
-			$time.appendChild($relative);
-		}
-
-		if (Array.isArray(item.tags)) {
-			const $tags = document.createElement("div");
 			{
-				$tags.classList.add("queue-item-tags");
-				$tags.dataset.tooltip = item.tags.join(", ");
-				$tags.dataset.tooltipDelay = 500;
-				$content.appendChild($tags);
-			}
+				const $header = CreateDOMElement("div", {
+					class: "header"
+				});
+				$body.appendChild($header);
 
-			item.tags.sort((a, b) => highlight.tags.has(b) - highlight.tags.has(a));
-			for (const tag of item.tags) {
-				const $tag = document.createElement("span");
-				$tag.classList.add("queue-item-tag");
-				$tag.classList.toggle("queue-highlight", highlight.tags.has(tag));
-				$tag.textContent = tag;
-				$tags.appendChild($tag);
-			}
-		} else if (Array.isArray(item.filters)) {
-			const $filters = document.createElement("div");
-			{
-				$filters.classList.add("queue-item-tags");
-				$content.appendChild($filters);
-			}
-
-			for (const filter of [ ...item.filters ].sort((a, b) => +a.id - +b.id)) {
-				const $filter = document.createElement("span");
-				$filter.classList.add("queue-item-tag");
-				$filter.dataset.tooltip = filter.filter;
-				$filter.dataset.tooltipDelay = 50;
-				$filter.textContent = filter.id === "-1" ? "private" : filter.id;
-				$filters.appendChild($filter);
-			}
-		}
-
-		switch (Queue.groups[item.type]) {
-			case "edit": {
-				const $ores = document.createElement("div");
 				{
-					$ores.classList.add("queue-item-color");
-					$ores.dataset.oresScore = `${Math.round((item.ores || 0) * 100)}%`;
-					$ores.dataset.rawOresScore = item.ores || 0;
-					$ores.style.backgroundColor = this.getORESColor(item.ores || 0);
-					$item.prepend($ores);
-				}
-
-				const $title = document.createElement("div");
-				{
-					$title.classList.add("queue-item-title");
-					$title.classList.toggle("queue-highlight", highlight.pages.has(item.page.title));
-					$title.dataset.tooltip = item.page.title;
-					$title.dataset.tooltipDelay = 500;
-					$title.textContent = item.page.title;
-					$content.prepend($title);
-
-					const $icon = document.createElement("span");
-					$icon.classList.add("fa", "fa-file-lines", "queue-item-icon");
-					$title.prepend($icon);
-				}
-
-				const $summary = document.createElement("div");
-				{
-					$summary.classList.add("queue-item-summary");
-					$content.insertBefore($summary, $time);
-
-					if (item.comment) {
-						$summary.dataset.tooltip = item.comment;
-						$summary.dataset.tooltipDelay = 500;
-						$summary.textContent = item.comment;
-					} else {
-						const $noSummary = document.createElement("em");
-						$noSummary.textContent = "No summary provided";
-						$summary.appendChild($noSummary);
-					}
-
-					if (item.minor) {
-						const $minor = document.createElement("span");
-						$minor.classList.add("minor-indicator");
-						$minor.dataset.tooltip = "Minor edit";
-						$minor.dataset.tooltipDelay = 500;
-						$minor.textContent = "m";
-						$summary.prepend($minor);
-					}
-				}
-
-				const $change = document.createElement("div");
-				{
-					const sizediff = item.sizediff || 0;
-
-					$change.classList.add("queue-item-change");
-					$change.innerHTML = this.ws.util.getChangeString(sizediff || 0);
-
-					$change.style.color = this.ws.util.getChangeColor(sizediff || 0);
-					if (Math.abs(sizediff || 0) >= 500)
-						$change.style.fontWeight = "bold";
-
-					$item.appendChild($change);
-				}
-			} break;
-			case "logevent": {
-				$user.classList.add("queue-log-title");
-
-				const $ores = document.createElement("div");
-				{
-					$ores.classList.add("queue-item-color");
-					$ores.dataset.oresScore = `${Math.round((item.user.profanity.clamped || 0) * 100)}%`;
-					$ores.dataset.rawOresScore = item.user.profanity.clamped || 0;
-					$ores.style.backgroundColor = this.getORESColor(item.user.profanity.clamped || 0);
-					$item.prepend($ores);
-				}
-			} break;
-			case "abuselog": {
-				const $ores = document.createElement("div");
-				{
-					const results = Object.entries({
-						"disallow": "\u{f05e}",
-						"warn": "\u{f071}",
-						"showcaptcha": "\u{f610}",
-						"tag": "\u{f02b}",
-						"none": "\u{f00c}"
+					const $title = CreateDOMElement("span", {
+						class: "page-title"
+							+ (this.ws.store.highlight.pages.has(item.page.title) ? " highlighted" : ""),
+						content: item.page.title
 					});
+					$header.appendChild($title);
+				}
 
-					let max = Infinity;
+				{
+					const $timestamp = CreateDOMElement("span", {
+						class: "timestamp",
+					});
+					$header.appendChild($timestamp);
+
+					const $icon = CreateDOMElement("i", {
+						dataset: {
+							lucide: "clock"
+						},
+						attributes: {
+							width: 12,
+							height: 12
+						}
+					});
+					$timestamp.appendChild($icon);
+
+					const $time = CreateDOMElement("span", {
+						content: this.ws.util.formatNotificationTime(new Date(item.timestamp)),
+						dataset: {
+							tooltip: new Date(item.timestamp).toLocaleString(),
+							tooltipDelay: 500,
+							time: item.timestamp,
+							timeFormat: "notification",
+						}
+					});
+					this.addTooltipListener($time);
+					$timestamp.appendChild($time);
+				}
+			}
+
+			{
+				const $meta = CreateDOMElement("div", {
+					class: "meta"
+				});
+				$body.appendChild($meta);
+
+				{
+					const $user = CreateDOMElement("span", {
+						class: "user-chip"
+							+ (item.user.blocked ? " blocked" : "")
+							+ (item.user.talk === undefined ? " empty-talk" : "")
+							+ (this.ws.store.highlight.users.has(item.user.name) ? " highlighted" : ""),
+						content: item.user.name,
+						dataset: {
+							...(item.user.blocked ? {
+								tooltip: item.user.blocked.reason,
+								tooltipDelay: 500
+							} : { })
+						}
+					});
+					this.addTooltipListener($user);
+					$meta.appendChild($user);
+
+					const $icon = CreateDOMElement("i", {
+						dataset: {
+							lucide: "user"
+						},
+						attributes: {
+							width: 11,
+							height: 11
+						}
+					});
+					$user.prepend($icon);
+				}
+
+				if (item.type === "abuselog") {
+					const results = [ "disallow", "warn", "showcaptcha", "tag", "none" ];
 					const len = results.length;
-					for (let i = 0; i < len; i++) {
-						const [ action ] = results[i];
-						if (item.origin.result.has(action) && i < max)
-							max = i;
+					let action = len - 1;
+					for (let i = 0; i < len; i++)
+						if (item.origin.result.has(results[i])) {
+							action = i;
+							break;
+						}
+
+					const $ores = CreateDOMElement("span", {
+						class: "ores-chip",
+						dataset: {
+							tooltip: `Action taken: ${results[action]}`,
+							tooltipDelay: 500
+						}
+					});
+					this.addTooltipListener($ores);
+					$meta.appendChild($ores);
+
+					const $icon = CreateDOMElement("i", {
+						dataset: {
+							lucide: [ "ban", "alert-triangle", "bot", "tag", "check" ][action]
+						},
+						attributes: {
+							width: 11,
+							height: 11
+						}
+					});
+					$ores.prepend($icon);
+				} else {
+					const $ores = CreateDOMElement("span", {
+						class: "ores-chip",
+						content: Math.round(item.ores * 100),
+						dataset: {
+							tooltip: "Score",
+							tooltipDelay: 500
+						}
+					});
+					this.addTooltipListener($ores);
+					$meta.appendChild($ores);
+
+					const $icon = CreateDOMElement("i", {
+						dataset: {
+							lucide: "flame",
+						},
+						attributes: {
+							width: 11,
+							height: 11
+						}
+					});
+					$ores.prepend($icon);
+				}
+
+				if ("sizediff" in item) {
+					const $diff = CreateDOMElement("span", {
+						class: "diff-chip",
+						content: Math.abs(item.sizediff).toLocaleString(),
+						dataset: {
+							tooltip: "Size difference",
+							tooltipDelay: 500
+						}
+					});
+					this.addTooltipListener($diff);
+					$meta.appendChild($diff);
+
+					const $icon = CreateDOMElement("i", {
+						dataset: {
+							lucide: item.sizediff > 0 ? "plus" : (item.sizediff < 0 ? "minus" : "equal"),
+						},
+						attributes: {
+							width: 10,
+							height: 10
+						}
+					});
+					$diff.prepend($icon);
+				}
+			}
+
+			if (item.comment) {
+				const $comment = CreateDOMElement("div", {
+					class: "item-comment",
+				});
+				$body.appendChild($comment);
+
+				const $icon = CreateDOMElement("i", {
+					dataset: {
+						lucide: "message-square"
+					},
+					attributes: {
+						width: 11,
+						height: 11
 					}
+				});
+				$comment.appendChild($icon);
 
-					if (max === Infinity)
-						max = len - 1;
-
-					const ores = +(1 - max / (len - 1)).toFixed(2);
-					$ores.classList.add("queue-item-color", "use-icon");
-					$ores.dataset.oresScore = results[max][1];
-					$ores.dataset.rawOresScore = ores || 0;
-					$ores.style.backgroundColor = this.getORESColor(ores || 0);
-					$item.prepend($ores);
-
-					$ores.dataset.tooltip = `Abuse filter action: ${results[max][0]}`;
-					$ores.dataset.tooltipDelay = 500;
-				}
-
-				const $title = document.createElement("div");
-				{
-					$title.classList.add("queue-item-title");
-					$title.classList.toggle("queue-highlight", highlight.pages.has(item.page.title));
-					$title.dataset.tooltip = item.page.title;
-					$title.dataset.tooltipDelay = 500;
-					$title.textContent = item.page.title;
-					$content.prepend($title);
-
-					const $icon = document.createElement("span");
-					$icon.classList.add("fa", "fa-file-lines", "queue-item-icon");
-					$title.prepend($icon);
-				}
-
-				const $summary = document.createElement("div");
-				{
-					$summary.classList.add("queue-item-summary");
-					$content.insertBefore($summary, $time);
-
-					if (item.comment) {
-						$summary.dataset.tooltip = item.comment;
-						$summary.dataset.tooltipDelay = 500;
-						$summary.textContent = item.comment;
-					} else if (item.comment === null) {
-						const $private = document.createElement("em");
-						$private.textContent = "Private";
-						$summary.appendChild($private);
-					} else {
-						const $noSummary = document.createElement("em");
-						$noSummary.textContent = "No summary provided";
-						$summary.appendChild($noSummary);
+				const $text = CreateDOMElement("span", {
+					class: "text",
+					content: item.comment,
+					dataset: {
+						tooltip: item.comment,
+						tooltipDelay: 500
 					}
+				});
+				this.addTooltipListener($text);
+				$comment.appendChild($text);
+			}
 
-					if (item.minor) {
-						const $minor = document.createElement("span");
-						$minor.classList.add("minor-indicator");
-						$minor.dataset.tooltip = "Minor edit";
-						$minor.dataset.tooltipDelay = 500;
-						$minor.textContent = "m";
-						$summary.prepend($minor);
-					}
-				}
+			const tags = item.tags ?? item.filters?.map(filter => `${filter.filter} (${filter.id})`) ?? [ ];
+			if (tags.length > 0) {
+				const $tags = CreateDOMElement("div", {
+					class: "item-tags"
+				});
+				$body.appendChild($tags);
 
-				if (item.sizediff !== undefined) {
-					const $change = document.createElement("div");
-					const sizediff = item.sizediff || 0;
-
-					$change.classList.add("queue-item-change");
-					$change.innerHTML = this.ws.util.getChangeString(sizediff || 0);
-
-					$change.style.color = this.ws.util.getChangeColor(sizediff || 0);
-					if (Math.abs(sizediff || 0) >= 500)
-						$change.style.fontWeight = "bold";
-
-					$item.appendChild($change);
-				}
-			} break;
+				tags.forEach(tag => {
+					const $tag = CreateDOMElement("span", {
+						class: "tag",
+						content: tag,
+					});
+					$tags.appendChild($tag);
+				});
+			}
 		}
 
 		return $item.innerHTML;
@@ -1123,7 +1116,7 @@ export class GUI {
 				$el.innerHTML = this.generateItemHTML(item);
 
 				if (item.mentions.has && this.ws.store.settings.username_highlighting.enabled) {
-					$el.classList.add("queue-item-mentions-me");
+					$el.classList.add("mentions-me");
 					$el.dataset.tooltip = "This queue item contains your username";
 
 					this.addTooltipListener($el);
@@ -1146,7 +1139,7 @@ export class GUI {
 			} else if ($el.previousSibling !== $previous)
 				$queue.insertBefore($el, $previous.nextSibling);
 
-			$el.classList.toggle("queue-item-current", item.id === current?.id);
+			$el.classList.toggle("current", item.id === current?.id);
 			$previous = $el;
 		}
 
@@ -1158,6 +1151,8 @@ export class GUI {
 			this.ws.queue.queues[type].previous = current;
 			this.newCurrentItem(current);
 		}
+
+		lucide.createIcons();
 	}
 	removeQueueItem(type, id) {
 		const $el = document.querySelector(`.queue-item[data-type="${type}"][data-id="${id}"]`);
@@ -1541,7 +1536,7 @@ export class GUI {
 				for (const item of contributions) {
 					const $item = document.createElement("div");
 					$item.className = "queue-item no-transition";
-					$item.classList.toggle("queue-item-current", item.id === (this.ws.queue.current.item.revid ?? this.ws.queue.current.item.id));
+					$item.classList.toggle("current", item.id === (this.ws.queue.current.item.revid ?? this.ws.queue.current.item.id));
 					$item.innerHTML = this.generateItemHTML({
 						page: { title: item.title },
 						user: { name: item.user },
@@ -1556,6 +1551,7 @@ export class GUI {
 
 					requestAnimationFrame(() => $item.classList.remove("no-transition"));
 				}
+				lucide.createIcons();
 
 				if (item.page.cached_contributions) {
 					const cached = await item.page.cached_contributions;
@@ -1577,7 +1573,7 @@ export class GUI {
 				for (const item of items.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))) {
 					const $item = document.createElement("div");
 					$item.className = "queue-item no-transition";
-					$item.classList.toggle("queue-item-current", item.id === (this.ws.queue.current.item.revid ?? this.ws.queue.current.item.id));
+					$item.classList.toggle("current", item.id === (this.ws.queue.current.item.revid ?? this.ws.queue.current.item.id));
 					$item.innerHTML = this.generateItemHTML(item);
 					$contributions.appendChild($item);
 
@@ -1587,6 +1583,7 @@ export class GUI {
 
 					requestAnimationFrame(() => $item.classList.remove("no-transition"));
 				}
+				lucide.createIcons();
 			};
 			load(controller.signal).catch(err => {
 				if (controller.signal.aborted)
@@ -1770,7 +1767,7 @@ export class GUI {
 				for (const item of history) {
 					const $item = document.createElement("div");
 					$item.className = "queue-item no-transition";
-					$item.classList.toggle("queue-item-current", item.id === (this.ws.queue.current.item.revid ?? this.ws.queue.current.item.id));
+					$item.classList.toggle("current", item.id === (this.ws.queue.current.item.revid ?? this.ws.queue.current.item.id));
 					$item.innerHTML = this.generateItemHTML({
 						page: { title: item.title },
 						user: { name: item.user },
@@ -1785,6 +1782,7 @@ export class GUI {
 
 					requestAnimationFrame(() => $item.classList.remove("no-transition"));
 				}
+				lucide.createIcons();
 
 				if (item.page.cached_history) {
 					const cached = await item.page.cached_history;
@@ -1806,7 +1804,7 @@ export class GUI {
 				for (const item of items.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))) {
 					const $item = document.createElement("div");
 					$item.className = "queue-item no-transition";
-					$item.classList.toggle("queue-item-current", item.id === (this.ws.queue.current.item.revid ?? this.ws.queue.current.item.id));
+					$item.classList.toggle("current", item.id === (this.ws.queue.current.item.revid ?? this.ws.queue.current.item.id));
 					$item.innerHTML = this.generateItemHTML(item);
 					$history.appendChild($item);
 
@@ -1816,6 +1814,7 @@ export class GUI {
 
 					requestAnimationFrame(() => $item.classList.remove("no-transition"));
 				}
+				lucide.createIcons();
 			};
 			load(controller.signal).catch(err => {
 				if (controller.signal.aborted)
@@ -2604,7 +2603,7 @@ export class GUI {
 
 	getORESColor(ores) {
 		if (isNaN(ores) || ores < 0)
-			return "rgba(128, 128, 128, .5)"; // Gray for unknown
+			return "rgba(128, 128, 128, .5)"; // Grey for unknown
 
 		ores = Math.min(Math.max(ores || 0, 0), 1);
 		const palette = GUI.palettes[this.ws.store.UI.theme.palette];
@@ -2612,8 +2611,8 @@ export class GUI {
 	}
 
 	updatePalette() {
-		document.querySelectorAll(".queue-item-color").forEach($el => {
-			$el.style.backgroundColor = this.getORESColor(parseFloat($el.dataset.rawOresScore));
+		document.querySelectorAll("[data-ores]").forEach($el => {
+			$el.style.setProperty("--ores-color", this.getORESColor(parseFloat($el.dataset.ores)));
 		});
 	}
 
@@ -3060,6 +3059,42 @@ export class GUI {
 		$helpIcon.dataset.tooltip = warning.description;
 		$item.appendChild($helpIcon);
 		this.addTooltipListener($helpIcon);
+		$helpIcon.addEventListener("click", async event => {
+			event.preventDefault();
+			event.stopPropagation();
+
+			const previews = await Promise.allSettled(warning.templates.map(template => {
+				const item = this.ws.queue.current.item;
+				return this.ws.api.parse(`{{${template.template}|${item.page.title}}}`, `User:${item.user.name}`);
+			}));
+
+			const content = previews.map((result, index) => {
+				let html = "";
+				if (result.status === "fulfilled")
+					html = result.value;
+				else
+					html = `<em>Error loading template preview: ${result.reason}</em>`;
+
+				const parser = new DOMParser();
+				const doc = parser.parseFromString(html, "text/html");
+				const $preview = doc.body.firstElementChild;
+				$preview.querySelectorAll("[href]").forEach($link => {
+					const href = $link.getAttribute("href");
+					$link.setAttribute("href", new URL(href, `https://${this.ws.server}`).href);
+				});
+				$preview.querySelectorAll("[src]").forEach($img => {
+					const src = $img.getAttribute("src");
+					$img.setAttribute("src", new URL(src, `https://${this.ws.server}`).href);
+				});
+				$preview.querySelectorAll("[srcset]").forEach($img => {
+					$img.removeAttribute("srcset");
+				});
+
+				return $preview.outerHTML;
+			});
+
+			this.dialog.show(warning.title, content.join(""));
+		});
 
 		if (!isFavorite) {
 			const $button = document.createElement("div");
@@ -3139,11 +3174,10 @@ export class GUI {
 				if (draggingItem && draggingItem !== $item) {
 					const rect = $item.getBoundingClientRect();
 					const midpoint = rect.top + rect.height / 2;
-					if (e.clientY < midpoint) {
+					if (e.clientY < midpoint)
 						$item.parentNode.insertBefore(draggingItem, $item);
-					} else {
+					else
 						$item.parentNode.insertBefore(draggingItem, $item.nextSibling);
-					}
 				}
 			});
 

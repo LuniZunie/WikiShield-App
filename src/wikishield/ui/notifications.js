@@ -192,6 +192,7 @@ export class Notifications {
             notification.read = true;
             this.update(type);
 
+            console.log(notification.id);
             this.ws.api.postWithToken({
                 action: "echomarkread",
                 sections: type,
