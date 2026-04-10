@@ -170,11 +170,9 @@ class Throttle {
 }
 
 class MediaWikiOAuth2 {
-    static get CLIENT() { return "22fe5a804b9899d75ccb4c077d816527"; }
-    // 381204bcce0506b309d1974167e399ac
+    static get CLIENT() { return "381204bcce0506b309d1974167e399ac"; }
     // it actually does not matter that this is public, see https://phabricator.wikimedia.org/T323855, since the client is not confidential, we can ship the secret
-    static get SECRET() { return "285260fa33c9e25082cbbd59444b3de20036f943"; }
-    // 7b188b6e0d0d326e9aa668ef9630409ec4f3981d
+    static get SECRET() { return "7b188b6e0d0d326e9aa668ef9630409ec4f3981d"; }
 
     constructor(userAgent) {
         this.userAgent = userAgent;
