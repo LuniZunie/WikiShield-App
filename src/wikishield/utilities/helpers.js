@@ -128,22 +128,21 @@ export class Utility {
 	}
 
 	formatNotificationTime(date, now = new Date()) {
-		if (now <= date)
+		const seconds = Math.floor((now - date) / 1000);
+		if (seconds <= 0)
 			return "Now";
-
-		if (now.getFullYear() !== date.getFullYear())
-			return `${now.getFullYear() - date.getFullYear()}y ago`;
-		else if (now.getMonth() !== date.getMonth())
-			return `${now.getMonth() - date.getMonth()}mo ago`;
-		else if (now.getDate() !== date.getDate())
-			return `${now.getDate() - date.getDate()}d ago`;
-		else if (now.getHours() !== date.getHours())
-			return `${now.getHours() - date.getHours()}h ago`;
-		else if (now.getMinutes() !== date.getMinutes())
-			return `${now.getMinutes() - date.getMinutes()}m ago`;
-		else if (now.getSeconds() !== date.getSeconds())
-			return `${now.getSeconds() - date.getSeconds()}s ago`;
-		return "Now";
+		else if (seconds < 60)
+			return `${seconds}s ago`;
+		else if (seconds < 3600)
+			return `${Math.floor(seconds / 60)}m ago`;
+		else if (seconds < 86400)
+			return `${Math.floor(seconds / 3600)}h ago`;
+		else if (seconds < 2592000)
+			return `${Math.floor(seconds / 86400)}d ago`;
+		else if (seconds < 31536000)
+			return `${Math.floor(seconds / 2592000)}mo ago`;
+		else
+			return `${Math.floor(seconds / 31536000)}y ago`;
 	}
 
 	match(needle, haystack) {

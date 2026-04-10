@@ -239,6 +239,30 @@ export class GUI {
 				const linkRange = 150;
 				const halfW = innerWidth / 2;
 				const halfH = innerHeight / 2;
+				const drawWrappedLine = (x1, y1, x2, y2, strokeStyle) => {
+					const xShifts = [ 0 ];
+					if (Math.max(x1, x2) > innerWidth)
+						xShifts.push(-innerWidth);
+					if (Math.min(x1, x2) < 0)
+						xShifts.push(innerWidth);
+
+					const yShifts = [ 0 ];
+					if (Math.max(y1, y2) > innerHeight)
+						yShifts.push(-innerHeight);
+					if (Math.min(y1, y2) < 0)
+						yShifts.push(innerHeight);
+
+					pen.lineWidth = 1;
+					pen.strokeStyle = strokeStyle;
+
+					for (const shiftX of xShifts)
+						for (const shiftY of yShifts) {
+							pen.beginPath();
+							pen.moveTo(x1 + shiftX, y1 + shiftY);
+							pen.lineTo(x2 + shiftX, y2 + shiftY);
+							pen.stroke();
+						}
+				};
 				for (let cy = 0; cy < rows; cy++) {
 					for (let cx = 0; cx < cols; cx++) {
 						const cellIdx = cy * cols + cx;
@@ -286,15 +310,7 @@ export class GUI {
 											const avgR = (parseInt(aSplit[0]) + parseInt(bSplit[0])) / 2;
 											const avgG = (parseInt(aSplit[1]) + parseInt(bSplit[1])) / 2;
 											const avgB = (parseInt(aSplit[2]) + parseInt(bSplit[2])) / 2;
-
-											pen.beginPath();
-
-											pen.moveTo(a.x, a.y);
-											pen.lineTo(a.x - dx, a.y - dy);
-
-											pen.lineWidth = 1;
-											pen.strokeStyle = `rgba(${avgR}, ${avgG}, ${avgB}, ${opacity})`;
-											pen.stroke();
+											drawWrappedLine(a.x, a.y, a.x - dx, a.y - dy, `rgba(${avgR}, ${avgG}, ${avgB}, ${opacity})`);
 										}
 									}
 								}
@@ -874,11 +890,18 @@ export class GUI {
 				$body.appendChild($header);
 
 				{
+					const highlighted = this.ws.store.highlight.pages.has(item.page.title);
+
 					const $title = CreateDOMElement("span", {
 						class: "page-title"
-							+ (this.ws.store.highlight.pages.has(item.page.title) ? " highlighted" : ""),
-						content: item.page.title
+							+ (highlighted ? " highlighted" : ""),
+						content: item.page.title,
+						dataset: highlighted ? {
+							tooltip: "This page is highlighted",
+							tooltipDelay: 500
+						} : { }
 					});
+					this.addTooltipListener($title);
 					$header.appendChild($title);
 				}
 
@@ -889,12 +912,9 @@ export class GUI {
 					$header.appendChild($timestamp);
 
 					const $icon = CreateDOMElement("i", {
-						dataset: {
-							lucide: "clock"
-						},
-						attributes: {
-							width: 12,
-							height: 12
+						class: "fas fa-clock",
+						style: {
+							"font-size": "11px"
 						}
 					});
 					$timestamp.appendChild($icon);
@@ -920,29 +940,35 @@ export class GUI {
 				$body.appendChild($meta);
 
 				{
+					const blocked = item.user.blocked;
+					const blockExpiry = this.ws.util.expiryToDate(blocked?.expiry);
+					const highlighted = this.ws.store.highlight.users.has(item.user.name);
+					const emptyTalk = item.user.talk === undefined;
+
 					const $user = CreateDOMElement("span", {
 						class: "user-chip"
-							+ (item.user.blocked ? " blocked" : "")
-							+ (item.user.talk === undefined ? " empty-talk" : "")
-							+ (this.ws.store.highlight.users.has(item.user.name) ? " highlighted" : ""),
+							+ (blocked?.partial === false ? " blocked" : "")
+							+ (highlighted ? " highlighted" : "")
+							+ (emptyTalk ? " empty-talk" : ""),
 						content: item.user.name,
-						dataset: {
-							...(item.user.blocked ? {
-								tooltip: item.user.blocked.reason,
-								tooltipDelay: 500
-							} : { })
-						}
+						dataset: blocked?.partial === false ? {
+							tooltip: `Blocked ${blockExpiry === Infinity ? "indefinitely" : `until ${blockExpiry.toLocaleString()}`} (${blocked.reason})`,
+							tooltipDelay: 500
+						} : (highlighted ? {
+							tooltip: "This user is highlighted",
+							tooltipDelay: 500
+						} : (emptyTalk ? {
+							tooltip: "This user has an empty talk page",
+							tooltipDelay: 500
+						} : { }))
 					});
 					this.addTooltipListener($user);
 					$meta.appendChild($user);
 
 					const $icon = CreateDOMElement("i", {
-						dataset: {
-							lucide: "user"
-						},
-						attributes: {
-							width: 11,
-							height: 11
+						class: "fas fa-user",
+						style: {
+							"font-size": "11px"
 						}
 					});
 					$user.prepend($icon);
@@ -969,12 +995,9 @@ export class GUI {
 					$meta.appendChild($ores);
 
 					const $icon = CreateDOMElement("i", {
-						dataset: {
-							lucide: [ "ban", "alert-triangle", "bot", "tag", "check" ][action]
-						},
-						attributes: {
-							width: 11,
-							height: 11
+						class: `fas fa-${[ "ban", "exclamation-triangle", "robot", "tag", "check" ][action]}`,
+						style: {
+							"font-size": "11px"
 						}
 					});
 					$ores.prepend($icon);
@@ -991,12 +1014,9 @@ export class GUI {
 					$meta.appendChild($ores);
 
 					const $icon = CreateDOMElement("i", {
-						dataset: {
-							lucide: "flame",
-						},
-						attributes: {
-							width: 11,
-							height: 11
+						class: "fas fa-fire",
+						style: {
+							"font-size": "11px"
 						}
 					});
 					$ores.prepend($icon);
@@ -1014,16 +1034,15 @@ export class GUI {
 					this.addTooltipListener($diff);
 					$meta.appendChild($diff);
 
-					const $icon = CreateDOMElement("i", {
-						dataset: {
-							lucide: item.sizediff > 0 ? "plus" : (item.sizediff < 0 ? "minus" : "equal"),
-						},
-						attributes: {
-							width: 10,
-							height: 10
-						}
-					});
-					$diff.prepend($icon);
+					if (item.sizediff !== 0) {
+						const $icon = CreateDOMElement("i", {
+							class: `fas fa-${item.sizediff > 0 ? "plus" : "minus"}`,
+							style: {
+								"font-size": "11px"
+							}
+						});
+						$diff.prepend($icon);
+					}
 				}
 			}
 
@@ -1034,12 +1053,9 @@ export class GUI {
 				$body.appendChild($comment);
 
 				const $icon = CreateDOMElement("i", {
-					dataset: {
-						lucide: "message-square"
-					},
-					attributes: {
-						width: 11,
-						height: 11
+					class: "fas fa-comment",
+					style: {
+						"font-size": "11px"
 					}
 				});
 				$comment.appendChild($icon);
@@ -1151,8 +1167,6 @@ export class GUI {
 			this.ws.queue.queues[type].previous = current;
 			this.newCurrentItem(current);
 		}
-
-		lucide.createIcons();
 	}
 	removeQueueItem(type, id) {
 		const $el = document.querySelector(`.queue-item[data-type="${type}"][data-id="${id}"]`);
@@ -1551,7 +1565,6 @@ export class GUI {
 
 					requestAnimationFrame(() => $item.classList.remove("no-transition"));
 				}
-				lucide.createIcons();
 
 				if (item.page.cached_contributions) {
 					const cached = await item.page.cached_contributions;
@@ -1583,7 +1596,6 @@ export class GUI {
 
 					requestAnimationFrame(() => $item.classList.remove("no-transition"));
 				}
-				lucide.createIcons();
 			};
 			load(controller.signal).catch(err => {
 				if (controller.signal.aborted)
@@ -1782,7 +1794,6 @@ export class GUI {
 
 					requestAnimationFrame(() => $item.classList.remove("no-transition"));
 				}
-				lucide.createIcons();
 
 				if (item.page.cached_history) {
 					const cached = await item.page.cached_history;
@@ -1814,7 +1825,6 @@ export class GUI {
 
 					requestAnimationFrame(() => $item.classList.remove("no-transition"));
 				}
-				lucide.createIcons();
 			};
 			load(controller.signal).catch(err => {
 				if (controller.signal.aborted)
@@ -2746,6 +2756,9 @@ export class GUI {
 	}
 
 	addTooltipListener($el) {
+		if (!$el.dataset.tooltip)
+			return;
+
 		let $tooltip;
 		$el.addEventListener("mouseenter", () => {
 			if (!$el.dataset.tooltip)

@@ -414,7 +414,7 @@ class MediaWikiAPI {
         usernames = MediaWikiAPI.paramify(usernames);
         try {
             const promises = await Promise.allSettled(MediaWikiAPI.chunk(usernames, 500).map(async chunk => {
-                return await this.post({ action: "query", list: "blocks", bkusers: MediaWikiAPI.join(chunk), bkprop: "id|user|by|reason|expiry" }, bypass, serverOverride);
+                return await this.post({ action: "query", list: "blocks", bkusers: MediaWikiAPI.join(chunk), bkprop: "id|user|by|reason|expiry|flags" }, bypass, serverOverride);
             }));
 
             const users = { };
