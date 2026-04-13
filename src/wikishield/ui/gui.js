@@ -1004,7 +1004,7 @@ export class GUI {
 				} else {
 					const $ores = CreateDOMElement("span", {
 						class: "ores-chip",
-						content: Math.round(item.ores * 100),
+						content: Number.isNaN(item.ores) ? "-" : Math.round(item.ores * 100),
 						dataset: {
 							tooltip: "Score",
 							tooltipDelay: 500
@@ -1020,6 +1020,26 @@ export class GUI {
 						}
 					});
 					$ores.prepend($icon);
+				}
+
+				if (item.minor) {
+					const $minor = CreateDOMElement("span", {
+						class: "minor-chip",
+						dataset: {
+							tooltip: "Minor edit",
+							tooltipDelay: 500
+						}
+					});
+					this.addTooltipListener($minor);
+					$meta.appendChild($minor);
+
+					const $icon = CreateDOMElement("i", {
+						class: "fas fa-m",
+						style: {
+							"font-size": "11px"
+						}
+					});
+					$minor.appendChild($icon);
 				}
 
 				if ("sizediff" in item) {
@@ -1046,7 +1066,7 @@ export class GUI {
 				}
 			}
 
-			if (item.comment) {
+			if (item.has_comment) {
 				const $comment = CreateDOMElement("div", {
 					class: "item-comment",
 				});
@@ -1062,9 +1082,10 @@ export class GUI {
 
 				const $text = CreateDOMElement("span", {
 					class: "text",
-					content: item.comment,
+					html: item.comment,
 					dataset: {
 						tooltip: item.comment,
+						tooltipHtml: true,
 						tooltipDelay: 500
 					}
 				});
@@ -1433,7 +1454,7 @@ export class GUI {
 
 					const $level = document.createElement("span");
 					$level.classList.add("tooltip-item-level");
-					$level.textContent = this.ws.util.truncate(block.comment || "No reason provided", 100);
+					$level.innerHTML = block.parsedcomment || "No reason provided";
 					$block.appendChild($level);
 
 					const $details = document.createElement("div");
@@ -1654,7 +1675,7 @@ export class GUI {
 						let icon, tooltip;
 						switch (protection.level) {
 							case "sysop": {
-								icon = "OP";
+								icon = "P";
 								tooltip = "Requires sysop right to edit";
 							} break;
 							case "extendedconfirmed": {
@@ -1666,16 +1687,23 @@ export class GUI {
 								tooltip = "Requires autoconfirmed right to edit";
 							} break;
 							default: {
-								icon = "P";
-								tooltip = "Protected";
+								icon = "?";
+								tooltip = "Uknown protection level";
 							} break;
 						}
 
 						$protection.innerHTML = `<span class="protection-icon" data-tooltip="${tooltip}">${icon}</span>`;
 						this.addTooltipListener($protection.querySelector("[data-tooltip]"));
 					} else if (this.ws.queue.pending.has(item.id)) {
-						const comment = this.ws.queue.pending.get(item.id).pending.stability?.comment || "No comment provided";
-						$protection.innerHTML = `<span class="protection-icon" data-tooltip="Pending changes: ${comment}">PC</span>`;
+						const comment = this.ws.queue.pending.get(item.id).pending.stability?.parsedcomment || "No comment provided";
+
+						const $icon = document.createElement("span");
+						$icon.classList.add("protection-icon");
+						$icon.textContent = "PC";
+						$icon.dataset.tooltip = comment;
+						$icon.dataset.tooltipHtml = true;
+						$protection.appendChild($icon);
+
 						this.addTooltipListener($protection.querySelector("[data-tooltip]"));
 					} else
 						$protection.innerHTML = "";
@@ -1740,7 +1768,7 @@ export class GUI {
 						let icon, tooltip;
 						switch (protection.level) {
 							case "sysop": {
-								icon = "OP";
+								icon = "P";
 								tooltip = "Requires sysop right to edit";
 							} break;
 							case "extendedconfirmed": {
@@ -1752,16 +1780,23 @@ export class GUI {
 								tooltip = "Requires autoconfirmed right to edit";
 							} break;
 							default: {
-								icon = "P";
-								tooltip = "Protected";
+								icon = "?";
+								tooltip = "Uknown protection level";
 							} break;
 						}
 
 						$protection.innerHTML = `<span class="protection-icon" data-tooltip="${tooltip}">${icon}</span>`;
 						this.addTooltipListener($protection.querySelector("[data-tooltip]"));
 					} else if (this.ws.queue.pending.has(item.id)) {
-						const comment = this.ws.queue.pending.get(item.id).pending.stability?.comment || "No comment provided";
-						$protection.innerHTML = `<span class="protection-icon" data-tooltip="Pending changes: ${comment}">PC</span>`;
+						const comment = this.ws.queue.pending.get(item.id).pending.stability?.parsedcomment || "No comment provided";
+
+						const $icon = document.createElement("span");
+						$icon.classList.add("protection-icon");
+						$icon.textContent = "PC";
+						$icon.dataset.tooltip = comment;
+						$icon.dataset.tooltipHtml = true;
+						$protection.appendChild($icon);
+
 						this.addTooltipListener($protection.querySelector("[data-tooltip]"));
 					} else
 						$protection.innerHTML = "";
@@ -1986,7 +2021,10 @@ export class GUI {
 							}
 						}
 
-						$diff.innerHTML = `<table>${data.diff ?? "<em>No diff available</em>"}</table>`;
+						if (data.diff ?? true)
+							$diff.innerHTML = `<table>${data.diff ?? "<em>No diff available</em>"}</table>`;
+						else
+							$diff.innerHTML = `<table><em>No difference</em></table>`;
 					});
 				} else {
 					document.querySelector("#latest-edits-tab").classList.add("selected");
@@ -2008,8 +2046,10 @@ export class GUI {
 						const $summary = document.createElement("span");
 						$summary.classList.add("summary");
 						$summary.dataset.tooltip = item.comment;
-						if (item.comment)
-							$summary.textContent = this.ws.util.truncate(item.comment, 100);
+						$summary.dataset.tooltipHtml = true;
+
+						if (item.has_comment)
+							$summary.innerHTML = item.comment;
 						else
 							$summary.innerHTML = "<em>No summary provided</em>";
 						$comment.appendChild($summary);
@@ -2057,8 +2097,9 @@ export class GUI {
 							const $summary = document.createElement("span");
 							$summary.classList.add("summary");
 							$summary.dataset.tooltip = item.comment;
-							if (item.comment)
-								$summary.textContent = this.ws.util.truncate(item.comment, 100);
+							$summary.dataset.tooltipHtml = true;
+							if (item.has_comment)
+								$summary.innerHTML = item.comment;
 							else
 								$summary.innerHTML = "<em>No summary provided</em>";
 							$comment.appendChild($summary);
@@ -2307,8 +2348,9 @@ export class GUI {
 					const $summary = document.createElement("span");
 					$summary.classList.add("summary");
 					$summary.dataset.tooltip = item.comment;
-					if (item.comment)
-						$summary.textContent = this.ws.util.truncate(item.comment, 100);
+					$summary.dataset.tooltipHtml = true;
+					if (item.has_comment)
+						$summary.innerHTML = item.comment;
 					else
 						$summary.innerHTML = "<em>No summary provided</em>";
 					$comment.appendChild($summary);
@@ -2664,6 +2706,15 @@ export class GUI {
 		const tab = queues.find(q => q.enabled)?.name;
 		if (tab)
 			this.ws.queue.switch(tab);
+		else {
+			const $empty = document.createElement("div");
+			$empty.classList.add("queue-empty");
+			$empty.textContent = "No items in queue";
+			document.querySelector("#queue-items").innerHTML = $empty.outerHTML;
+
+			this.newCurrentItem(null);
+			this.ws.queue.switch("void");
+		}
 	}
 
 	updateQueueTabs(types = Queue.types) {
@@ -3092,7 +3143,7 @@ export class GUI {
 
 					const parser = new DOMParser();
 					const doc = parser.parseFromString(html, "text/html");
-					const $preview = doc.body.firstElementChild;
+					const $preview = doc.body;
 					$preview.querySelectorAll("[href]").forEach($link => {
 						const href = $link.getAttribute("href");
 						$link.setAttribute("href", new URL(href, `https://${ws.server}`).href);
@@ -3111,7 +3162,7 @@ export class GUI {
 						$img.setAttribute("srcset", newSrcset);
 					});
 
-					return $preview.outerHTML;
+					return $preview.innerHTML;
 				});
 
 				return content.join("<div style='height: 1px; background: #0004; margin: 8px 0;'></div>");

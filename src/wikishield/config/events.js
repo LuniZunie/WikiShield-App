@@ -1289,7 +1289,7 @@ export const events = {
             const page = `User talk:${item.user.name}`;
             if (item.user.temp) {
                 const result = await ws.api.thankRevision(item.id);
-                if (result.valid) {
+                if (result.valid || ws.store.settings.talk_page_thanks_for_temporary_users.enabled) {
                     if ((await ws.api.pagesExist(page))[page] === undefined) // if talk page doesn't exist, we can use the welcome, thanks template =)
                         await ws.api.editSection(page, "new", "Thank you!", "{{subst:Thanks-autosign}}", summary);
                 }

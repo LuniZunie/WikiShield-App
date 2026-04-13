@@ -564,13 +564,6 @@ export class Settings {
 					this.ws.store.settings.performance.startup = "always_on";
 				});
 			}
-
-			const $tools = document.querySelector("#settings-dynamic-toolbar");
-			$tools.value = this.ws.store.UI.hide_tools;
-			$tools.addEventListener("change", e => {
-				this.ws.store.UI.hide_tools = $tools.value;
-				this.ws.gui.updateHiddenItems();
-			});
 		}
 
 		{
@@ -657,6 +650,7 @@ export class Settings {
 				this.ws.store.settings.accessibility.colorblind = $colorblind.value;
 				this.ws.gui.updateAccessibility();
 			}); */
+
 			const $dyslexia = document.querySelector("#settings-dyslexia-font");
 			$dyslexia.value = this.ws.store.settings.accessibility.dyslexia;
 			$dyslexia.addEventListener("change", e => {
@@ -913,6 +907,12 @@ export class Settings {
 			$popups.value = this.ws.store.settings.wikipedia_popups.enabled;
 			$popups.addEventListener("change", e => {
 				this.ws.store.settings.wikipedia_popups.enabled = $popups.value;
+			});
+
+			const $talkPageThanksForTemporaryUsersToggle = document.querySelector("#talk-page-thanks-for-temporary-users-toggle");
+			$talkPageThanksForTemporaryUsersToggle.value = this.ws.store.settings.talk_page_thanks_for_temporary_users.enabled;
+			$talkPageThanksForTemporaryUsersToggle.addEventListener("change", e => {
+				this.ws.store.settings.talk_page_thanks_for_temporary_users.enabled = $talkPageThanksForTemporaryUsersToggle.value;
 			});
 
 			const $highlight = document.querySelector("#settings-username-highlighting-toggle");

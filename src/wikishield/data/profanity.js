@@ -740,6 +740,10 @@ class Profanity {
             note: "Racist mob killing reference, though also a surname."
         },
         {
+            term: "killer",
+            severity: 0.5,
+        },
+        {
             term: "mobster",
             severity: 0.5,
             note: "Organized crime reference."

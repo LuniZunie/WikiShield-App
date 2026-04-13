@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld("electron", {
     mwapiLoader: () => ipcRenderer.invoke("mwapi-loader"),
     mwapiLoaded: callback => ipcRenderer.on("mwapi-loaded", (event, server, username, pendingChangesServers) => callback(server, username, pendingChangesServers)),
     mwapi: (action, ...args) => ipcRenderer.invoke("mwapi", action, ...args),
+    eventstream: callback => ipcRenderer.on("eventstream-data", (event, data) => callback(data)),
 
     menuEnabler: opts => ipcRenderer.send("menu-enabler", opts),
 
@@ -46,6 +47,12 @@ contextBridge.exposeInMainWorld("electron", {
     onBeforeunload: callback => ipcRenderer.on("beforeunload", () => callback()),
     unloaded: () => ipcRenderer.send("unloaded"),
     saveAccount: (username, data) => ipcRenderer.send("save-account", username, data),
+
+    isMaximized: () => ipcRenderer.sendSync("is-main-window-maximized"),
+    isFullScreen: () => ipcRenderer.sendSync("is-main-window-fullscreen"),
+    minimize: () => ipcRenderer.send("minimize-main-window"),
+    maximize: () => ipcRenderer.send("maximize-main-window"),
+    restore: () => ipcRenderer.send("restore-main-window"),
 
     disable: (title, message) => ipcRenderer.send("disable-app", title, message),
     quit: () => ipcRenderer.send("quit"),

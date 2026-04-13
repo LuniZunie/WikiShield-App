@@ -692,6 +692,7 @@ class BuildWindow {
 
         const primary = screen.getPrimaryDisplay();
         glob.windows.main = new BrowserWindow({
+            modal: true,
             width: glob.window.width ?? primary.workAreaSize.width,
             height: glob.window.height ?? primary.workAreaSize.height,
             show: false,
@@ -1282,6 +1283,7 @@ class NotificationHandler {
 }
 
 // API
+const APIs = [ ];
 async function CreateAPI(username = null, api = true) {
     const active = username ?? glob.account?.username ?? null;
     if (active === null)
@@ -1323,7 +1325,12 @@ async function CreateAPI(username = null, api = true) {
     if (!api)
         return null;
 
+    for (const existing of APIs)
+        existing.close();
+
     glob.mwapi = new MediaWikiAPI(glob, mw, glob.server, active);
+    APIs.push(glob.mwapi);
+
     return glob.mwapi;
 }
 

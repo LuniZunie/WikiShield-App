@@ -607,7 +607,7 @@ body {
             overflow: hidden;
 
             /* Theme dependent */
-            background: rgba(15, 12, 41, 1);
+            background: white;
 
             & > webview {
                 display: none;

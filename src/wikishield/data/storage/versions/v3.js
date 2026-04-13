@@ -69,6 +69,10 @@ Version.v3 = class V3 extends Version {
                     enabled: false,
                 },
 
+                talk_page_thanks_for_temporary_users: {
+                    enabled: true
+                },
+
                 expiry: {
                     watchlist: "1W",
 
@@ -192,7 +196,6 @@ Version.v3 = class V3 extends Version {
                 }
             },
             UI: {
-                hide_tools: true,
                 theme: {
                     app: "auto",
                     palette: "traffic",
@@ -447,11 +450,15 @@ Version.v3 = class V3 extends Version {
                 },
 
                 wikipedia_popups: {
-                    enabled: defaults.settings.wikipedia_popups.enabled, // did not exist in v1
+                    enabled: defaults.settings.wikipedia_popups.enabled,
                 },
 
                 auto_welcome: {
                     enabled: this.sanitize([ "settings", "auto_welcome", "enabled" ], defaults.settings.auto_welcome.enabled),
+                },
+
+                talk_page_thanks_for_temporary_users: {
+                    enabled: defaults.settings.talk_page_thanks_for_temporary_users.enabled,
                 },
 
                 expiry: {
@@ -582,7 +589,6 @@ Version.v3 = class V3 extends Version {
                 }
             },
             UI: {
-                hide_tools: defaults.UI.hide_tools,
                 theme: {
                     app: defaults.UI.theme.app,
                     palette: this.sanitize([ "UI", "theme", "palette" ], defaults.UI.theme.palette, value => {
@@ -1065,6 +1071,17 @@ Version.v3 = class V3 extends Version {
                 }
             }
 
+            { // root.settings.talk_page_thanks_for_temporary_users
+                const scope = root.settings.talk_page_thanks_for_temporary_users;
+                this.restrictObject(scope, "settings", "talk_page_thanks_for_temporary_users");
+
+                { // root.settings.talk_page_thanks_for_temporary_users.enabled
+                    const value = root.settings.talk_page_thanks_for_temporary_users.enabled;
+                    if (typeof value !== "boolean")
+                        this.reset("settings", "talk_page_thanks_for_temporary_users", "enabled");
+                }
+            }
+
             { // root.settings.expiry
                 const scope = root.settings.expiry;
                 this.restrictObject(scope, "settings", "expiry");
@@ -1366,12 +1383,6 @@ Version.v3 = class V3 extends Version {
         { // root.UI
             const scope = root.UI;
             this.restrictObject(scope, "UI");
-
-            { // root.UI.hide_tools
-                const value = root.UI.hide_tools;
-                if (typeof value !== "boolean")
-                    this.reset("UI", "hide_tools");
-            }
 
             { // root.UI.theme
                 const scope = root.UI.theme;

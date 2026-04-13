@@ -170,7 +170,7 @@
                                     </div>
                                 </div>
 
-                                <div class="bottom-tool-item" data-menu="page" data-queue-type="edit,abuselog">
+                                <div class="bottom-tool-item" data-menu="page" data-queue-type="edit,logevent,abuselog">
                                     <div class="bottom-tool-trigger">
                                         <i class="fas fa-file-lines"></i>
                                         <span>Page</span>
@@ -433,9 +433,6 @@
                         <div class="settings-category">
                             <div class="settings-category-header">
                                 <span>TOOLS</span>
-                            </div>
-                            <div class="settings-left-menu-item" id="settings-toolbar-button">
-                                <span><i class="fas fa-tools"></i>Toolbar</span>
                             </div>
                             <div class="settings-left-menu-item" id="settings-auto-reporting-button">
                                 <span><i class="fas fa-flag"></i>Auto Reporting</span>
@@ -708,15 +705,6 @@
                             </div>
                         </div>
 
-                        <div class="toolbar hidden">
-                            <div class="settings-section compact inline">
-                                <div class="settings-section-content">
-                                    <div class="settings-section-title">Dynamically hide toolbar</div>
-                                    <div class="settings-section-desc">Automatically hide toolbar when not needed to reduce clutter.</div>
-                                </div>
-                                <toggle-input id="settings-dynamic-toolbar" value="true"></toggle-input>
-                            </div>
-                        </div>
                         <div class="auto-reporting hidden">
                             <div class="settings-section">
                                 <div class="settings-section-title">Enable Auto Reporting</div>
@@ -754,6 +742,13 @@
                                         <div class="settings-section-desc">When enabled, links will be opened in a new window. Otherwise, they will be opened in your default browser. (Not supported by Opera or Safari browsers)</div>
                                     </div>
                                     <toggle-input id="settings-wikipedia-popups-toggle" value="true"></toggle-input>
+                                </div>
+                                <div class="settings-section compact inline" id="talk-page-thanks-for-temporary-users-toggle">
+                                    <div class="settings-section-content">
+                                        <div class="settings-section-title">Send talk page thanks for temporary users</div>
+                                        <div class="settings-section-desc">If enabled, when you thank a temporary user with an empty talk page, WikiShield will send them a welcoming thank you message in addition to the standard thank you message.</div>
+                                    </div>
+                                    <toggle-input id="settings-edit-summaries-toggle" value="true"></toggle-input>
                                 </div>
                             </div>
                             <div class="settings-toggles-section">

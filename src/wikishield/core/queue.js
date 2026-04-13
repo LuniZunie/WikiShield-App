@@ -6,6 +6,8 @@ export class Queue {
 	static refresh = 1000;
 	static types = [ "recent", "pending", "watchlist", "abuselog", "users" ];
 	static groups = {
+		void: "void",
+
 		recent: "edit",
 		pending: "edit",
 		watchlist: "edit",
@@ -23,7 +25,7 @@ export class Queue {
 	constructor(ws) {
 		this.ws = ws;
 
-		this.queues = Object.fromEntries(Queue.types.map(type => {
+		this.queues = Object.fromEntries([ "void", ...Queue.types ].map(type => {
 			return [
 				type,
 				{
@@ -89,7 +91,7 @@ export class Queue {
 		this.ws.gui.newCurrentItem(this.current.item);
 
 		document.querySelectorAll("#queue-tabs > .queue-tab.selected").forEach($el => $el.classList.remove("selected"));
-		document.querySelector(`#queue-tab-${type}`).classList.add("selected");
+		document.querySelector(`#queue-tab-${type}`)?.classList.add("selected");
 	}
 
 	async fetch() {
@@ -649,16 +651,13 @@ export class Queue {
 					const { item, prior, data } = temp;
 
 					const mentions = { comment: false, diff: false };
-					if (username) {
-						if (item.comment)
-							mentions.comment = ws.util.match(username, item.comment);
+					if (username)
 						if (data.edit.diff) {
 							const $temp = document.createElement("div");
 							$temp.innerHTML = data.edit.diff;
 							if ($temp.textContent)
 								mentions.diff = ws.util.match(username, $temp.textContent);
 						}
-					}
 
 					this.watchlist.set(item.title, data.page.watched);
 
@@ -770,10 +769,7 @@ export class Queue {
 								return ws.queue.talks.get(item.user) ?? data.user.talk;
 							}
 						},
-						mentions: {
-							has: Object.values(mentions).some(v => v),
-							...mentions
-						},
+						mentions,
 						AI: { // will be populated asynchronously
 							edit: null,
 							username: null
@@ -783,7 +779,7 @@ export class Queue {
 						prior: prior,
 
 						timestamp: item.timestamp,
-						comment: item.comment,
+						comment: item.parsedcomment,
 						minor: item.minor || false,
 
 						diff: data.edit.diff,
@@ -849,12 +845,9 @@ export class Queue {
 					const user = item.title.replace(/^(User|User talk):/, "");
 
 					const mentions = { username: false, comment: false };
-					if (username) {
+					if (username)
 						if (user)
 							mentions.username = ws.util.match(username, user);
-						if (item.comment)
-							mentions.comment = ws.util.match(username, item.comment);
-					}
 
 					this.contributions.set(user, data.user.contributions);
 					this.contributions.set(item.user, performer.user.contributions);
@@ -1000,10 +993,7 @@ export class Queue {
 								return ws.queue.talks.get(item.user) ?? performer.user.talk;
 							}
 						},
-						mentions: {
-							has: Object.values(mentions).some(v => v),
-							...mentions
-						},
+						mentions,
 						AI: { // will be populated asynchronously
 							username: null
 						},
@@ -1011,7 +1001,7 @@ export class Queue {
 						id: item.logid,
 
 						timestamp: item.timestamp,
-						comment: item.comment,
+						comment: item.parsedcomment,
 
 						ores: userProfanity.clamped || 0,
 						filters: userProfanity.matches.map(match => match.name),
@@ -1046,16 +1036,13 @@ export class Queue {
 					const { item, data } = temp;
 
 					const mentions = { comment: false, diff: false };
-					if (username) {
-						if (item.comment)
-							mentions.comment = ws.util.match(username, item.comment);
+					if (username)
 						if (data.edit.diff) {
 							const $temp = document.createElement("div");
 							$temp.innerHTML = data.edit.diff;
 							if ($temp.textContent)
 								mentions.diff = ws.util.match(username, $temp.textContent);
 						}
-					}
 
 					this.watchlist.set(item.title, data.page.watched);
 
@@ -1176,10 +1163,7 @@ export class Queue {
 								return ws.queue.talks.get(item.user) ?? data.user.talk;
 							}
 						},
-						mentions: {
-							has: Object.values(mentions).some(v => v),
-							...mentions
-						},
+						mentions,
 						AI: { // will be populated asynchronously
 							edit: null,
 							username: null
@@ -1189,7 +1173,7 @@ export class Queue {
 						revid: item.revid,
 
 						timestamp: item.timestamp,
-						comment: item.comment,
+						comment: data.parsedcomment,
 						minor: false,
 
 						diff: data.edit.diff,
@@ -1234,6 +1218,42 @@ export class Queue {
 				}
 			} break;
 		}
+
+		result.forEach(item => {
+			item.has_comment = Boolean(item.comment);
+			if (item.comment) {
+				const parser = new DOMParser();
+				const doc = parser.parseFromString(item.comment, "text/html");
+				const $preview = doc.body;
+				$preview.querySelectorAll("[href]").forEach($link => {
+					const href = $link.getAttribute("href");
+					$link.setAttribute("href", new URL(href, `https://${this.ws.server}`).href);
+				});
+				$preview.querySelectorAll("[src]").forEach($img => {
+					const src = $img.getAttribute("src");
+					$img.setAttribute("src", new URL(src, `https://${this.ws.server}`).href);
+				});
+				$preview.querySelectorAll("[srcset]").forEach($img => {
+					const srcset = $img.getAttribute("srcset");
+					const newSrcset = srcset.split(",").map(part => {
+						const [ url, descriptor ] = part.trim().split(/\s+/, 2);
+						const newUrl = new URL(url, `https://${this.ws.server}`).href;
+						return descriptor ? `${newUrl} ${descriptor}` : newUrl;
+					}).join(", ");
+					$img.setAttribute("srcset", newSrcset);
+				});
+
+				item.comment = $preview.innerHTML;
+
+				if (item.mentions.comment === false) {
+					const textContent = $preview.textContent || "";
+					item.mentions.comment = ws.util.match(username, textContent);
+				}
+
+				if (item.mentions)
+					item.mentions.has = Object.values(item.mentions).some(v => v);
+			}
+		});
 
 		return result;
 	}
@@ -1497,6 +1517,7 @@ export class Queue {
 				let object;
 				if (this.cache.simple.has(revid)) {
 					const simple = this.cache.simple.get(revid);
+					console.warn("Using simple cache for revision load, some data may be missing", simple);
 					object = {
 						revid: simple.id,
 						parentid: simple.prior,
@@ -1506,7 +1527,7 @@ export class Queue {
 						user: simple.user.name,
 
 						timestamp: simple.timestamp,
-						comment: simple.comment,
+						parsedcomment: simple.parsedcomment,
 						tags: simple.origin.tags,
 
 						sizediff: simple.sizediff,
@@ -1527,7 +1548,7 @@ export class Queue {
 						user: rev.user,
 
 						timestamp: rev.timestamp,
-						comment: rev.comment,
+						parsedcomment: rev.parsedcomment,
 						tags: rev.tags,
 
 						size: rev.size,

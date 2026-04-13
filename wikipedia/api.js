@@ -5,6 +5,7 @@ const { truncate } = require("../global/truncate/script.com.js");
 const { Memory } = require("../global/memory/script.com.js");
 const { Trie } = require("../global/trie/script.com.js");
 const { ORES } = require("./ores.js");
+const { EventStream } = require("./stream.js");
 
 const __servers__ = require("../servers.js");
 
@@ -50,6 +51,12 @@ class MediaWikiAPI {
     }
 
     constructor(glob, oauth, server, username) {
+        this.stream = new EventStream(server);
+        this.stream.connect();
+        this.stream.listen(data => {
+            glob.windows.main?.webContents.send("eventstream-data", data);
+        });
+
         this.glob = glob;
         this.oauth = oauth;
         this.server = server;
@@ -66,6 +73,10 @@ class MediaWikiAPI {
             ores: new Memory({ size: 10000, timeout: 15 * 60 * 1000 }),
             diff: new Memory({ size: 500, timeout: 5 * 60 * 1000 }),
         };
+    }
+
+    close() {
+        this.stream.disconnect();
     }
 
     get cache() {
@@ -388,7 +399,7 @@ class MediaWikiAPI {
     async getRevisionsBetween(title, from, to, bypass, serverOverride) {
         try {
             return (await this.continuous({
-                action: "query", prop: "revisions", titles: title, rvstartid: to, rvendid: from, rvprop: "title|ids|flags|user|timestamp|comment|size|tags", rvlimit: "max"
+                action: "query", prop: "revisions", titles: title, rvstartid: to, rvendid: from, rvprop: "title|ids|flags|user|timestamp|comment|parsedcomment|size|tags", rvlimit: "max"
             }, undefined, bypass, serverOverride)).responses.flatMap(r => r.query?.pages?.[0]?.revisions || [ ]);
         } catch (err) { return void(Logger.error("Error fetching revisions between IDs:", err)) ?? [ ]; }
     }
@@ -447,7 +458,7 @@ class MediaWikiAPI {
 
                 ucuser: username,
                 uclimit: limit,
-                ucprop: "ids|title|timestamp|comment|flags|tags|sizediff|flags"
+                ucprop: "ids|title|timestamp|comment|parsedcomment|flags|tags|sizediff|flags"
             }, bypass, serverOverride)).query?.usercontribs || [ ];
         } catch (err) { return void(Logger.error("Error fetching contributions:", err)) ?? [ ]; }
     }
@@ -461,7 +472,7 @@ class MediaWikiAPI {
                 letitle: `User:${username}`,
                 leaction: "block/block",
                 lelimit: "max",
-                leprop: "id|timestamp|details|user|comment"
+                leprop: "id|timestamp|details|user|comment|parsedcomment"
             }, undefined, bypass, serverOverride)).responses.flatMap(r => r.query?.logevents || [ ]);
         } catch (err) { return void(Logger.error("Error fetching blocks:", err)) ?? [ ]; }
     }
@@ -550,7 +561,7 @@ class MediaWikiAPI {
                 titles: title,
 
                 rvlimit: limit + 1, // +1 bc we need sizediff
-                rvprop: "ids|user|timestamp|comment|flags|tags|size|flags",
+                rvprop: "ids|user|timestamp|comment|parsedcomment|flags|tags|size|flags",
             }, bypass, serverOverride)).query?.pages?.[0];
 
             if (!page?.revisions)
@@ -681,7 +692,7 @@ class MediaWikiAPI {
                 prop: "revisions",
                 titles: title,
 
-                rvprop: "ids|user|comment|timestamp|size|tags|flags",
+                rvprop: "ids|user|comment|parsedcomment|timestamp|size|tags|flags",
                 rvslots: "*",
                 rvstartid: revid,
                 rvlimit: 2
@@ -696,6 +707,7 @@ class MediaWikiAPI {
                 parentid: rev.parentid,
 
                 user: rev.user,
+                parsedcomment: rev.parsedcomment,
                 comment: rev.comment,
                 timestamp: rev.timestamp,
 
@@ -714,7 +726,7 @@ class MediaWikiAPI {
                 return await this.post({
                     action: "query",
                     prop: "revisions",
-                    rvprop: "ids|user|comment|timestamp|size|tags|flags|oresscores",
+                    rvprop: "ids|user|comment|parsedcomment|timestamp|size|tags|flags|oresscores",
                     rvslots: "*",
                     revids: MediaWikiAPI.join(chunk)
                 }, bypass, serverOverride);
@@ -882,10 +894,19 @@ class MediaWikiAPI {
         const result = items.map(item => ({
             item,
             data: { user: { }, page: { }, edit: { } }
-        }))
+        }));
         try {
             const promises = [ ];
             promises.push(
+                (async () => {
+                    await Promise.all(items.map(async (item, i) => {
+                        [
+                            result[i].data.parsedcomment,
+                        ] = await Promise.all([
+                            this.parse(item.comment, undefined, false, bypass, serverOverride)
+                        ]);
+                    }));
+                })(),
                 this.parseUsers(users, simple, bypass, serverOverride).then(data => {
                     items.forEach((item, i) => {
                         const userIndex = users.indexOf(item.user);
@@ -943,7 +964,7 @@ class MediaWikiAPI {
                 options.list.push("recentchanges");
 
                 options.rctype = "edit";
-                options.rcprop = "title|ids|sizes|flags|user|timestamp|comment|tags|oresscores";
+                options.rcprop = "title|ids|sizes|flags|user|timestamp|comment|parsedcomment|tags|oresscores";
 
                 options.rcshow = "!bot";
                 options.rcnamespace = recent.ns || "*";
@@ -964,6 +985,7 @@ class MediaWikiAPI {
                 options.list.push("logevents");
 
                 options.letype = "newusers";
+                options.wlprop = "ids|title|type|user|timestamp|comment|details|parsedcomment";
 
                 if (users.since) options.lestart = users.since;
                 options.ledir = users.since ? "newer" : "older";
@@ -974,7 +996,7 @@ class MediaWikiAPI {
                 options.list.push("watchlist");
 
                 options.wltype = "edit";
-                options.wlprop = "title|ids|sizes|flags|user|timestamp|comment|tags|oresscores";
+                options.wlprop = "title|ids|sizes|flags|user|timestamp|comment|tags|oresscores|parsedcomment";
 
                 options.wlexcludeuser = this.username;
                 options.wlnamespace = watchlist.ns || "*";
@@ -1024,7 +1046,7 @@ class MediaWikiAPI {
                             titles: item.title,
                             rvstartid: item.revid,
                             rvlimit: 1,
-                            rvprop: "ids|flags|user|timestamp|comment|size|tags",
+                            rvprop: "ids|flags|user|timestamp|comment|parsedcomment|size|tags",
                         }));
                     const rev = this.cache.pending.get(item.revid);
 

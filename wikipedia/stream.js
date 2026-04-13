@@ -6,6 +6,8 @@ class EventStream {
     constructor(...servers) {
         this.servers = servers;
         this.connected = false;
+
+        this.callbacks = new Set();
     }
 
     connect() {
@@ -13,9 +15,20 @@ class EventStream {
             return;
         this.source = new EventSource(EventStream.url);
         this.source.onerror = error => {
-            console.error("EventSource failed:", error);
             this.disconnect();
         };
+
+        this.source.onmessage = event => {
+            const data = JSON.parse(event.data);
+            if (data.meta.domain === "canary")
+                return;
+            if (this.servers.length > 0 && !this.servers.includes(data.server_name))
+                return;
+            for (const callback of this.callbacks)
+                callback(data);
+        };
+
+        this.connected = true;
     }
     disconnect() {
         if (!this.connected)
@@ -24,21 +37,12 @@ class EventStream {
         this.connected = false;
     }
 
-    message(callback) {
-        this.source.onmessage = event => {
-            const data = JSON.parse(event.data);
-            if (data.meta.domain === "canary")
-                return;
-            if (this.servers.length > 0 && !this.servers.includes(data.server_name))
-                return;
-            callback(data);
-        };
+    listen(callback) {
+        this.callbacks.add(callback);
+    }
+    unlisten(callback) {
+        this.callbacks.delete(callback);
     }
 }
 
-const stream = new EventStream("en.wikipedia.org", "de.wikipedia.org");
-stream.connect();
-
-stream.message(data => {
-    console.log(data);
-});
+module.exports = { EventStream };

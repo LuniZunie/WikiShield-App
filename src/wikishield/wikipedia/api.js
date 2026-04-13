@@ -2,6 +2,7 @@ const serversWithPendingChanges = new Set([ ]);
 
 import { truncate } from "../../../global/truncate/script.esm.js";
 
+const eventstreamCallbacks = new Set();
 export class API {
     static chunk(array, size = 50) {
         const chunks = [ ];
@@ -36,6 +37,15 @@ export class API {
 
         for (const pcServer of pendingChangesServers)
             serversWithPendingChanges.add(pcServer);
+
+        electron.eventstream(data => {
+            for (const callback of eventstreamCallbacks)
+                try {
+                    callback(data);
+                } catch (error) {
+                    console.error("Error in eventstream callback:", error);
+                }
+        });
     }
 
     build(opts = {}) {
@@ -272,4 +282,14 @@ export class API {
     async feeds(recent, pending, users, watchlist, abuselog) {
         return await electron.mwapi("feeds", recent, pending, users, watchlist, abuselog);
     }
+
+    eventstream = Object.freeze({
+        subscribe: callback => {
+            eventstreamCallbacks.add(callback);
+            return callback;
+        },
+        unsubscribe: callback => {
+            eventstreamCallbacks.delete(callback);
+        },
+    });
 }
