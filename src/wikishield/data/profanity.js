@@ -414,11 +414,6 @@ class Profanity {
             note: "Crude joke phrase."
         },
         {
-            term: "die",
-            severity: 0.5,
-            note: "Violent/threatening language, but legitimate word."
-        },
-        {
             term: "destroy",
             severity: 0.3,
             note: "Aggressive language."
@@ -456,19 +451,9 @@ class Profanity {
         { term: "erotic", severity: 0.5 },
         { term: "fuck", severity: 0.8 },
         {
-            term: "fuk",
-            severity: 0.8,
-            note: "Phonetic spelling to evade filters."
-        },
-        {
-            term: "fuc",
-            severity: 0.8,
-            note: "Shortened version to evade filters."
-        },
-        {
             term: "phuck",
             severity: 0.8,
-            note: "Alternative spelling to bypass detection."
+            note: "Alternative spelling of \"fuck\" to bypass detection."
         },
         { term: "orgasm", severity: 0.7 },
         { term: "rape", severity: 1.0 },

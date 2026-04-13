@@ -468,7 +468,7 @@ export class Dialog {
     }
 
     #show(title, message) {
-        return new Promise(resolve => {
+        return new Promise(async resolve => {
             const $overlay = document.createElement("div");
             $overlay.classList.add("confirmation-modal-overlay");
             document.body.querySelector("#app").appendChild($overlay);
@@ -484,7 +484,10 @@ export class Dialog {
 
             const $content = document.createElement("div");
             $content.classList.add("confirmation-modal-body");
-            $content.innerHTML = message;
+            $content.innerHTML = `<div class="dialog-loading">
+                <div class="dialog-spinner"></div>
+                <div class="dialog-loading-text">Loading...</div>
+            </div>`;
             $dialog.appendChild($content);
 
             const closeModal = () => {
@@ -513,6 +516,17 @@ export class Dialog {
                 if (e.target === $overlay)
                     closeModal();
             });
+
+            if (message instanceof Promise)
+                message.then(resolvedMessage => {
+                    if ($content)
+                        $content.innerHTML = resolvedMessage;
+                }).catch(() => {
+                    if ($content)
+                        $content.innerHTML = "Failed to load content";
+                });
+            else
+                $content.innerHTML = message;
         });
     }
     show(title, message) {

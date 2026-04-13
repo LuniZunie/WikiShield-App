@@ -3611,9 +3611,13 @@ body {
                 }
 
                 & > .confirmation-modal-body {
+                    max-height: 70vh;
+
                     padding: 24px;
 
                     line-height: 1.5;
+
+                    overflow: hidden auto;
 
                     /* Theme dependent */
                     color: rgba(187, 187, 187, 1);

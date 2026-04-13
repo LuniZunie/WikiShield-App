@@ -53,6 +53,8 @@ export const events = {
 
         progress: "Accepting pending edit",
         valid: (ws, item, params) => {
+            if (!ws.rights.review)
+                return { valid: false, reason: "You do not have permission to review pending changes." };
             if (!ws.queue.pending.has(item.id))
                 return { valid: false, reason: "Pending edit can only be accepted when a pending edit is selected." };
             return { valid: true };
@@ -121,6 +123,8 @@ export const events = {
 
         progress: "Rejecting pending edit",
         valid: (ws, item, params) => {
+            if (!ws.rights.review)
+                return { valid: false, reason: "You do not have permission to review pending changes." };
             if (!ws.queue.pending.has(item.id))
                 return { valid: false, reason: "Pending edit can only be rejected when a pending edit is selected." };
             return { valid: true };

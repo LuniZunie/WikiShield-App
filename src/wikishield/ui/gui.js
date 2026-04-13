@@ -1072,7 +1072,7 @@ export class GUI {
 				$comment.appendChild($text);
 			}
 
-			const tags = item.tags ?? item.filters?.map(filter => `${filter.filter} (${filter.id})`) ?? [ ];
+			const tags = item.tags ?? item.filters?.map(filter => `${filter.filter} (${filter.id === "-1" ? "private" : filter.id})`) ?? [ ];
 			if (tags.length > 0) {
 				const $tags = CreateDOMElement("div", {
 					class: "item-tags"
@@ -1237,7 +1237,7 @@ export class GUI {
 		document.querySelector("#user-warn-level").classList.toggle("hidden", item === null);
 		document.querySelector("#user-block-count").classList.add("hidden");
 
-		document.querySelector("#pending-changes-container").classList.toggle("hidden", !this.ws.queue.pending.has(item?.id));
+		document.querySelector("#pending-changes-container").classList.toggle("hidden", !(this.ws.rights.review && this.ws.queue.pending.has(item?.id)));
 
 		this.updateHiddenItems(item);
 		if (item === null) {
@@ -3069,44 +3069,53 @@ export class GUI {
 
 		const $helpIcon = document.createElement("span");
 		$helpIcon.className = "fas fa-circle-question";
-		$helpIcon.dataset.tooltip = warning.description;
+		$helpIcon.dataset.tooltip = `${warning.description} (click for template preview)`;
 		$item.appendChild($helpIcon);
 		this.addTooltipListener($helpIcon);
 		$helpIcon.addEventListener("click", async event => {
 			event.preventDefault();
 			event.stopPropagation();
 
-			const previews = await Promise.allSettled(warning.templates.map(template => {
-				const item = this.ws.queue.current.item;
-				return this.ws.api.parse(`{{${template.template}|${item.page.title}}}`, `User:${item.user.name}`);
-			}));
+			const ws = this.ws;
+			this.dialog.show(warning.title, (async function() {
+				const previews = await Promise.allSettled(warning.templates.map(template => {
+					const item = ws.queue.current.item;
+					return ws.api.parse(`{{${template.template}|${item.page.title}}}`, `User:${item.user.name}`, true);
+				}));
 
-			const content = previews.map((result, index) => {
-				let html = "";
-				if (result.status === "fulfilled")
-					html = result.value;
-				else
-					html = `<em>Error loading template preview: ${result.reason}</em>`;
+				const content = previews.map(result => {
+					let html = "";
+					if (result.status === "fulfilled")
+						html = result.value;
+					else
+						html = `<em>Error loading template preview: ${result.reason}</em>`;
 
-				const parser = new DOMParser();
-				const doc = parser.parseFromString(html, "text/html");
-				const $preview = doc.body.firstElementChild;
-				$preview.querySelectorAll("[href]").forEach($link => {
-					const href = $link.getAttribute("href");
-					$link.setAttribute("href", new URL(href, `https://${this.ws.server}`).href);
+					const parser = new DOMParser();
+					const doc = parser.parseFromString(html, "text/html");
+					const $preview = doc.body.firstElementChild;
+					$preview.querySelectorAll("[href]").forEach($link => {
+						const href = $link.getAttribute("href");
+						$link.setAttribute("href", new URL(href, `https://${ws.server}`).href);
+					});
+					$preview.querySelectorAll("[src]").forEach($img => {
+						const src = $img.getAttribute("src");
+						$img.setAttribute("src", new URL(src, `https://${ws.server}`).href);
+					});
+					$preview.querySelectorAll("[srcset]").forEach($img => {
+						const srcset = $img.getAttribute("srcset");
+						const newSrcset = srcset.split(",").map(part => {
+							const [ url, descriptor ] = part.trim().split(/\s+/, 2);
+							const newUrl = new URL(url, `https://${ws.server}`).href;
+							return descriptor ? `${newUrl} ${descriptor}` : newUrl;
+						}).join(", ");
+						$img.setAttribute("srcset", newSrcset);
+					});
+
+					return $preview.outerHTML;
 				});
-				$preview.querySelectorAll("[src]").forEach($img => {
-					const src = $img.getAttribute("src");
-					$img.setAttribute("src", new URL(src, `https://${this.ws.server}`).href);
-				});
-				$preview.querySelectorAll("[srcset]").forEach($img => {
-					$img.removeAttribute("srcset");
-				});
 
-				return $preview.outerHTML;
-			});
-
-			this.dialog.show(warning.title, content.join(""));
+				return content.join("<div style='height: 1px; background: #0004; margin: 8px 0;'></div>");
+			})());
 		});
 
 		if (!isFavorite) {

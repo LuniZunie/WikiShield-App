@@ -410,7 +410,7 @@ export class Queue {
 
 							const i = this.queues[t].queue.findIndex(qItem => qItem[prop] === revid);
 							if (i > -1) {
-								this.queues[t].queue.splice(i, 1);
+								this.queues[t].history.push({ ...this.queues[t].queue.splice(i, 1)[0], history: performance.now() });
 								this.ws.gui.removeQueueItem(t, id);
 							}
 						});
@@ -1259,9 +1259,21 @@ export class Queue {
 			const id = leaving.type === "abuselog" ? leaving.revid : leaving.id;
 			[ "recent", "watchlist", "abuselog" ].filter(t => t !== leaving.type).forEach(t => {
 				if (t === "abuselog")
-					this.queues[t].queue = this.queues[t].queue.filter(item => item.revid !== id);
+					this.queues[t].queue = this.queues[t].queue.filter(item => {
+						if (item.revid === id) {
+							this.queues[t].history.push({ ...item, history: performance.now() });
+							return false;
+						}
+						return true;
+					});
 				else
-					this.queues[t].queue = this.queues[t].queue.filter(item => item.id !== id);
+					this.queues[t].queue = this.queues[t].queue.filter(item => {
+						if (item.id === id) {
+							this.queues[t].history.push({ ...item, history: performance.now() });
+							return false;
+						}
+						return true;
+					});
 			});
 
 			if (group !== "abuselog") {

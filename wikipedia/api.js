@@ -300,7 +300,7 @@ class MediaWikiAPI {
         } catch (err) { return void(Logger.error("Error unwatching page:", err)) ?? { valid: false, reason: err.message }; }
     }
 
-    async parse(wt, title, bypass, serverOverride) {
+    async parse(wt, title, preview = false, bypass, serverOverride) {
         title ??= undefined;
         const cacheKey = [ title, wt ].filter(item => item !== undefined);
 
@@ -311,6 +311,7 @@ class MediaWikiAPI {
             const text = (await this.post({
                 action: "parse",
                 prop: "text",
+                preview,
                 text: wt,
                 title,
                 contentmodel: "wikitext"

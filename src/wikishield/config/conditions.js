@@ -15,6 +15,40 @@ export const conditions = {
 		check: (ws, item, params) => ws.groups.sysop === true
 	},
 
+	"item-selected": {
+		title: "An item is selected",
+		check: (ws, item, params) => item !== null
+	},
+	"edit-selected": {
+		title: "An edit is selected",
+		check: (ws, item, params) => Queue.groups[item?.type] === "edit"
+	},
+	"logevent-selected": {
+		title: "A logentry is selected",
+		check: (ws, item, params) => Queue.groups[item?.type] === "logevent"
+	},
+
+	"revertable": {
+		title: "Current item is revertable",
+		check: (ws, item, params) => {
+			let type = item.type;
+            if (type === "abuselog" && item.revid)
+                type = "edit"; // treat abuse log items with revids as edits for the sake of the revert menu
+
+            if (Queue.groups[type] !== "edit")
+                return false;
+            return true;
+		}
+	},
+	"pending": {
+		title: "Current item is pending review",
+		check: (ws, item, params) => {
+			if (!ws.queue.pending.has(item.id))
+                return false;
+            return true;
+		}
+	},
+
 	"user-registered": {
 		title: "Selected user is registered",
 		check: (ws, item, params) => item.user.anon === false
@@ -251,19 +285,6 @@ export const conditions = {
 			}
 			return false;
 		}
-	},
-
-	"item-selected": {
-		title: "An item is selected",
-		check: (ws, item, params) => item !== null
-	},
-	"edit-selected": {
-		title: "An edit is selected",
-		check: (ws, item, params) => Queue.groups[item?.type] === "edit"
-	},
-	"logevent-selected": {
-		title: "A logentry is selected",
-		check: (ws, item, params) => Queue.groups[item?.type] === "logevent"
 	},
 
 	"in-recent-queue": {
