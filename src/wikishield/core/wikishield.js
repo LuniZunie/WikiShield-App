@@ -185,7 +185,7 @@ export class WikiShield {
 			document.body.querySelector("#right-details").style.width = width;
 			document.body.querySelector("#right-top").style.width = width;
 			document.body.querySelector("#main-container").style.width = `calc(100% - ${width})`;
-			document.body.querySelector("#middle-top").style.width = `calc(100% - ${width})`;
+			document.body.querySelector("#middle-top").style.right = `calc(${width} + 1vmin)`;
 		}
 
 		this.gui.settings.update();

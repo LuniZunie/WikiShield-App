@@ -966,7 +966,7 @@ export class GUI {
 					$meta.appendChild($user);
 
 					const $icon = CreateDOMElement("i", {
-						class: "fas fa-user",
+						class: `fas fa-${item.user.anon ? "user-secret" : "user"}`,
 						style: {
 							"font-size": "11px"
 						}

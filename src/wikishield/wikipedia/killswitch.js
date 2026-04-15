@@ -1,5 +1,5 @@
 export class Killswitch {
-    static #page = "User:LuniZunie/killswitch.js";
+    static #page = "User:LuniZunie/JSON/Killswitch.json";
 
     static #soft = 11;
     static #hard = 1;
