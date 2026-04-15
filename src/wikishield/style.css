@@ -1479,6 +1479,7 @@ body {
 
                             scroll-behavior: smooth;
                             overflow-y: auto;
+                            scroll-snap-type: y mandatory;
 
                             /* Theme dependent */
                             background: linear-gradient(135deg,
@@ -1788,7 +1789,7 @@ body {
 
                             position: fixed;
                             left: 50%;
-                            bottom: 50px;
+                            bottom: 60px;
                             z-index: 2;
 
                             transform: translateX(-50%);
@@ -2011,7 +2012,7 @@ body {
                             flex-shrink: 0;
                             gap: 8px;
 
-                            max-width: calc(100% - 16px);
+                            max-width: calc(100% - 20vmin);
                             width: fit-content;
 
                             position: absolute;
@@ -2145,6 +2146,71 @@ body {
 
                                     opacity: .2;
                                 }
+                            }
+                        }
+
+                        & > #copy-link {
+                            cursor: pointer;
+
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            flex-wrap: wrap;
+                            flex-shrink: 0;
+                            gap: 8px;
+
+                            width: 40px;
+                            height: 40px;
+
+                            position: absolute;
+                            right: 8px;
+                            bottom: 8px;
+                            z-index: 2;
+
+                            border: 1px solid;
+                            border-radius: 50%;
+
+                            overflow: auto hidden;
+
+                            opacity: 1;
+
+                            transition: opacity .3s ease,
+                                        padding .3s ease,
+                                        color .3s ease;
+
+                            /* Theme dependent */
+                            border-color: rgba(102, 126, 234, .2);
+                            box-shadow: 0 -2px 8px rgba(0, 0, 0, .3);
+                            color: rgba(255, 255, 255, .9);
+
+                            background: transparent;
+                            -webkit-backdrop-filter: blur(12px);
+                                    backdrop-filter: blur(12px);
+
+                            &:hover, &:focus-visible {
+                                /* Theme dependent */
+                                color: rgba(143, 163, 255, 1);
+                            }
+
+                            &.hidden {
+                                pointer-events: none;
+
+                                opacity: 0;
+                            }
+
+                            & > div {
+                                -webkit-user-select: none;
+                                        user-select: none;
+
+                                display: flex;
+                                align-items: center;
+
+                                font-size: .9em;
+                                font-weight: 400;
+
+                                white-space: nowrap;
+
+                                background: transparent;
                             }
                         }
                     }
@@ -3212,6 +3278,8 @@ body {
                         flex-wrap: wrap;
                         gap: .75rem;
 
+                        width: 100%;
+
                         & > .user-chip {
                             display: flex;
                             align-items: center;
@@ -3238,57 +3306,67 @@ body {
                                 color: rgba(255, 193, 7, 1);
                             }
                         }
-                        & > .ores-chip {
+
+                        & > .chips {
                             display: flex;
                             align-items: center;
+                            justify-content: space-between;
+                            flex-grow: 1;
                             gap: 4px;
 
-                            padding: 2px .5rem;
+                            & > .ores-chip {
+                                display: flex;
+                                align-items: center;
+                                gap: 4px;
 
-                            border-radius: .375rem;
+                                padding: 2px .5rem;
 
-                            font-size: clamp(.75rem, .7rem + .25vw, .875rem);
-                            font-weight: 600;
+                                border-radius: .375rem;
 
-                            /* Theme dependent */
-                            color: var(--ores-color);
-                            background: color-mix(in srgb, var(--ores-color) 15%, transparent);
-                        }
-                        & > .minor-chip {
-                            display: flex;
-                            align-items: center;
-                            gap: 4px;
+                                font-size: clamp(.75rem, .7rem + .25vw, .875rem);
+                                font-weight: 600;
 
-                            margin-left: auto;
-                            padding: 5px .5rem;
-
-                            border-radius: .375rem;
-
-                            font-size: clamp(.75rem, .7rem + .25vw, .875rem);
-
-                            /* Theme dependent */
-                            color: rgba(175, 175, 175, 1);
-                            background: rgba(175, 175, 175, .15);
-
-                            & ~ .diff-chip {
-                                margin-left: 0;
+                                /* Theme dependent */
+                                color: var(--ores-color);
+                                background: color-mix(in srgb, var(--ores-color) 15%, transparent);
                             }
-                        }
-                        & > .diff-chip {
-                            display: flex;
-                            align-items: center;
-                            gap: 4px;
 
-                            margin-left: auto;
-                            padding: 2px .5rem;
+                            & > .diff-chips {
+                                display: flex;
+                                align-items: center;
+                                gap: 4px;
 
-                            border-radius: .375rem;
+                                & > .minor-chip {
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 4px;
 
-                            font-size: clamp(.75rem, .7rem + .25vw, .875rem);
+                                    padding: 5px .5rem;
 
-                            /* Theme dependent */
-                            color: var(--diff-color);
-                            background: color-mix(in srgb, var(--diff-color) 15%, transparent);
+                                    border-radius: .375rem;
+
+                                    font-size: clamp(.75rem, .7rem + .25vw, .875rem);
+
+                                    /* Theme dependent */
+                                    color: rgba(175, 175, 175, 1);
+                                    background: rgba(175, 175, 175, .15);
+                                }
+                                & > .diff-chip {
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 4px;
+
+                                    padding: 2px .5rem;
+
+                                    border-radius: .375rem;
+
+                                    font-size: clamp(.75rem, .7rem + .25vw, .875rem);
+
+                                    /* Theme dependent */
+                                    color: var(--diff-color);
+                                    background: color-mix(in srgb, var(--diff-color) 15%, transparent);
+                                }
+                            }
                         }
                     }
 

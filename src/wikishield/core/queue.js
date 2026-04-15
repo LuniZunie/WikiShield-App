@@ -119,8 +119,9 @@ export class Queue {
 				const lastId = this.queues[type].last.id;
 
 				let q = feeds[type] ?? [ ];
-				if (q[0]?.timestamp)
-					this.queues[type].last.timestamp = this.ws.util.utcString(new Date(q[0].timestamp));
+				const maxTimestamp = q.reduce((max, item) => Math.max(max, item.timestamp), 0);
+				if (maxTimestamp)
+					this.queues[type].last.timestamp = this.ws.util.utcString(new Date(maxTimestamp));
 
 				switch (Queue.groups[type]) {
 					case "edit": {
@@ -224,7 +225,7 @@ export class Queue {
 
 				switch (Queue.groups[type]) {
 					case "edit": {
-						this.queues[type].last.id = Math.max(...q.map(item => item.revid));
+						this.queues[type].last.id = q.reduce((max, item) => Math.max(max, item.revid), 0);
 
 						const highlight = this.ws.store.highlight;
 						const hasHighlight = item => highlight.users.has(item.user) ||
@@ -1004,7 +1005,7 @@ export class Queue {
 						comment: item.parsedcomment,
 
 						ores: userProfanity.clamped || 0,
-						filters: userProfanity.matches.map(match => match.name),
+						filters: userProfanity.matches.map(match => ({ filter: match.name, id: match.match })),
 
 						propagating: false,
 						reviewed: false,
@@ -1220,7 +1221,6 @@ export class Queue {
 		}
 
 		result.forEach(item => {
-			item.has_comment = Boolean(item.comment);
 			if (item.comment) {
 				const parser = new DOMParser();
 				const doc = parser.parseFromString(item.comment, "text/html");
@@ -1245,14 +1245,15 @@ export class Queue {
 
 				item.comment = $preview.innerHTML;
 
-				if (item.mentions.comment === false) {
-					const textContent = $preview.textContent || "";
+				const textContent = ($preview.textContent || "").trim();
+				item.has_comment = Boolean(textContent);
+				if (item.mentions.comment === false)
 					item.mentions.comment = ws.util.match(username, textContent);
-				}
 
 				if (item.mentions)
 					item.mentions.has = Object.values(item.mentions).some(v => v);
-			}
+			} else
+				item.has_comment = false;
 		});
 
 		return result;

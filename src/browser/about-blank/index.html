@@ -50,7 +50,6 @@
             padding: clamp(1rem, 5vw, 2.5rem) clamp(1rem, 4vw, 1.25rem);
 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            overflow: hidden auto;
 
             /* Theme dependent */
             background: linear-gradient(135deg,
@@ -63,11 +62,15 @@
             & > .container {
                 width: 100%;
                 max-width: 900px;
+                height: 100%;
 
                 position: relative;
                 top: 50%;
 
                 margin: 0 auto;
+                padding: 10px;
+
+                overflow: hidden auto;
 
                 transform: translateY(-50%);
 

@@ -974,94 +974,104 @@ export class GUI {
 					$user.prepend($icon);
 				}
 
-				if (item.type === "abuselog") {
-					const results = [ "disallow", "warn", "showcaptcha", "tag", "none" ];
-					const len = results.length;
-					let action = len - 1;
-					for (let i = 0; i < len; i++)
-						if (item.origin.result.has(results[i])) {
-							action = i;
-							break;
-						}
+				{
+					const $chips = CreateDOMElement("div", { class: "chips" });
+					$meta.appendChild($chips);
 
-					const $ores = CreateDOMElement("span", {
-						class: "ores-chip",
-						dataset: {
-							tooltip: `Action taken: ${results[action]}`,
-							tooltipDelay: 500
-						}
-					});
-					this.addTooltipListener($ores);
-					$meta.appendChild($ores);
+					if (item.type === "abuselog") {
+						const results = [ "disallow", "warn", "showcaptcha", "tag", "none" ];
+						const len = results.length;
+						let action = len - 1;
+						for (let i = 0; i < len; i++)
+							if (item.origin.result.has(results[i])) {
+								action = i;
+								break;
+							}
 
-					const $icon = CreateDOMElement("i", {
-						class: `fas fa-${[ "ban", "exclamation-triangle", "robot", "tag", "check" ][action]}`,
-						style: {
-							"font-size": "11px"
-						}
-					});
-					$ores.prepend($icon);
-				} else {
-					const $ores = CreateDOMElement("span", {
-						class: "ores-chip",
-						content: Number.isNaN(item.ores) ? "-" : Math.round(item.ores * 100),
-						dataset: {
-							tooltip: "Score",
-							tooltipDelay: 500
-						}
-					});
-					this.addTooltipListener($ores);
-					$meta.appendChild($ores);
+						const $ores = CreateDOMElement("span", {
+							class: "ores-chip",
+							dataset: {
+								tooltip: `Action taken: ${results[action]}`,
+								tooltipDelay: 500
+							}
+						});
+						this.addTooltipListener($ores);
+						$chips.appendChild($ores);
 
-					const $icon = CreateDOMElement("i", {
-						class: "fas fa-fire",
-						style: {
-							"font-size": "11px"
-						}
-					});
-					$ores.prepend($icon);
-				}
-
-				if (item.minor) {
-					const $minor = CreateDOMElement("span", {
-						class: "minor-chip",
-						dataset: {
-							tooltip: "Minor edit",
-							tooltipDelay: 500
-						}
-					});
-					this.addTooltipListener($minor);
-					$meta.appendChild($minor);
-
-					const $icon = CreateDOMElement("i", {
-						class: "fas fa-m",
-						style: {
-							"font-size": "11px"
-						}
-					});
-					$minor.appendChild($icon);
-				}
-
-				if ("sizediff" in item) {
-					const $diff = CreateDOMElement("span", {
-						class: "diff-chip",
-						content: Math.abs(item.sizediff).toLocaleString(),
-						dataset: {
-							tooltip: "Size difference",
-							tooltipDelay: 500
-						}
-					});
-					this.addTooltipListener($diff);
-					$meta.appendChild($diff);
-
-					if (item.sizediff !== 0) {
 						const $icon = CreateDOMElement("i", {
-							class: `fas fa-${item.sizediff > 0 ? "plus" : "minus"}`,
+							class: `fas fa-${[ "ban", "exclamation-triangle", "robot", "tag", "check" ][action]}`,
 							style: {
 								"font-size": "11px"
 							}
 						});
-						$diff.prepend($icon);
+						$ores.prepend($icon);
+					} else {
+						const $ores = CreateDOMElement("span", {
+							class: "ores-chip",
+							content: Number.isNaN(item.ores) ? "-" : Math.round(item.ores * 100),
+							dataset: {
+								tooltip: "Score",
+								tooltipDelay: 500
+							}
+						});
+						this.addTooltipListener($ores);
+						$chips.appendChild($ores);
+
+						const $icon = CreateDOMElement("i", {
+							class: "fas fa-fire",
+							style: {
+								"font-size": "11px"
+							}
+						});
+						$ores.prepend($icon);
+					}
+
+					{
+						const $diffChips = CreateDOMElement("div", { class: "diff-chips" });
+						$chips.appendChild($diffChips);
+
+						if (item.minor) {
+							const $minor = CreateDOMElement("span", {
+								class: "minor-chip",
+								dataset: {
+									tooltip: "Minor edit",
+									tooltipDelay: 500
+								}
+							});
+							this.addTooltipListener($minor);
+							$diffChips.appendChild($minor);
+
+							const $icon = CreateDOMElement("i", {
+								class: "fas fa-m",
+								style: {
+									"font-size": "11px"
+								}
+							});
+							$minor.appendChild($icon);
+						}
+
+						if ("sizediff" in item) {
+							const $diff = CreateDOMElement("span", {
+								class: "diff-chip",
+								content: Math.abs(item.sizediff).toLocaleString(),
+								dataset: {
+									tooltip: "Size difference",
+									tooltipDelay: 500
+								}
+							});
+							this.addTooltipListener($diff);
+							$diffChips.appendChild($diff);
+
+							if (item.sizediff !== 0) {
+								const $icon = CreateDOMElement("i", {
+									class: `fas fa-${item.sizediff > 0 ? "plus" : "minus"}`,
+									style: {
+										"font-size": "11px"
+									}
+								});
+								$diff.prepend($icon);
+							}
+						}
 					}
 				}
 			}
@@ -1670,6 +1680,8 @@ export class GUI {
 
 				const $protection = document.querySelector("#protection-indicator");
 				if ($protection) {
+					$protection.innerHTML = "";
+
 					const protection = item.page.protection;
 					if (protection.protected) {
 						let icon, tooltip;
