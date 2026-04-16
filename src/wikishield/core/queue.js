@@ -790,7 +790,7 @@ export class Queue {
 						tags: item.tags || [ ],
 
 						reverts: data.page.reverts,
-						consecutive: simple ? undefined : ws.api.getConsecutiveEdits(item.title, item.revid, item.user, bypass),
+						consecutive: simple ? undefined : await ws.api.getConsecutiveEdits(item.title, item.revid, item.user, bypass), // TODO improve
 
 						propagating: false,
 						reviewed: false,

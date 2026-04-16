@@ -748,7 +748,7 @@ class MediaWikiAPI {
     async getConsecutiveEdits(page, revid, username, bypass, serverOverride) {
         try {
             const data = await this.continuous({
-                action: "query", prop: "revisions", titles: page, rvprop: "ids|timestamp|user|size", rvlimit: "max", rvstartid: revid
+                action: "query", prop: "revisions", titles: page, rvprop: "ids|timestamp|user|size|parsedcomment", rvlimit: "max", rvstartid: revid
             }, data => data.query?.pages?.[0]?.revisions.some(rev => rev.user !== username), bypass, serverOverride);
 
             const revisions = data.responses.flatMap(response => response.query?.pages?.[0]?.revisions || [ ]);
@@ -756,9 +756,9 @@ class MediaWikiAPI {
             let last, prior;
             const first = revisions[0];
             if (first?.user !== username)
-                return { count: 0, sizediff: 0, timestamp: { new: null, old: null }, diff: null };
+                return { count: 0, sizediff: 0, timestamp: { new: null, old: null }, diff: null, edits: [ ] };
 
-            const result = { count: 0, sizediff: 0, timestamp: { new: null, old: null }, diff: null };
+            const result = { count: 0, sizediff: 0, timestamp: { new: null, old: null }, diff: null, edits: [ ] };
             const len = revisions.length;
             for (let i = 0; i < len; i++) {
                 const rev = revisions[i];
@@ -766,6 +766,8 @@ class MediaWikiAPI {
 
                 if (rev.user !== username)
                     break;
+
+                result.edits.push(rev);
 
                 last = rev;
                 result.count++;
@@ -1075,6 +1077,8 @@ class MediaWikiAPI {
                                     acc[rev.user] = 1;
                                 return acc;
                             }, { }),
+
+                            edits: between,
 
                             revid: item.revid,
                             prior: stable.revid,

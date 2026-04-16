@@ -3,6 +3,8 @@ import { CreateDOMElement } from "../../../global/create-dom-element/script.esm.
 
 import { WikiShield } from "../core/wikishield.js";
 
+import { Text } from "../utilities/text.js";
+
 import { Dialog } from "./dialog.js";
 import { EventManager } from "../core/event-manager.js";
 import { Settings } from "./settings.js";
@@ -693,9 +695,8 @@ export class GUI {
 				const width = this.ws.store.UI.details.width;
 				if (width) {
 					$details.style.width = width;
-					document.querySelector("#right-top").style.width = width;
 					document.querySelector("#main-container").style.width = `calc(100% - ${width})`;
-					document.querySelector("#middle-top").style.width = `calc(100% - ${width})`;
+					// document.querySelector("#middle-top").style.width = `calc(100% - ${width})`;
 				}
 			}
 
@@ -758,9 +759,8 @@ export class GUI {
 				if (resize.active === $queueHandle)
 					document.querySelector("#right-container").style.width = `calc(100% - ${vw}vw)`;
 				else if (resize.active === $detailsHandle) {
-					document.querySelector("#right-top").style.width = `${vw}vw`;
 					document.querySelector("#main-container").style.width = `calc(100% - ${vw}vw)`;
-					document.querySelector("#middle-top").style.width = `calc(100% - ${vw}vw)`;
+					// document.querySelector("#middle-top").style.width = `calc(100% - ${vw}vw)`;
 				}
 			});
 		}
@@ -842,7 +842,10 @@ export class GUI {
 				const timestamp = new Date($el.dataset.time);
 				switch ($el.dataset.timeFormat) {
 					case "notification": {
-						$el.textContent = this.ws.util.formatNotificationTime(timestamp, now) + ($el.dataset.timePostfix || "");
+						$el.textContent = this.ws.util.formatNotificationTime(timestamp, "timeNow" in $el.dataset ? new Date($el.dataset.timeNow) : now) + ($el.dataset.timePostfix || "");
+					} break;
+					case "duration": {
+						$el.textContent = this.ws.util.formatDuration(timestamp, "timeNow" in $el.dataset ? new Date($el.dataset.timeNow) : now) + ($el.dataset.timePostfix || "");
 					} break;
 				}
 			});
@@ -897,12 +900,17 @@ export class GUI {
 							+ (highlighted ? " highlighted" : ""),
 						content: item.page.title,
 						dataset: highlighted ? {
-							tooltip: "This page is highlighted",
+							tooltip: "Page is highlighted",
 							tooltipDelay: 500
 						} : { }
 					});
 					this.addTooltipListener($title);
 					$header.appendChild($title);
+
+					const $icon = CreateDOMElement("i", {
+						class: "fas fa-file-lines",
+					});
+					$title.prepend($icon);
 				}
 
 				{
@@ -955,10 +963,10 @@ export class GUI {
 							tooltip: `Blocked ${blockExpiry === Infinity ? "indefinitely" : `until ${blockExpiry.toLocaleString()}`} (${blocked.reason})`,
 							tooltipDelay: 500
 						} : (highlighted ? {
-							tooltip: "This user is highlighted",
+							tooltip: "User is highlighted",
 							tooltipDelay: 500
 						} : (emptyTalk ? {
-							tooltip: "This user has an empty talk page",
+							tooltip: "User has an empty talk page",
 							tooltipDelay: 500
 						} : { }))
 					});
@@ -1123,6 +1131,347 @@ export class GUI {
 		return $item.innerHTML;
 	}
 
+	generateEditDetails(item, consecutive = false) {
+		if (!item)
+			return void(document.querySelector("#edit-details").innerHTML = "<div class='central'>Nothing selected</div>");
+
+		const pending = Queue.groups[item.type] === "edit" ? this.ws.queue.pending.get(item.id) : null;
+
+		const $details = document.querySelector("#edit-details");
+		$details.style.setProperty("--diff-color", "sizediff" in item ? this.ws.util.getChangeColor(item.sizediff) : undefined);
+		$details.innerHTML = "";
+
+		{
+			const $header = CreateDOMElement("div", {
+				class: "header"
+			});
+			$details.appendChild($header);
+
+			{
+				const highlighted = this.ws.store.highlight.pages.has(item.page.title);
+
+				const $title = CreateDOMElement("span", {
+					class: "page-title"
+						+ (highlighted ? " highlighted" : ""),
+					dataset: highlighted ? {
+						tooltip: "Page is highlighted",
+						tooltipDelay: 500
+					} : { },
+				});
+				this.addTooltipListener($title);
+				$header.appendChild($title);
+
+				const $icon = CreateDOMElement("i", {
+					class: "fas fa-file-lines",
+				});
+				$title.appendChild($icon);
+
+				const $link = CreateDOMElement("a", {
+					content: item.page.title,
+					attributes: {
+						href: this.ws.page(item.page.title)
+					}
+				});
+				$title.appendChild($link);
+			}
+
+			{
+				const $meta = CreateDOMElement("div", {
+					class: "meta"
+				});
+				$header.appendChild($meta);
+
+				{
+					const otherUsers = Object.keys(pending?.users ?? { }).filter(user => user !== item.user.name);
+
+					const blocked = item.user.blocked;
+					const blockExpiry = this.ws.util.expiryToDate(blocked?.expiry);
+					const highlighted = this.ws.store.highlight.users.has(item.user.name);
+					const emptyTalk = item.user.talk === undefined;
+
+					const $user = CreateDOMElement("span", {
+						class: "user-chip"
+							+ (blocked?.partial === false ? " blocked" : "")
+							+ (highlighted ? " highlighted" : "")
+							+ (emptyTalk ? " empty-talk" : ""),
+						dataset: blocked?.partial === false ? {
+							tooltip: `Blocked ${blockExpiry === Infinity ? "indefinitely" : `until ${blockExpiry.toLocaleString()}`} (${blocked.reason})`,
+							tooltipDelay: 500
+						} : (highlighted ? {
+							tooltip: "User is highlighted",
+							tooltipDelay: 500
+						} : (emptyTalk ? {
+							tooltip: "User has an empty talk page",
+							tooltipDelay: 500
+						} : { }))
+					});
+					this.addTooltipListener($user);
+					$meta.appendChild($user);
+
+					const $icon = CreateDOMElement("i", {
+						class: `fas fa-${otherUsers.length > 0 ? "users" : (item.user.anon ? "user-secret" : "user")}`,
+					});
+					$user.appendChild($icon);
+
+					const $link = CreateDOMElement("a", {
+						content: item.user.name,
+						attributes: {
+							href: this.ws.page(`Special:Contribs/${item.user.name}`)
+						}
+					});
+					this.addTooltipListener($link);
+					$user.appendChild($link);
+
+					if (otherUsers.length > 0) {
+						const $others = CreateDOMElement("span", {
+							class: "other-users",
+							content: ` and ${otherUsers.length} ${Text.pluralize("other", otherUsers.length)}`,
+							dataset: {
+								tooltip: otherUsers.join(", "),
+								tooltipDelay: 500
+							}
+						});
+						this.addTooltipListener($others);
+						$user.appendChild($others);
+					}
+				}
+			}
+		}
+
+		{
+			const $subheader = CreateDOMElement("div", {
+				class: "subheader"
+			});
+			$details.appendChild($subheader);
+
+			if (pending?.count > 1 || (consecutive && item.consecutive?.count > 1)) {
+				const $comment = CreateDOMElement("div", {
+					class: "item-comment",
+				});
+				$subheader.appendChild($comment);
+
+				const $icon = CreateDOMElement("i", {
+					class: "fas fa-comments",
+					style: {
+						"font-size": "11px"
+					}
+				});
+				$comment.appendChild($icon);
+
+				const data = pending ?? item.consecutive;
+				const $text = CreateDOMElement("span", {
+					class: "text",
+					content: `${data.count} ${Text.pluralize("edit", data.count)} over the course of `,
+					dataset: {
+						tooltip: data.edits.map(edit => {
+							const $body = CreateDOMElement("div", {
+								style: {
+									"display": "flex",
+									"flex-direction": "column",
+									"gap": "6px"
+								}
+							});
+
+							{
+								const $header = CreateDOMElement("div", {
+									style: {
+										"display": "flex",
+										"align-items": "center",
+										"gap": "6px",
+										"width": "100%",
+										"justify-content": "space-between",
+										"font-size": "13px"
+									}
+								});
+								$body.appendChild($header);
+
+								{
+									const $user = CreateDOMElement("span", {
+										style: {
+											"display": "flex",
+											"align-items": "center",
+											"gap": "4px",
+											"font-weight": "500"
+										},
+										content: edit.user,
+									});
+									$header.appendChild($user);
+
+									const $icon = CreateDOMElement("i", {
+										class: `fas fa-${edit.anon ? "user-secret" : "user"}`,
+										style: {
+											"font-size": "11px",
+											"opacity": "0.7"
+										}
+									});
+									$user.prepend($icon);
+								}
+
+								{
+									const $time = CreateDOMElement("span", {
+										style: {
+											"display": "flex",
+											"align-items": "center",
+											"gap": "4px",
+											"font-size": "12px",
+											"opacity": "0.75"
+										},
+										content: this.ws.util.formatNotificationTime(new Date(edit.timestamp)),
+										dataset: {
+											time: edit.timestamp,
+											timeFormat: "notification",
+										}
+									});
+									$header.appendChild($time);
+
+									const $icon = CreateDOMElement("i", {
+										class: "fas fa-clock",
+										style: {
+											"font-size": "10px",
+											"opacity": "0.7"
+										}
+									});
+									$time.prepend($icon);
+								}
+							}
+
+							{
+								const $comment = CreateDOMElement("div", {
+									style: {
+										"display": "flex",
+										"align-items": "flex-start",
+										"gap": "4px",
+										"font-size": "12px",
+										"opacity": "0.85",
+										"padding": "2px 0"
+									},
+									content: edit.comment || "No edit summary"
+								});
+								$body.appendChild($comment);
+
+								const $icon = CreateDOMElement("i", {
+									class: "fas fa-comment",
+									style: {
+										"font-size": "10px",
+										"opacity": "0.7",
+										"flex-shrink": "0",
+										"margin-top": "2px"
+									}
+								});
+								$comment.prepend($icon);
+							}
+
+							return $body.outerHTML;
+						}).join("<br>"),
+						tooltipHtml: true,
+						tooltipDelay: 500,
+					}
+				});
+				this.addTooltipListener($text);
+				$comment.appendChild($text);
+
+				const $time = CreateDOMElement("span", {
+					class: "time",
+					content: this.ws.util.formatDuration(new Date(data.timestamp.old), new Date(data.timestamp.new)),
+					dataset: {
+						tooltip: `${new Date(data.timestamp.old).toLocaleString()}&emdash;${new Date(data.timestamp.new).toLocaleString()}`,
+						tooltipHtml: true,
+						tooltipDelay: 500,
+
+						time: data.timestamp.old,
+						timeNow: data.timestamp.new,
+						timeFormat: "duration"
+					},
+				});
+				this.addTooltipListener($time);
+				$comment.appendChild($time);
+			} else if (item.has_comment) {
+				const $comment = CreateDOMElement("div", {
+					class: "item-comment",
+				});
+				$subheader.appendChild($comment);
+
+				const $icon = CreateDOMElement("i", {
+					class: "fas fa-comment",
+					style: {
+						"font-size": "11px"
+					}
+				});
+				$comment.appendChild($icon);
+
+				const $text = CreateDOMElement("span", {
+					class: "text",
+					html: item.comment,
+					dataset: {
+						tooltip: item.comment,
+						tooltipHtml: true,
+						tooltipDelay: 500
+					}
+				});
+				this.addTooltipListener($text);
+				$comment.appendChild($text);
+			} else {
+				const $noComment = CreateDOMElement("div", {
+					class: "item-comment none",
+					content: "No edit summary"
+				});
+				$subheader.appendChild($noComment);
+			}
+
+			{
+				const $meta = CreateDOMElement("div", {
+					class: "meta"
+				});
+				$subheader.appendChild($meta);
+
+				{
+					if (item.minor) {
+						const $minor = CreateDOMElement("span", {
+							class: "minor-chip",
+							dataset: {
+								tooltip: "Minor edit",
+								tooltipDelay: 500
+							}
+						});
+						this.addTooltipListener($minor);
+						$meta.appendChild($minor);
+
+						const $icon = CreateDOMElement("i", {
+							class: "fas fa-m",
+							style: {
+								"font-size": "11px"
+							}
+						});
+						$minor.appendChild($icon);
+					}
+
+					if ("sizediff" in item) {
+						const $diff = CreateDOMElement("span", {
+							class: "diff-chip",
+							content: Math.abs(item.sizediff).toLocaleString(),
+							dataset: {
+								tooltip: "Size difference",
+								tooltipDelay: 500
+							}
+						});
+						this.addTooltipListener($diff);
+						$meta.appendChild($diff);
+
+						if (item.sizediff !== 0) {
+							const $icon = CreateDOMElement("i", {
+								class: `fas fa-${item.sizediff > 0 ? "plus" : "minus"}`,
+								style: {
+									"font-size": "11px"
+								}
+							});
+							$diff.prepend($icon);
+						}
+					}
+				}
+			}
+		}
+	}
+
 	renderQueue(queue = null, current = null, type = null) {
 		queue ??= this.ws.queue.current.queue;
 		current ??= this.ws.queue.current.item;
@@ -1272,7 +1621,7 @@ export class GUI {
 
 		this.updateHiddenItems(item);
 		if (item === null) {
-			document.querySelector("#middle-top").innerHTML = "";
+			this.generateEditDetails();
 			document.querySelector("#diff-container").innerHTML = "";
 			document.querySelector("#ai-analysis-container").classList.add("hidden");
 
@@ -1638,44 +1987,11 @@ export class GUI {
 		switch (group) {
 			case "edit": {
 				this.startOutdatedCheck(item);
-				if (!this.ws.queue.pending.has(item.id))
-					item.consecutive.then(data => {
-						if (this.ws.queue.current.item !== item)
-							return;
-						else if (data.count < 2)
-							return;
-
+				if (!this.ws.queue.pending.has(item.id)) {
+					if (item.consecutive?.count >= 2) {
 						document.querySelector("#latest-edits-tab").classList.remove("hidden");
 						document.querySelector("#consecutive-edits-tab").classList.remove("hidden");
-					});
-
-
-				const $middle = document.querySelector("#middle-top");
-				{
-					$middle.innerHTML = "";
-
-					const $line = document.createElement("div");
-					$line.classList.add("middle-top-line");
-					$line.innerHTML = `${item.display.title}${item.display.username}`;
-					$middle.appendChild($line);
-					$line.querySelectorAll("[data-tooltip]").forEach($tooltip => this.addTooltipListener($tooltip));
-
-					const $size = document.createElement("div");
-					$line.appendChild($size);
-
-					const $icon = document.createElement("span");
-					$icon.classList.add("fa", "fa-pencil");
-					$size.appendChild($icon);
-
-					const $text = document.createElement("span");
-					$text.id = "diff-size-text";
-					$text.style.color = this.ws.util.getChangeColor(0);
-					$text.innerHTML = this.ws.util.getChangeString(0);
-					$size.appendChild($text);
-
-					const $comment = document.createElement("div");
-					$comment.classList.add("middle-top-comment");
-					$middle.appendChild($comment);
+					}
 				}
 
 				const $protection = document.querySelector("#protection-indicator");
@@ -1726,52 +2042,10 @@ export class GUI {
 					$metadata.innerHTML = item.page.metadata.join(" &middot; ");
 			} break;
 			case "logevent": {
-				const $middle = document.querySelector("#middle-top");
-				{
-					$middle.innerHTML = "";
-
-					const $line = document.createElement("div");
-					$line.classList.add("middle-top-line");
-					$line.innerHTML = `Log entry on ${item.display.title} by ${item.display.performer}`;
-					$middle.appendChild($line);
-					$line.querySelectorAll("[data-tooltip]").forEach($tooltip => this.addTooltipListener($tooltip));
-
-					const $comment = document.createElement("div");
-					$comment.classList.add("middle-top-comment");
-					$middle.appendChild($comment);
-				}
 			} break;
 			case "abuselog": {
 				if (item.revid)
 					this.startOutdatedCheck(item);
-
-				const $middle = document.querySelector("#middle-top");
-				{
-					$middle.innerHTML = "";
-
-					const $line = document.createElement("div");
-					$line.classList.add("middle-top-line");
-					$line.innerHTML = `${item.display.title}${item.display.username}`;
-					$middle.appendChild($line);
-					$line.querySelectorAll("[data-tooltip]").forEach($tooltip => this.addTooltipListener($tooltip));
-
-					const $size = document.createElement("div");
-					$line.appendChild($size);
-
-					const $icon = document.createElement("span");
-					$icon.classList.add("fa", "fa-pencil");
-					$size.appendChild($icon);
-
-					const $text = document.createElement("span");
-					$text.id = "diff-size-text";
-					$text.style.color = this.ws.util.getChangeColor(0);
-					$text.innerHTML = this.ws.util.getChangeString(0);
-					$size.appendChild($text);
-
-					const $comment = document.createElement("div");
-					$comment.classList.add("middle-top-comment");
-					$middle.appendChild($comment);
-				}
 
 				const $protection = document.querySelector("#protection-indicator");
 				if ($protection) {
@@ -1909,178 +2183,28 @@ export class GUI {
 		}
 
 		document.querySelectorAll("#right-top > .tabs > .tab.selected").forEach($tab => $tab.classList.remove("selected"));
+		this.generateEditDetails(item, consecutive);
+
 		switch (Queue.groups[item.type]) {
 			case "edit": {
 				const pending = this.ws.queue.pending.get(item.id);
 				if (pending) {
-					const $size = document.querySelector("#diff-size-text");
-					$size.innerHTML = this.ws.util.getChangeString(pending.sizediff || 0);
-					$size.style.color = this.ws.util.getChangeColor(pending.sizediff || 0);
-
-					const $comment = document.querySelector("#middle-top .middle-top-comment");
-					{
-						$comment.innerHTML = "";
-
-						const $edits = document.createElement("div");
-						{
-							$comment.appendChild($edits);
-
-							const $icon = document.createElement("span");
-							$icon.classList.add("fa", "fa-edit");
-							$edits.appendChild($icon);
-
-							const $text = document.createElement("span");
-							$text.id = "pending-edits";
-							$text.textContent = `${pending.count} edit${pending.count !== 1 ? "s" : ""}`;
-							$edits.appendChild($text);
-						}
-
-						const $users = document.createElement("div");
-						{
-							$comment.appendChild($users);
-
-							const $icon = document.createElement("span");
-							$icon.classList.add("fa", "fa-user");
-							$users.appendChild($icon);
-
-							const users = Object.values(pending.users).length;
-							const $text = document.createElement("span");
-							$text.id = "pending-users";
-							$text.textContent = `${users} user${users !== 1 ? "s" : ""}`;
-							$users.appendChild($text);
-						}
-
-						const $time = document.createElement("div");
-						{
-							$comment.appendChild($time);
-
-							const $icon = document.createElement("span");
-							$icon.classList.add("fa", "fa-clock");
-							$time.appendChild($icon);
-
-							const $consecutive = document.createElement("span");
-							$consecutive.id = "consecutive-time";
-							$consecutive.dataset.tooltip = new Date(pending.timestamp.old).toLocaleString();
-							$consecutive.textContent = "over the course of ";
-							$time.appendChild($consecutive);
-
-							const $span = document.createElement("span");
-							{
-								$span.dataset.time = pending.timestamp.old;
-								$span.dataset.timeFormat = "notification";
-								$span.textContent = this.ws.util.formatNotificationTime(new Date(pending.timestamp.old));
-								$time.appendChild($span);
-							}
-
-							this.addTooltipListener($consecutive);
-						}
-					}
-
+					console.log(pending);
 					$diff.innerHTML = `<table>${item.diff ?? "<em>No diff available</em>"}</table>`;
-				} else if (consecutive) {
+				} else if (consecutive && item.consecutive?.count > 1) {
 					document.querySelector("#consecutive-edits-tab").classList.add("selected");
 
-					$diff.innerHTML = `<table>Loading consecutive edits&hellip;</table>`;
-					item.consecutive.then(data => {
-						if (this.ws.queue.current.item !== item)
-							return;
-
-						const $size = document.querySelector("#diff-size-text");
-						$size.innerHTML = this.ws.util.getChangeString(data.sizediff || 0);
-						$size.style.color = this.ws.util.getChangeColor(data.sizediff || 0);
-
-						const $comment = document.querySelector("#middle-top .middle-top-comment");
-						{
-							$comment.innerHTML = "";
-
-							const $edits = document.createElement("div");
-							{
-								$comment.appendChild($edits);
-
-								const $icon = document.createElement("span");
-								$icon.classList.add("fa", "fa-edit");
-								$edits.appendChild($icon);
-
-								const $text = document.createElement("span");
-								$text.id = "consecutive-edits";
-								$text.textContent = `${data.count} edit${data.count !== 1 ? "s" : ""}`;
-								$edits.appendChild($text);
-							}
-
-							const $time = document.createElement("div");
-							{
-								$comment.appendChild($time);
-
-								const $icon = document.createElement("span");
-								$icon.classList.add("fa", "fa-clock");
-								$time.appendChild($icon);
-
-								const $consecutive = document.createElement("span");
-								$consecutive.id = "consecutive-time";
-								$consecutive.dataset.tooltip = new Date(data.timestamp.old).toLocaleString();
-								$consecutive.textContent = "over the course of";
-								$time.appendChild($consecutive);
-
-								const $span = document.createElement("span");
-								{
-									$span.dataset.time = data.timestamp.old;
-									$span.dataset.timeFormat = "notification";
-									$span.textContent = this.ws.util.formatNotificationTime(new Date(data.timestamp.old));
-									$time.appendChild($span);
-								}
-
-								this.addTooltipListener($consecutive);
-							}
-						}
-
-						if (data.diff ?? true)
-							$diff.innerHTML = `<table>${data.diff ?? "<em>No diff available</em>"}</table>`;
-						else
-							$diff.innerHTML = `<table><em>No difference</em></table>`;
-					});
+					if (item.consecutive.diff ?? true)
+						$diff.innerHTML = `<table>${item.consecutive.diff ?? "<em>No diff available</em>"}</table>`;
+					else
+						$diff.innerHTML = `<table><em>No difference</em></table>`;
 				} else {
 					document.querySelector("#latest-edits-tab").classList.add("selected");
 
 					$diff.innerHTML = `<table>${item.diff ?? "<em>No diff available</em>"}</table>`;
-
-					const $size = document.querySelector("#diff-size-text");
-					$size.innerHTML = this.ws.util.getChangeString(item.sizediff || 0);
-					$size.style.color = this.ws.util.getChangeColor(item.sizediff || 0);
-
-					const $comment = document.querySelector("#middle-top .middle-top-comment");
-					{
-						$comment.innerHTML = "";
-
-						const $icon = document.createElement("span");
-						$icon.classList.add("fa", "fa-comment-dots");
-						$comment.appendChild($icon);
-
-						const $summary = document.createElement("span");
-						$summary.classList.add("summary");
-						$summary.dataset.tooltip = item.comment;
-						$summary.dataset.tooltipHtml = true;
-
-						if (item.has_comment)
-							$summary.innerHTML = item.comment;
-						else
-							$summary.innerHTML = "<em>No summary provided</em>";
-						$comment.appendChild($summary);
-
-						if (item.minor) {
-							const $minor = document.createElement("span");
-							$minor.classList.add("minor-indicator");
-							$minor.dataset.tooltip = "Minor edit";
-							$minor.textContent = "m";
-							$comment.prepend($minor);
-
-							this.addTooltipListener($minor);
-						}
-
-						this.addTooltipListener($summary);
-					}
 				}
 
-				if (this.ws.store.settings.username_highlighting.enabled) {
+				if (this.ws.store.settings.username_highlighting.enabled) { // TODO
 					const username = this.ws.api.username;
 					if (username) {
 						if (item.mentions.diff)
@@ -2098,27 +2222,6 @@ export class GUI {
 			case "logevent": {
 				switch (item.type) {
 					case "users": {
-						const $comment = document.querySelector("#middle-top .middle-top-comment");
-						{
-							$comment.innerHTML = "";
-
-							const $icon = document.createElement("span");
-							$icon.classList.add("fa", "fa-comment-dots");
-							$comment.appendChild($icon);
-
-							const $summary = document.createElement("span");
-							$summary.classList.add("summary");
-							$summary.dataset.tooltip = item.comment;
-							$summary.dataset.tooltipHtml = true;
-							if (item.has_comment)
-								$summary.innerHTML = item.comment;
-							else
-								$summary.innerHTML = "<em>No summary provided</em>";
-							$comment.appendChild($summary);
-
-							this.addTooltipListener($summary);
-						}
-
 						$diff.innerHTML = "";
 
 						const evaluation = item.user.profanity;
@@ -2345,41 +2448,6 @@ export class GUI {
 			case "abuselog": {
 				$diff.innerHTML = `<table>${item.diff ?? "<em>No diff available</em>"}</table>`;
 
-				const $size = document.querySelector("#diff-size-text");
-				$size.innerHTML = this.ws.util.getChangeString(item.sizediff || 0);
-				$size.style.color = this.ws.util.getChangeColor(item.sizediff || 0);
-
-				const $comment = document.querySelector("#middle-top .middle-top-comment");
-				{
-					$comment.innerHTML = "";
-
-					const $icon = document.createElement("span");
-					$icon.classList.add("fa", "fa-comment-dots");
-					$comment.appendChild($icon);
-
-					const $summary = document.createElement("span");
-					$summary.classList.add("summary");
-					$summary.dataset.tooltip = item.comment;
-					$summary.dataset.tooltipHtml = true;
-					if (item.has_comment)
-						$summary.innerHTML = item.comment;
-					else
-						$summary.innerHTML = "<em>No summary provided</em>";
-					$comment.appendChild($summary);
-
-					if (item.minor) {
-						const $minor = document.createElement("span");
-						$minor.classList.add("minor-indicator");
-						$minor.dataset.tooltip = "Minor edit";
-						$minor.textContent = "m";
-						$comment.prepend($minor);
-
-						this.addTooltipListener($minor);
-					}
-
-					this.addTooltipListener($summary);
-				}
-
 				if (this.ws.store.settings.username_highlighting.enabled) {
 					const username = this.ws.api.username;
 					if (username) {
@@ -2415,9 +2483,37 @@ export class GUI {
 			});
 		});
 
-		const $first = $diff.querySelector("table .diff-addedline, table .diff-deletedline");
-		if ($first)
-			requestAnimationFrame(() => ($first.querySelector(".diffchange") ?? $first).scrollIntoView({ behavior: "smooth", block: "center" }));
+		const $lines = $diff.querySelectorAll(".diff-addedline, .diff-deletedline");
+		const $changes = $diff.querySelectorAll(":is(.diff-addedline, .diff-deletedline) .diffchange");
+
+		const $scroll = $changes[0] ?? $lines[0];
+		if ($scroll)
+			requestAnimationFrame(() => {
+				$diff.scroll({ top: $scroll.offsetTop - $diff.clientHeight / 2, behavior: "smooth" });
+
+				function updateOffScreen() {
+					let above = false, below = false;
+					const rect = $diff.getBoundingClientRect();
+					for (const $change of $changes) {
+						let thisAbove = false, thisBelow = false;
+
+						const changeRect = $change.getBoundingClientRect();
+						if (changeRect.bottom < rect.top)
+							thisAbove = true;
+						if (changeRect.top > rect.bottom)
+							thisBelow = true;
+
+						if (!(thisAbove && thisBelow)) {
+							above ||= thisAbove;
+							below ||= thisBelow;
+						}
+					}
+				}
+
+				updateOffScreen();
+				$diff.onscroll = () => requestAnimationFrame(updateOffScreen);
+				window.onresize = () => requestAnimationFrame(updateOffScreen);
+			});
 	}
 	#sanitizeInlineHtml(html) {
 		const allowed = new Set(["B", "I", "EM", "STRONG", "CODE", "SPAN", "BR"]);

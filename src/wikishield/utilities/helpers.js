@@ -145,6 +145,24 @@ export class Utility {
 			return `${Math.floor(seconds / 31536000)}y ago`;
 	}
 
+	formatDuration(date, now = new Date()) {
+		const seconds = Math.floor((now - date) / 1000);
+		if (seconds <= 0)
+			return "0s";
+		else if (seconds < 60)
+			return `${seconds}s`;
+		else if (seconds < 3600)
+			return `${Math.floor(seconds / 60)}m`;
+		else if (seconds < 86400)
+			return `${Math.floor(seconds / 3600)}h`;
+		else if (seconds < 2592000)
+			return `${Math.floor(seconds / 86400)}d`;
+		else if (seconds < 31536000)
+			return `${Math.floor(seconds / 2592000)}mo`;
+		else
+			return `${Math.floor(seconds / 31536000)}y`;
+	}
+
 	match(needle, haystack) {
 		if (this.ws.store.settings.username_highlighting.fuzzy) {
 			return hasApproxSubstring(needle, haystack, 2);

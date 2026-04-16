@@ -10,6 +10,10 @@ class Case {
 }
 
 export class Text {
+    static pluralize(word, n, plural) {
+        return new Text(word).plural(plural).get(n);
+    }
+
     static Case = Case;
 
     // convert from case to array of words
