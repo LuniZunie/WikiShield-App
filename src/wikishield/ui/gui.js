@@ -1166,12 +1166,32 @@ export class GUI {
 				});
 				$title.appendChild($icon);
 
+				let pageHref;
+				switch (Queue.groups[item.type]) {
+					case "edit": {
+						pageHref = "page";
+					} break;
+					case "logevent": {
+						pageHref = "log";
+					} break;
+					case "abuselog": {
+						pageHref = "page-abuse";
+					} break;
+				}
+
 				const $link = CreateDOMElement("a", {
 					content: item.page.title,
+					dataset: {
+						multipleHrefs: `${pageHref};title=${encodeURIComponent(item.page.title)}&${pageHref === "log" ? `log=${JSON.stringify(item)}` : `id=${item.page.id}`}`,
+
+						tooltip: item.page.title,
+						tooltipDelay: 500
+					},
 					attributes: {
-						href: this.ws.page(item.page.title)
+						href: null,
 					}
 				});
+				this.addTooltipListener($link);
 				$title.appendChild($link);
 			}
 
@@ -1215,8 +1235,14 @@ export class GUI {
 
 					const $link = CreateDOMElement("a", {
 						content: item.user.name,
+						dataset: {
+							multipleHrefs: `user;name=${encodeURIComponent(item.user.name)}`,
+
+							tooltip: item.user.name,
+							tooltipDelay: 500
+						},
 						attributes: {
-							href: this.ws.page(`Special:Contribs/${item.user.name}`)
+							href: null
 						}
 					});
 					this.addTooltipListener($link);

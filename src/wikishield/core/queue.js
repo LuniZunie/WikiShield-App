@@ -674,62 +674,6 @@ export class Queue {
                     	this.warnings.set(item.user, warning);
 
 					const object = {
-						display: {
-							get title() {
-								const $title = document.createElement("div");
-								$title.className = "page-title";
-								$title.classList.toggle("queue-highlight", ws.store.highlight.pages.has(item.title));
-
-								const $icon = document.createElement("span");
-								$icon.className = "fa fa-file-alt queue-item-icon";
-								$title.appendChild($icon);
-
-								const $text = document.createElement("a");
-								$text.href = ws.util.pageLink(item.title);
-								$text.dataset.tooltip = item.title;
-								$text.dataset.multipleHrefs = `page;title=${encodeURIComponent(item.title)}&id=${item.revid}`;
-								$text.textContent = ws.util.truncate(item.title, 50);
-								$title.appendChild($text);
-
-								return $title.outerHTML;
-							},
-							get username() {
-								const $user = document.createElement("div");
-								$user.className = "username";
-								$user.classList.toggle("queue-highlight", ws.store.highlight.users.has(item.user));
-								$user.classList.toggle("queue-user-empty-talk", (ws.queue.talks.get(item.user) ?? data.user.talk) === undefined);
-
-								const $icon = document.createElement("span");
-								$icon.className = "fa fa-user queue-user-icon";
-								$user.appendChild($icon);
-
-								const $text = document.createElement("a");
-								$text.classList.toggle("user-blocked", ws.queue.blocked.get(item.user) ?? data.user.blocked);
-								$text.href = ws.util.pageLink(`User:${item.user}`);
-								$text.dataset.tooltip = item.user;
-								$text.dataset.multipleHrefs = `user;name=${encodeURIComponent(item.user)}`;
-								$text.textContent = ws.util.truncate(item.user, 30);
-								$user.appendChild($text);
-
-								return $user.outerHTML;
-							},
-							get tags() {
-								const $tags = document.createElement("div");
-								$tags.className = "tags";
-
-								const tags = item.tags.sort((a, b) => ws.store.highlight.tags.has(b) - ws.store.highlight.tags.has(a));
-								tags.forEach(tag => {
-									const $tag = document.createElement("span");
-									$tag.className = "tag";
-									$tag.classList.toggle("queue-highlight", ws.store.highlight.tags.has(tag));
-									$tag.dataset.tooltip = tag;
-									$tag.textContent = ws.util.truncate(tag, 10);
-									$tags.appendChild($tag);
-								});
-
-								return $tags.outerHTML;
-							}
-						},
 						page: {
 							namespace: item.ns,
 							title: item.title,
@@ -869,66 +813,6 @@ export class Queue {
 
 					const userProfanity = profanity.evaluate(user);
 					const object = {
-						display: {
-							get title() {
-								const $title = document.createElement("div");
-								$title.className = "page-title";
-								$title.classList.toggle("queue-highlight", ws.store.highlight.pages.has(item.title));
-
-								const $icon = document.createElement("span");
-								$icon.className = "fa fa-file-alt queue-item-icon";
-								$title.appendChild($icon);
-
-								const $text = document.createElement("a");
-								$text.href = ws.util.pageLink(item.title);
-								$text.dataset.tooltip = item.title;
-								$text.dataset.multipleHrefs = `log;title=${encodeURIComponent(item.title)}&log=${JSON.stringify(item)}`;
-								$text.textContent = ws.util.truncate(item.title, 50);
-								$title.appendChild($text);
-
-								return $title.outerHTML;
-							},
-							get username() {
-								const $user = document.createElement("div");
-								$user.className = "username";
-								$user.classList.toggle("queue-highlight", ws.store.highlight.users.has(user));
-								$user.classList.toggle("queue-user-empty-talk", (ws.queue.talks.get(user) ?? data.user.talk) === undefined);
-
-								const $icon = document.createElement("span");
-								$icon.className = "fa fa-user queue-user-icon";
-								$user.appendChild($icon);
-
-								const $text = document.createElement("a");
-								$text.classList.toggle("user-blocked", ws.queue.blocked.get(user) ?? data.user.blocked);
-								$text.href = ws.util.pageLink(`User:${user}`);
-								$text.dataset.tooltip = user;
-								$text.dataset.multipleHrefs = `user;name=${encodeURIComponent(user)}`;
-								$text.textContent = ws.util.truncate(user, 30);
-								$user.appendChild($text);
-
-								return $user.outerHTML;
-							},
-							get performer() {
-								const $user = document.createElement("div");
-								$user.className = "username";
-								$user.classList.toggle("queue-highlight", ws.store.highlight.users.has(item.user));
-								$user.classList.toggle("queue-user-empty-talk", (ws.queue.talks.get(item.user) ?? performer.user.talk) === undefined);
-
-								const $icon = document.createElement("span");
-								$icon.className = "fa fa-user queue-user-icon";
-								$user.appendChild($icon);
-
-								const $text = document.createElement("a");
-								$text.classList.toggle("user-blocked", ws.queue.blocked.get(item.user) ?? performer.user.blocked);
-								$text.href = ws.util.pageLink(`User:${item.user}`);
-								$text.dataset.tooltip = item.user;
-								$text.dataset.multipleHrefs = `user;name=${encodeURIComponent(item.user)}`;
-								$text.textContent = ws.util.truncate(item.user, 30);
-								$user.appendChild($text);
-
-								return $user.outerHTML;
-							},
-						},
 						page: {
 							namespace: item.ns,
 							title: item.title,
@@ -1068,62 +952,6 @@ export class Queue {
 						}
 
 					const object = {
-						display: {
-							get title() {
-								const $title = document.createElement("div");
-								$title.className = "page-title";
-								$title.classList.toggle("queue-highlight", ws.store.highlight.pages.has(item.title));
-
-								const $icon = document.createElement("span");
-								$icon.className = "fa fa-file-alt queue-item-icon";
-								$title.appendChild($icon);
-
-								const $text = document.createElement("a");
-								$text.href = ws.util.pageLink(item.title);
-								$text.dataset.tooltip = item.title;
-								$text.dataset.multipleHrefs = `page-abuse;title=${encodeURIComponent(item.title)}&id=${item.id}`;
-								$text.textContent = ws.util.truncate(item.title, 50);
-								$title.appendChild($text);
-
-								return $title.outerHTML;
-							},
-							get username() {
-								const $user = document.createElement("div");
-								$user.className = "username";
-								$user.classList.toggle("queue-highlight", ws.store.highlight.users.has(item.user));
-								$user.classList.toggle("queue-user-empty-talk", (ws.queue.talks.get(item.user) ?? data.user.talk) === undefined);
-
-								const $icon = document.createElement("span");
-								$icon.className = "fa fa-user queue-user-icon";
-								$user.appendChild($icon);
-
-								const $text = document.createElement("a");
-								$text.classList.toggle("user-blocked", ws.queue.blocked.get(item.user) ?? data.user.blocked);
-								$text.href = ws.util.pageLink(`User:${item.user}`);
-								$text.dataset.tooltip = item.user;
-								$text.dataset.multipleHrefs = `user;name=${encodeURIComponent(item.user)}`;
-								$text.textContent = ws.util.truncate(item.user, 30);
-								$user.appendChild($text);
-
-								return $user.outerHTML;
-							},
-							get filters() {
-								const $filters = document.createElement("div");
-								$filters.className = "tags";
-
-								const filters = item.entries.map(entry => ({ id: entry?.filter_id || "-1", filter: entry?.filter }));
-								filters.sort((a, b) => +a.id - +b.id);
-								filters.forEach(filter => {
-									const $filter = document.createElement("span");
-									$filter.className = "tag";
-									$filter.dataset.tooltip = filter.filter;
-									$filter.textContent = ws.util.truncate(filter.id, 10);
-									$filters.appendChild($filter);
-								});
-
-								return $filters.outerHTML;
-							}
-						},
 						page: {
 							namespace: item.ns,
 							title: item.title,
