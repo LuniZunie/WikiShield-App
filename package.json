@@ -17,14 +17,15 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "test": "electron . --trace-warnings",
-    "build": "webpack --mode production",
+    "build": "electron-builder --publish never",
+    "build-web": "webpack --mode production",
     "version": "node scripts/sync-version.js",
     "publish": "node scripts/publish-release.js",
     "publish:win": "electron-builder --win --publish always",
     "publish:mac": "electron-builder --mac --publish always",
     "publish:linux": "electron-builder --linux --publish always",
-    "build:dev": "webpack serve --mode development",
-    "build:readable": "cross-env READABLE=true webpack --mode production"
+    "build-web:dev": "webpack serve --mode development",
+    "build-web:readable": "cross-env READABLE=true webpack --mode production"
   },
   "keywords": [
     "Electron",
