@@ -1,5 +1,3 @@
-const { execSync } = require("child_process");
-
 const fs = require("fs");
 const path = require("path");
 
@@ -21,6 +19,3 @@ if (packageJson.config?.forge?.packagerConfig) {
 fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`, "utf8");
 
 console.log(`Updated all version fields to ${version}`);
-
-console.log(`Generating release notes...`);
-execSync("node scripts/generate-release-notes.js", { stdio: "inherit" });

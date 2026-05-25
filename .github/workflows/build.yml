@@ -25,14 +25,6 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Generate release notes
-        id: notes
-        run: |
-          node scripts/generate-release-notes.js
-          echo "notes<<EOF" >> $GITHUB_OUTPUT
-          cat .github/RELEASE_NOTES.md >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
   build:
     needs: prepare-release
     runs-on: ${{ matrix.os }}
