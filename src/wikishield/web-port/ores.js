@@ -1,4 +1,4 @@
-module.exports.ORES = class ORES {
+export class ORES {
     static extract(data, bias = 0.5) {
         const models = [ {
             key: "goodfaith",

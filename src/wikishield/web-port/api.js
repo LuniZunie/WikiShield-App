@@ -1,17 +1,17 @@
-const Logger = require("electron-log");
+const Logger = console;
 
-const { convertToUTCString } = require("../global/utc-string/script.com.js");
-const { truncate } = require("../global/truncate/script.com.js");
-const { Memory } = require("../global/memory/script.com.js");
-const { Trie } = require("../global/trie/script.com.js");
-const { ORES } = require("./ores.js");
+import { convertToUTCString } from "../../../global/utc-string/script.esm.js";
+import { truncate } from "../../../global/truncate/script.esm.js";
+import { Memory } from "../../../global/memory/script.esm.js";
+import { Trie } from "../../../global/trie/script.esm.js";
+import { ORES } from "./ores.js";
 
-const __servers__ = require("../servers.js");
+import { __servers__ } from "./servers.js";
 
 const __tags__ = new Set(__servers__.filter(s => s.tag).map(s => s.host));
 const __pendingChanges__ = new Set(__servers__.filter(s => s.pending_changes).map(s => s.host));
 
-class MediaWikiAPI {
+export class MediaWikiAPI {
     static cache = { };
 
     static get pendingChangesServers() {
@@ -1161,5 +1161,3 @@ class MediaWikiAPI {
         }
     }
 }
-
-module.exports = { MediaWikiAPI };

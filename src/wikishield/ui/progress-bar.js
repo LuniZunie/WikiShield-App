@@ -1,7 +1,5 @@
 export class ProgressBar {
     constructor() {
-
-
         this.$bar = document.createElement("div");
         this.$bar.classList.add("progress-bar");
         this.$bar.style.opacity = 1;

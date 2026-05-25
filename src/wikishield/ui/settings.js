@@ -1,16 +1,3 @@
-const { AI } = require("../ai/class.js");
-const { conditions } = require("../config/conditions.js");
-const { buildShortcut, controls, validateShortcut } = require("../config/control-keys.js");
-const { events } = require("../config/events.js");
-const { Queue } = require("../core/queue.js");
-const { WikiShield } = require("../core/wikishield.js");
-const { namespaces } = require("../data/namespaces.js");
-const { StorageManager } = require("../data/storage/manager.js");
-const { warningsLookup } = require("../data/warnings.js");
-const { sortDependencies } = require("../utilities/scripts.js");
-const { Text } = require("../utilities/text.js");
-const { GUI } = require("./gui.js");
-
 import { AI } from "../ai/class.js";
 import { conditions } from "../config/conditions.js";
 import { buildShortcut, controls, validateShortcut } from "../config/control-keys.js";
@@ -43,7 +30,7 @@ const formatTime = ms => {
 	return str.trim();
 };
 
-module.exports.Settings = class Settings {
+export class Settings {
 	#keypressListener;
 
 	#promiseResolve;
@@ -928,7 +915,7 @@ module.exports.Settings = class Settings {
 			$export.addEventListener("click", async e => {
 				try {
 					const b64 = this.ws.export();
-					electron.copyToClipboard(b64);
+					await electron.copyToClipboard(b64);
 
 					$status.classList.remove("hidden", "error", "info");
 					$status.classList.add("success");

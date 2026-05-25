@@ -1288,10 +1288,7 @@ app.whenReady().then(async () => {
 
     ipcMain.on("open-external", (event, url) => Security.openExternal(url));
 
-    ipcMain.handle("get-language", async () => __servers__.find(server => server.host === glob.server) ?? __servers__[0]);
-
     ipcMain.handle("get-oauth-version", async () => MediaWikiOAuth2.CLIENT);
-    ipcMain.handle("get-account", async () => glob.account);
     ipcMain.handle("get-accounts", async () => [
         glob.rememberAccounts,
         Object.entries(glob.accounts).map(([ username, account ]) => ({
@@ -1386,7 +1383,6 @@ app.whenReady().then(async () => {
     });
 
     ipcMain.on("copy-to-clipboard", (event, text) => clipboard.writeText(text));
-    ipcMain.handle("get-clipboard-text", async () => clipboard.readText());
 
     ipcMain.on("log", (event, message, level) => Logger[level ?? "info"]?.(message));
     ipcMain.on("error", (event, message, detail) => dialog.showErrorBox(message, detail?.toString() ?? "No additional details provided."));
@@ -1573,11 +1569,6 @@ app.whenReady().then(async () => {
         const senderWindow = BrowserWindow.fromWebContents(event.sender);
         if (senderWindow && !senderWindow.isDestroyed())
             senderWindow.close();
-    });
-
-    ipcMain.on("quit", () => {
-        glob.quitting = true;
-        app.quit();
     });
 
     BuildTray();

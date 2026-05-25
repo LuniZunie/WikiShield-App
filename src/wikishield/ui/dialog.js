@@ -14,7 +14,7 @@ export class Dialog {
         addEventListener("focus", () => {
             if (this.popups.length > 0) {
                 this.popups.forEach(popupId => electron.closePopup(popupId));
-                this.popups = [];
+                this.popups = [ ];
 
                 requestAnimationFrame(() => {
                     if (this.popups.length === 0)

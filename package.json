@@ -22,7 +22,11 @@
     "publish": "node scripts/publish-release.js",
     "publish:win": "electron-builder --win --publish always",
     "publish:mac": "electron-builder --mac --publish always",
-    "publish:linux": "electron-builder --linux --publish always"
+    "publish:linux": "electron-builder --linux --publish always",
+
+    "build": "webpack --mode production",
+    "build:dev": "webpack serve --mode development",
+    "build:readable": "cross-env READABLE=true webpack --mode production"
   },
   "keywords": [
     "Electron",

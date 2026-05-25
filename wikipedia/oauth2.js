@@ -169,7 +169,7 @@ class Throttle {
     }
 }
 
-module.exports.MediaWikiOAuth2 = class MediaWikiOAuth2 {
+class MediaWikiOAuth2 {
     static get CLIENT() { return "381204bcce0506b309d1974167e399ac"; }
     // it actually does not matter that this is public, see https://phabricator.wikimedia.org/T323855, since the client is not confidential, we can ship the secret
     static get SECRET() { return "7b188b6e0d0d326e9aa668ef9630409ec4f3981d"; }
@@ -308,3 +308,5 @@ module.exports.MediaWikiOAuth2 = class MediaWikiOAuth2 {
         }, bypass);
     }
 }
+
+module.exports = { MediaWikiOAuth2 };

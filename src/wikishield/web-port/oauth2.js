@@ -31,7 +31,7 @@ class Throttle {
     }
 }
 
-module.exports.MediaWikiOAuth2 = class MediaWikiOAuth2 {
+export class MediaWikiOAuth2 {
     constructor(userAgent) {
         this.userAgent = userAgent;
 

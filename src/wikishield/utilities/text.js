@@ -9,7 +9,7 @@ class Case {
     static Split = Symbol("split,case");
 }
 
-module.exports.Text = class Text {
+export class Text {
     static pluralize(word, n, plural) {
         return new Text(word).plural(plural).get(n);
     }

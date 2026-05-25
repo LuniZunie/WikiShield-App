@@ -1,18 +1,85 @@
+import { MediaWikiAPI } from "./web-port/api.js";
+
 if (window.electron === undefined) {
     window.isElectron = false;
 
     window.electron = {
+        mwapiLoader: () => {
+            window.dispatchEvent(new CustomEvent("mwapi-loaded", {
+                detail: {
+                    server: window.location.host,
+                    username: mw.user.getName(),
+                    pendingChangesServers: MediaWikiAPI.pendingChangesServer,
+                    dev: false,
+                }
+            }));
+        },
+        mwapiLoaded: callback => window.addEventListener("mwapi-loaded", event => {
+            const { server, username, pendingChangesServers, dev } = event.detail;
+            callback(server, username, pendingChangesServers, dev);
+        }),
+        mwapi: () => Promise.reject(new Error("Not running in Electron environment")),
+
+        menuEnabler: () => { },
+
+        setBadgeCount: () => { },
+        sendNotification: () => Promise.reject(new Error("Not running in Electron environment")),
         localStorage: {
             get: key => localStorage.getItem(key),
             set: (key, value) => localStorage.setItem(key, value),
             delete: key => localStorage.removeItem(key),
         },
 
-        menuEnabler: () => {},
-        mwapiLoader: () => Promise.resolve(),
-        mwapiLoaded: () => {},
-        mwapi: () => Promise.reject(new Error("Not running in Electron environment")),
-        eventstream: () => {},
+        copyToClipboard: async text => {
+            if (navigator.clipboard && navigator.clipboard.writeText)
+                await navigator.clipboard.writeText(text);
+            else {
+                const $textarea = document.createElement("textarea");
+                $textarea.value = text;
+
+                document.body.appendChild($textarea);
+                $textarea.select();
+
+                document.execCommand("copy");
+
+                document.body.removeChild($textarea);
+            }
+
+            return;
+        },
+
+        log: message => console.debug(message),
+        info: message => console.info(message),
+        warn: message => console.warn(message),
+        error: message => console.error(message),
+        errorbox: (message, detail) => alert(`${message}\n\n${detail}`),
+
+        closePopup: popup => popup.close(),
+        openExternal: url => window.open(url, "_blank"),
+        openInBrowser: async url => {
+            const w = window.screen.availWidth * .8, h = window.screen.availHeight * .8;
+            const x = window.screenX + (window.outerWidth - w) / 2, y = window.screenY + (window.outerHeight - h) / 2;
+
+            const popup = window.open(url, "myPopup", `width=${w},height=${h},left=${x},top=${y},resizable=false,scrollbars=true,menubar=false,toolbar=false,location=false,status=false`);
+            popup.focus();
+
+            popup.addEventListener("beforeunload", () => {
+                if (popup.closed)
+                    window.dispatchEvent(new CustomEvent("popup-closed", { detail: popup }));
+            });
+
+            return popup;
+        },
+        onPopupClosed: callback => window.addEventListener("popup-closed", event => callback(event.detail)),
+
+        onBeforeunload: () => { },
+        unloaded: () => { },
+        saveAccount: () => { },
+
+        disable: (title, message) => {
+            alert(`${title}\n\n${message}`);
+            location.reload();
+        }
     };
 } else
     window.isElectron = true;

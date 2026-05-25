@@ -1,9 +1,13 @@
 const serversWithPendingChanges = new Set([ ]);
 
-const { truncate } = require("../../../global/truncate/script.com.js");
+import { truncate } from "../../../global/truncate/script.esm.js";
 
+import { MediaWikiAPI } from "../web-port/api.js";
+import { MediaWikiOAuth2 } from "../web-port/oauth2.js";
+
+let API;
 if (window.isElectron) {
-    module.exports.API = class API {
+    API = class API {
         static chunk(array, size = 50) {
             const chunks = [ ];
             const len = array.length;
@@ -275,5 +279,24 @@ if (window.isElectron) {
         }
     }
 } else {
+    API = class API extends MediaWikiAPI {
+        #ws = null;
 
+        get hasPendingChanges() {
+            return serversWithPendingChanges.has(this.server);
+        }
+
+        constructor(ws, server, username, pendingChangesServers) {
+            super(ws, new MediaWikiOAuth2(`WikiShield/${electron.getVersion()} (${server}; ${username})`), server, username);
+
+            this.#ws = ws;
+            this.server = server;
+            this.username = username;
+
+            for (const pcServer of pendingChangesServers)
+                serversWithPendingChanges.add(pcServer);
+        }
+    }
 }
+
+export { API };

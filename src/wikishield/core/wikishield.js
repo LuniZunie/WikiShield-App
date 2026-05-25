@@ -435,8 +435,18 @@ export class WikiShield {
 	async save() {
 		this.backup();
 
-		const data = this.export();
-		electron.saveAccount(this.api.username, `${Date.now()};${data}`);
+		const data = `${Date.now()};${this.export()}`, username = this.api.username;
+		if (window.isFinite)
+			electron.saveAccount(username, data);
+		else {
+			try {
+				const result = await this.api.postWithToken({ action: "options", optionname: "userjs-wikishield-storage", optionvalue: data });
+				if (result?.options === "success")
+					console.debug(`[WikiShield] Successfully saved account data for ${username}.`);
+				else
+					console.error(`[WikiShield] Failed to save account data for ${username}:`, result);
+			} catch (err) { console.error(`[WikiShield] Failed to save account data for ${username}:`, err); }
+		}
 	}
 
 	async load() {
