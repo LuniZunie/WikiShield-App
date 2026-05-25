@@ -19,3 +19,25 @@ if (packageJson.config?.forge?.packagerConfig) {
 fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`, "utf8");
 
 console.log(`Updated all version fields to ${version}`);
+
+// Also update release files in .github to keep templates in sync
+const releaseFiles = [
+    path.join(__dirname, "..", ".github", "RELEASE_NOTES.md"),
+];
+
+releaseFiles.forEach((filePath) => {
+    try {
+        if (!fs.existsSync(filePath)) return;
+        let content = fs.readFileSync(filePath, "utf8");
+
+        // Replace occurrences like v1.2.3 or 1.2.3 with the new version
+        content = content.replace(/v?\d+\.\d+\.\d+/g, (match) => {
+            return match.startsWith("v") ? `v${version}` : version;
+        });
+
+        fs.writeFileSync(filePath, content, "utf8");
+        console.log(`Updated version strings in ${filePath}`);
+    } catch (err) {
+        console.error(`Failed to update ${filePath}:`, err);
+    }
+});

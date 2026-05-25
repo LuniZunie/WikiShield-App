@@ -1,23 +1,24 @@
 ## Installation
 
 ### Windows
-- **Recommended**: [WikiShield-Setup-2.0.0.exe](https://github.com/LuniZunie/WikiShield-App/releases/download/v2.0.0/WikiShield-Setup-2.0.0.exe)
-  - Full installer with auto-update support
-  - Creates desktop and start menu shortcuts
+- **Download**: [WikiShield-2.0.0-windows](https://github.com/LuniZunie/WikiShield-App/releases/download/v2.0.0/dist-windows-latest.zip)
+  - Unzip folder
+  - Run `WikiShield Setup 2.0.0.exe`
 
 ### macOS
-- **Intel Macs**: [WikiShield-2.0.0-mac.zip](https://github.com/LuniZunie/WikiShield-App/releases/download/v2.0.0/WikiShield-2.0.0-mac.zip)
-- **Apple Silicon (M1/M2/M3)**: [WikiShield-2.0.0-arm64-mac.zip](https://github.com/LuniZunie/WikiShield-App/releases/download/v2.0.0/WikiShield-2.0.0-arm64-mac.zip)
-- **DMG Installer (Intel)**: [WikiShield-2.0.0.dmg](https://github.com/LuniZunie/WikiShield-App/releases/download/v2.0.0/WikiShield-2.0.0.dmg)
-- **DMG Installer (Apple Silicon)**: [WikiShield-2.0.0-arm64.dmg](https://github.com/LuniZunie/WikiShield-App/releases/download/v2.0.0/WikiShield-2.0.0-arm64.dmg)
+- **Download**: [WikiShield-2.0.0-macOS](https://github.com/LuniZunie/WikiShield-App/releases/download/v2.0.0/dist-macos-latest.zip)
+  - Unzip folder
+  - Run the appropriate installer for your Mac (Intel or Apple Silicon)
+    - **Intel**: `WikiShield-2.0.0.dmg`
+    - **Apple Silicon**: `WikiShield-2.0.0-arm64.dmg`
 
 ### Linux
-- **Universal (Recommended)**: [WikiShield-2.0.0.AppImage](https://github.com/LuniZunie/WikiShield-App/releases/download/v2.0.0/WikiShield-2.0.0.AppImage)
-  - Works on all Linux distributions
-  - Just download, make executable, and run
-- **Debian/Ubuntu**: [WikiShield_2.0.0_amd64.deb](https://github.com/LuniZunie/WikiShield-App/releases/download/v2.0.0/WikiShield_2.0.0_amd64.deb)
-- **Fedora/RHEL/CentOS**: [WikiShield-2.0.0.x86_64.rpm](https://github.com/LuniZunie/WikiShield-App/releases/download/v2.0.0/WikiShield-2.0.0.x86_64.rpm)
-
+- **Download**: [WikiShield-2.0.0-linux](https://github.com/LuniZunie/WikiShield-App/releases/download/v2.0.0/dist-ubuntu-latest.zip)
+  - Unzip folder
+  - Run the appropriate installer for your Linux distribution
+    - **Universal**: `WikiShield-2.0.0.AppImage` (works on all distributions)
+    - **Debian/Ubuntu/Linux Mint**: `WikiShield_2.0.0_amd64.deb`
+    - **Fedora/RHEL/CentOS**: `WikiShield-2.0.0.x86_64.rpm`
 ---
 
 ## Auto-Updates
