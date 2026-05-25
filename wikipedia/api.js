@@ -11,7 +11,7 @@ const __servers__ = require("../servers.js");
 const __tags__ = new Set(__servers__.filter(s => s.tag).map(s => s.host));
 const __pendingChanges__ = new Set(__servers__.filter(s => s.pending_changes).map(s => s.host));
 
-module.exports.MediaWikiAPI = class MediaWikiAPI {
+class MediaWikiAPI {
     static cache = { };
 
     static get pendingChangesServers() {

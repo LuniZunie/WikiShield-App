@@ -14,8 +14,7 @@ import { BuildPalette } from "../utilities/build-palette.js";
 import { AutoScroll } from "./auto-scroll.js";
 
 export class GUI {
-	static palettes = {
-		traffic: BuildPalette(1000, "#78c675", "#fdff7a", "#fcff54", "#fbff12", "#ffc619", "#ff8812", "#f56214", "#f73214", "#fc0303", "#fc0303"),
+	BuildPalette(1000, "#78c675", "#fdff7a", "#fcff54", "#fbff12", "#ffc619", "#ff8812", "#f56214", "#f73214", "#fc0303", "#fc0303"),
 		magma: BuildPalette(1000, "#000004", "#1b0c41", "#4a0c6b", "#781c6d", "#a52c60", "#cf4446", "#ed6925", "#fb9b06", "#f7d13d", "#fcffa4"),
 		plasma: BuildPalette(1000, "#0d0887", "#46039f", "#7201a8", "#9c179e", "#bd3786", "#d8576b", "#ed7953", "#fb9f3a", "#fdca26", "#f0f921"),
 		viridis: BuildPalette(1000, "#440154", "#3b528b", "#21918c", "#5ec962", "#fde725"),
