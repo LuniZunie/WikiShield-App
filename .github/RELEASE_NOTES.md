@@ -22,19 +22,3 @@
 
 ## Auto-Updates
 All installers support automatic updates. The app will check for new versions and notify you when an update is available.
-
-## What's New
-<!-- Add release notes here -->
-
----
-
-<details>
-<summary>Technical Files (for auto-update system)</summary>
-
-The following files are used by the auto-updater and don't need to be downloaded manually:
-- `latest.yml` - Windows update manifest
-- `latest-mac.yml` - macOS update manifest
-- `latest-linux.yml` - Linux update manifest
-- `*.blockmap` files - Delta update optimization files
-
-</details>
