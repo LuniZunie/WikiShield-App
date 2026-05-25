@@ -3,14 +3,12 @@
         "target": "ES2017",
         "module": "ESNext",
         "lib": [ "ES2017", "DOM" ],
-        "moduleResolution": "node",
         "allowJs": true,
         "checkJs": false,
         "strict": false,
         "esModuleInterop": true,
         "skipLibCheck": true,
-        "resolveJsonModule": true,
-        "types": [ "jquery" ]
+        "resolveJsonModule": true
     },
     "include": [
         "global/**/*",

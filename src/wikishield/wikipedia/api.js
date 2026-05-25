@@ -287,7 +287,7 @@ if (window.isElectron) {
         }
 
         constructor(ws, server, username, pendingChangesServers) {
-            super(ws, new MediaWikiOAuth2(`WikiShield/${electron.getVersion()} (${server}; ${username})`), server, username);
+            super(ws, new MediaWikiOAuth2(`WikiShield (${server}; ${username})`), server, username);
 
             this.#ws = ws;
             this.server = server;

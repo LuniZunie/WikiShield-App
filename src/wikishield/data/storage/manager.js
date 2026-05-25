@@ -36,6 +36,12 @@ export class StorageManager {
         const logger = new Logger();
 
         let version = data.version ??= 0;
+        if (version > StorageManager.version.number) {
+            window.alert("The storage data is from a newer version of WikiShield. Please update to the latest version so that your data can be loaded correctly.");
+            window.location.reload();
+            return;
+        }
+
         if (StorageManager.versions.has(version)) {
             const expectedVersion = StorageManager.version.number;
             while (version !== expectedVersion) {

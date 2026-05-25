@@ -67,7 +67,7 @@ class Trie {
 	set(...keys) {
         const value = keys.pop();
 
-		let UUID = ((...keys) => {
+		let UUID = ((keys) => {
             const lastKey = keys.pop();
             let scope = this.store;
             for (const key of keys) {
@@ -82,7 +82,7 @@ class Trie {
             }
 
             return scope.get(lastKey)?.UUID;
-        })(...keys);
+        })(keys);
 
         delete this.order[UUID];
 
@@ -169,7 +169,7 @@ class Trie {
         }
     }
 	delete(...keys) {
-        const UUID = ((...keys) => {
+        const UUID = ((keys) => {
             const lastKey = keys.pop();
             let scope = this.store;
             for (const key of keys) {
@@ -184,7 +184,7 @@ class Trie {
             }
 
             return scope.get(lastKey)?.UUID;
-        })(...keys);
+        })(keys);
 
         if (UUID !== undefined)
             this.#deleteByUUID(UUID);

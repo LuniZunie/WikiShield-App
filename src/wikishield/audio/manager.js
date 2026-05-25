@@ -252,7 +252,11 @@ export class AudioManager {
             }
         });
 
-        audio.play();
+        try {
+            audio.play();
+        } catch (err) {
+            audio.reject(err);
+        }
 
         return promise;
     }

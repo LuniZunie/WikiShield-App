@@ -1,5 +1,3 @@
-// <nowiki>
-
 import { run } from "../script.js";
 import { build } from "./build.js";
 
@@ -7,13 +5,22 @@ import { build } from "./build.js";
     "use strict";
 
     function start() {
-        build().then(run).catch(error => {
-            console.error("Error during build:", error);
+        build().then(() => {
+            run();
+
+            window.onpopstate = event => {
+                if (event.state?.page !== "WikiShield") {
+                    window.location.reload();
+                    window.onpopstate = null;
+                }
+            };
+        }).catch(error => {
+            console.error("[WikiShield] Error during build:", error);
             alert("An error occurred while starting WikiShield. Please check the console for details.");
         });
     }
 
-    mw.util.addPortletLink(
+    const $link = mw.util.addPortletLink(
         "p-personal",
         mw.util.getUrl("Wikipedia:WikiShield/run"),
         "Run WikiShield",
@@ -21,12 +28,15 @@ import { build } from "./build.js";
         "WikiShield",
         undefined,
         "#pt-notifications"
-    )?.addEventListener("click", event => {
-        event.preventDefault();
-        history.pushState({ page: "WikiShield" }, "", location.href);
+    );
 
-        start();
-    });
+    if ($link && electron.localStorage.get("WikiShield:OpenExternally") !== "true")
+        $link.addEventListener("click", event => {
+            event.preventDefault();
+            history.pushState({ page: "WikiShield" }, "", location.href);
+
+            start();
+        });
 
     addEventListener("popstate", event => {
         if (event.state?.page === "WikiShield")
@@ -48,5 +58,3 @@ import { build } from "./build.js";
         start();
     }
 }
-
-// </nowiki>

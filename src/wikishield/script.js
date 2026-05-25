@@ -53,11 +53,17 @@ export function run() {
                 const killswitch = new Killswitch(ws);
                 killswitch.on("kill", () => {
                     alert("WikiShield has been temporarily disabled. Please contact the development team for more information.");
-                    window.close();
+                    if (electron.isElectron)
+                        window.close();
+                    else
+                        location.reload();
                 });
                 killswitch.on("force-update", () => {
                     alert("The current version of WikiShield is no longer supported. Please update to the latest version to continue using WikiShield.");
-                    window.close();
+                    if (electron.isElectron)
+                        window.close();
+                    else
+                        location.reload();
                 });
                 killswitch.on("update", () => {
                     electron.sendNotification({
@@ -68,7 +74,10 @@ export function run() {
 
                 killswitch.on("unsafe", () => {
                     alert("Could not verify the integrity of WikiShield. Make sure you are connected to the internet. If the problem persists, please contact the development team.");
-                    window.close();
+                    if (electron.isElectron)
+                        window.close();
+                    else
+                        location.reload();
                 });
                 killswitch.on("okay", async () => {
                     addEventListener("keydown", event => ws.controller(event));
@@ -80,12 +89,18 @@ export function run() {
             }, { once: true });
         } else {
             alert("An error has occurred with the WikiShield storage system that could lead to data loss. For that reason, WikiShield has been automatically disabled. Please report this immediately to the development team.");
-            window.close();
+            if (electron.isElectron)
+                window.close();
+            else
+                location.reload();
         }
     });
     electron.mwapiLoader().catch(err => {
         alert(`An error occurred while loading the WikiShield API:\n\n${err.stack || err}`);
-        window.close();
+        if (electron.isElectron)
+            window.close();
+        else
+            location.reload();
     });
 }
 

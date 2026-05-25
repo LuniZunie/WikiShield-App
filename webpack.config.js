@@ -1,5 +1,34 @@
 const path = require('path');
 const TerserPlugin = require('terser-webpack-plugin');
+const webpack = require('webpack');
+
+class NowikiWrapperPlugin {
+    apply(compiler) {
+        compiler.hooks.thisCompilation.tap('NowikiWrapperPlugin', compilation => {
+            compilation.hooks.processAssets.tap(
+                {
+                    name: 'NowikiWrapperPlugin',
+                    stage: webpack.Compilation.PROCESS_ASSETS_STAGE_REPORT,
+                },
+                assets => {
+                    for (const assetName of Object.keys(assets)) {
+                        if (!assetName.endsWith('.js') || assetName.endsWith('.js.map'))
+                            continue;
+
+                        const asset = compilation.getAsset(assetName);
+                        if (!asset)
+                            continue;
+
+                        compilation.updateAsset(
+                            assetName,
+                            new webpack.sources.ConcatSource('// Code is available at https://github.com/LuniZunie/WikiShield-App\n/*<nowiki>*/', asset.source, '/*</nowiki>*/')
+                        );
+                    }
+                }
+            );
+        });
+    }
+}
 
 module.exports = (env, argv) => {
     const isDev = argv.mode === 'development';
@@ -81,6 +110,9 @@ module.exports = (env, argv) => {
             type: 'filesystem', // Faster rebuilds with disk cache
             cacheDirectory: path.resolve(__dirname, '.webpack-cache'),
         },
+        plugins: [
+            new NowikiWrapperPlugin(),
+        ],
         stats: isDev ? 'minimal' : 'normal',
         watchOptions: {
             ignored: /node_modules/,

@@ -1,0 +1,14 @@
+{
+    "sourceType": "module",
+    "presets": [
+      [
+        "@babel/preset-env",
+        {
+          "targets": {
+            "browsers": ["chrome 60", "firefox 55"]
+          },
+          "modules": "commonjs"
+        }
+      ]
+    ]
+  }

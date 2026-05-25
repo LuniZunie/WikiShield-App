@@ -4,12 +4,12 @@ if (window.electron === undefined) {
     window.isElectron = false;
 
     window.electron = {
-        mwapiLoader: () => {
+        mwapiLoader: async () => {
             window.dispatchEvent(new CustomEvent("mwapi-loaded", {
                 detail: {
                     server: window.location.host,
                     username: mw.user.getName(),
-                    pendingChangesServers: MediaWikiAPI.pendingChangesServer,
+                    pendingChangesServers: MediaWikiAPI.pendingChangesServers,
                     dev: false,
                 }
             }));
@@ -53,6 +53,11 @@ if (window.electron === undefined) {
         warn: message => console.warn(message),
         error: message => console.error(message),
         errorbox: (message, detail) => alert(`${message}\n\n${detail}`),
+
+        onOpenBrowser: () => { },
+        onOpenUrl: () => { },
+        onOpenNotification: () => { },
+        onOpenChangelog: () => { },
 
         closePopup: popup => popup.close(),
         openExternal: url => window.open(url, "_blank"),

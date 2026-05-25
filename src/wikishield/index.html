@@ -537,6 +537,14 @@
                     </div>
                     <div class="settings-right">
                         <div class="general hidden">
+                            <div class="settings-section" data-electron="false">
+                                <div class="settings-section-title">Launch behavior</div>
+                                <div class="settings-section-desc">Choose whether WikiShield should open inthe current tabor a new tab when launched.</div>
+                                <div id="settings-launch-behavior" class="settings-radio-group">
+                                    <div class="settings-radio-option selected" data-value="current_page">Run on current page</div>
+                                    <div class="settings-radio-option" data-value="new_page">Run on <a href="https://en.wikipedia.org/wiki/Wikipedia:WikiShield/run">/Run</a> page</div>
+                                </div>
+                            </div>
                             <div class="settings-compact-grid">
                                 <div class="settings-section compact">
                                     <div class="settings-section-title">Maximum edit count</div>
@@ -680,14 +688,6 @@
                         </div>
 
                         <div class="app hidden">
-                            <div class="settings-section" data-electron="false">
-                                <div class="settings-section-title">Launch behavior</div>
-                                <div class="settings-section-desc">Choose whether WikiShield should open inthe current tabor a new tab when launched.</div>
-                                <div id="settings-launch-behavior" class="settings-radio-group">
-                                    <div class="settings-radio-option selected" data-value="current_tab">Open in current tab</div>
-                                    <div class="settings-radio-option" data-value="new_tab">Open in new tab</div>
-                                </div>
-                            </div>
                             <!-- <div class="settings-section">
                                 <div class="settings-section-title">App theme</div>
                                 <div class="settings-section-desc">Choose between light mode, dark mode, or automatic switching based on system settings.</div>

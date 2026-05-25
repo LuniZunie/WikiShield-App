@@ -1,6 +1,6 @@
 {
   "name": "WikiShield",
-  "version": "1.0.11",
+  "version": "2.0.0",
   "description": "WikiShield is an anti-vandalism tool for Wikipedia.",
   "main": "index.js",
   "repository": {
@@ -17,14 +17,12 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "test": "electron . --trace-warnings",
-    "build": "electron-builder --publish never",
+    "build": "webpack --mode production",
     "version": "node scripts/sync-version.js",
     "publish": "node scripts/publish-release.js",
     "publish:win": "electron-builder --win --publish always",
     "publish:mac": "electron-builder --mac --publish always",
     "publish:linux": "electron-builder --linux --publish always",
-
-    "build": "webpack --mode production",
     "build:dev": "webpack serve --mode development",
     "build:readable": "cross-env READABLE=true webpack --mode production"
   },
@@ -49,14 +47,20 @@
     "electron": "^39.2.7",
     "electron-builder": "^26.0.12",
     "electron-icon-builder": "^2.0.1",
-    "electron-winstaller": "^5.4.0"
+    "electron-winstaller": "^5.4.0",
+    "webpack-cli": "^7.0.2"
   },
   "dependencies": {
+    "@babel/core": "^7.29.7",
+    "@babel/preset-env": "^7.29.7",
+    "babel-loader": "^10.1.1",
+    "cross-env": "^10.1.0",
     "discord-rpc": "^4.0.1",
     "electron-log": "^5.4.3",
     "electron-squirrel-startup": "^1.0.1",
     "electron-store": "^8.2.0",
-    "electron-updater": "^6.6.2"
+    "electron-updater": "^6.6.2",
+    "webpack": "^5.107.2"
   },
   "config": {
     "forge": {
@@ -69,11 +73,11 @@
           "CompanyName": "WikiShield Team",
           "FileDescription": "WikiShield Application",
           "ProductName": "WikiShield",
-          "FileVersion": "1.0.11",
-          "ProductVersion": "1.0.11"
+          "FileVersion": "2.0.0",
+          "ProductVersion": "2.0.0"
         },
-        "appVersion": "1.0.11",
-        "buildVersion": "1.0.11"
+        "appVersion": "2.0.0",
+        "buildVersion": "2.0.0"
       },
       "makers": [
         {

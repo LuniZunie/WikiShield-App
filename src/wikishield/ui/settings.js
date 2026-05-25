@@ -12,6 +12,7 @@ import { Text } from "../utilities/text.js";
 import { GUI } from "./gui.js";
 
 // TODO make watching, whitelisting, and highlighting require times as a param
+// TODO update control scripts (repeating scripts for each one individually, different triggers, etc.)
 
 const formatTime = ms => {
 	const seconds = Math.floor(ms / 1000);
@@ -208,6 +209,27 @@ export class Settings {
 		document.querySelector("#settings-about-button").addEventListener("click", this.about.bind(this));
 
 		{
+			if (!window.isElectron) {
+				const $launch = document.querySelector("#settings-launch-behavior");
+
+				document.querySelectorAll("#settings-launch-behavior .selected").forEach($el => $el.classList.remove("selected"));
+				document.querySelector(`#settings-launch-behavior [data-value=${electron.localStorage.get("WikiShield:OpenExternally") === "true" ? "new_page" : "current_page"}]`).classList.add("selected");
+
+				const $current = $launch.querySelector("[data-value=current_page]");
+				$current.addEventListener("click", () => {
+					$launch.querySelectorAll(".selected").forEach($el => $el.classList.remove("selected"));
+					$current.classList.add("selected");
+					electron.localStorage.set("WikiShield:OpenExternally", false);
+				});
+
+				const $new = $launch.querySelector("[data-value=new_page]");
+				$new.addEventListener("click", () => {
+					$launch.querySelectorAll(".selected").forEach($el => $el.classList.remove("selected"));
+					$new.classList.add("selected");
+					electron.localStorage.set("WikiShield:OpenExternally", true);
+				});
+			}
+
 			const $slider = document.querySelector("#settings-ores-bias");
 
 			const $track = $slider.querySelector(".settings-slider-track");
@@ -493,27 +515,6 @@ export class Settings {
 					$dark.classList.add("selected");
 					this.ws.store.UI.theme.app = "dark";
 					document.documentElement.style.colorScheme = "only dark";
-				});
-			}
-
-			if (!window.isElectron) {
-				const $launch = document.querySelector("#settings-launch-behavior");
-
-				document.querySelectorAll("#settings-launch-behavior .selected").forEach($el => $el.classList.remove("selected"));
-				document.querySelector(`#settings-launch-behavior [data-value=${electron.localStorage.get("WikiShield:OpenExternally") ? "new_tab" : "current_tab"}]`).classList.add("selected");
-
-				const $current = $launch.querySelector("[data-value=current_tab]");
-				$current.addEventListener("click", () => {
-					$launch.querySelectorAll(".selected").forEach($el => $el.classList.remove("selected"));
-					$current.classList.add("selected");
-					electron.localStorage.set("WikiShield:OpenExternally", false);
-				});
-
-				const $new = $launch.querySelector("[data-value=new_tab]");
-				$new.addEventListener("click", () => {
-					$launch.querySelectorAll(".selected").forEach($el => $el.classList.remove("selected"));
-					$new.classList.add("selected");
-					electron.localStorage.set("WikiShield:OpenExternally", true);
 				});
 			}
 
