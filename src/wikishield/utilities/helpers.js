@@ -1,6 +1,6 @@
-import { truncate } from "../../../global/truncate/script.esm.js";
+const { truncate } = require("../../../global/truncate/script.com.js");
 
-export const expiryRegex = /(infinity|^((?<years>[0-9]+)Y)?((?<months>[0-9]+)M)?((?<weeks>[0-9]+)W)?((?<days>[0-9]+)D)?((?<hours>[0-9]+)h)?((?<minutes>[0-9]+)m)?((?<seconds>[0-9]+)s)?)$/;
+module.exports.expiryRegex = /(infinity|^((?<years>[0-9]+)Y)?((?<months>[0-9]+)M)?((?<weeks>[0-9]+)W)?((?<days>[0-9]+)D)?((?<hours>[0-9]+)h)?((?<minutes>[0-9]+)m)?((?<seconds>[0-9]+)s)?)$/;
 
 function hasApproxSubstring(needle, haystack, k) {
 	const n = needle.length;
@@ -40,7 +40,7 @@ function hasApproxSubstring(needle, haystack, k) {
 	return false;
 }
 
-export class Utility {
+module.exports.Utility = class Utility {
 	constructor(ws) {
 		this.ws = ws;
 	}

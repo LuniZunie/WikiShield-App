@@ -53,7 +53,7 @@
             <div id="container">
                 <div id="queue">
                     <div id="queue-top">
-                        <div id="queue-top-left">
+                        <div id="queue-top-left" class="queue-button-cluster" data-zen-show="alerts,messages">
                             <span class="fa fa-bell" id="alerts-icon" data-tooltip="Alerts" data-zen-show="alerts">
                                 <span id="alerts-count" class="icon-count hidden red" data-zen-show="badges"></span>
                             </span>
@@ -61,8 +61,13 @@
                                 <span id="messages-count" class="icon-count hidden blue" data-zen-show="badges"></span>
                             </span>
                         </div>
-                        <div id="queue-top-right">
-                            <span class="fa fa-trash" id="clear-queue" data-tooltip="Clear queue"></span>
+                        <div id="DEFCON">
+                            <div class="dot"></div>
+                            <span><span class="DEFCON-RPM">0</span> RPM</span>
+                        </div>
+                        <div id="queue-top-right" class="queue-button-cluster">
+                            <span class="fa fa-envelope" id="email-button" data-tooltip="Email Emergency, ArbCom, or Oversight" data-multiple-hrefs="email" href></span>
+                            <span class="fa fa-gear" id="settings-icon" data-tooltip="Settings"></span>
                         </div>
                     </div>
                     <div id="queue-tabs">
@@ -98,6 +103,9 @@
                         </div>
                     </div>
                     <div class="width-adjust" id="queue-width-adjust"></div>
+                    <div id="clear-queue">
+                        <span class="fa fa-trash"></span>
+                    </div>
                 </div>
                 <div id="alerts-panel" class="notification-panel">
                     <div id="alerts-header" class="notification-header">
@@ -119,6 +127,12 @@
                             <div id="edit-details">
                                 <div class="central">Nothing selected</div>
                             </div>
+                            <div id="previous-item-button" class="nav-item-button">
+                                <i class="fas fa-chevron-left"></i>
+                            </div>
+                            <div id="next-item-button" class="nav-item-button">
+                                <i class="fas fa-chevron-right"></i>
+                            </div>
                             <div id="ai-analysis-container" class="hidden shimmer shimmer-border">
                                 <div class="header">
                                     <i class="fas fa-robot"></i>
@@ -129,7 +143,13 @@
                                 <div class="explanation"></div>
                                 <div class="issues"></div>
                             </div>
+                            <div id="diff-scroll-up" class="diff-scroll-button hidden">
+                                <i class="fas fa-chevron-up"></i>
+                            </div>
                             <div id="diff-container"></div>
+                            <div id="diff-scroll-down" class="diff-scroll-button hidden">
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
                             <div id="pending-changes-container" class="hidden">
                                 <div class="accept">Accept</div>
                                 <div class="reject">Reject</div>
@@ -195,29 +215,39 @@
 
                                 <div class="icons"></div>
                             </div>
-                            <div id="user-contribs" class="right-detail" data-queue-type="edit,logevent,abuselog">
-                                <div id="user-contribs-top" class="right-detail-top">
-                                    <div class="right-detail-left">
-                                        <div id="user-contribs-title" class="right-detail-title">User Contributions</div>
-                                        <div id="user-contribs-count" class="hidden">_ edits</div>
-                                    </div>
-                                    <div class="indicators">
-                                        <div id="user-block-count" class="hidden"></div>
-                                        <div id="user-warn-level" data-tooltip="Warning level" class="hidden">0</div>
+
+                            <div id="user-contributions" class="section" data-queue-type="edit,logevent,abuselog">
+                                <div class="header">
+                                    <div class="title"><i id="refresh-user-contributions" class="fas fa-rotate"></i> Contributions</div>
+                                    <div class="pills">
+
                                     </div>
                                 </div>
-                                <div id="user-contribs-content" class="queue-list"></div>
-                            </div>
-                            <div id="page-history" class="right-detail" data-queue-type="edit,abuselog">
-                                <div id="page-history-top" class="right-detail-top">
-                                    <div class="right-detail-left">
-                                        <div id="page-history-title" class="right-detail-title">Page History</div>
-                                        <div id="page-metadata"></div>
-                                    </div>
-                                    <div id="protection-indicator"></div>
+                                <div class="queue-list">
+
                                 </div>
-                                <div id="page-history-content" class="queue-list"></div>
+                                <div class="footer">
+                                    <span>View all contributions</span>
+                                    <i class="fas fa-arrow-right"></i>
+                                </div>
                             </div>
+
+                            <div id="page-history" class="section"  data-queue-type="edit,abuselog">
+                                <div class="header">
+                                    <div class="title"><i id="refresh-page-history" class="fas fa-rotate"></i> Page History</div>
+                                    <div class="pills">
+
+                                    </div>
+                                </div>
+                                <div class="queue-list">
+
+                                </div>
+                                <div class="footer">
+                                    <span>View full page history</span>
+                                    <i class="fas fa-arrow-right"></i>
+                                </div>
+                            </div>
+
                             <div class="width-adjust" id="details-width-adjust"></div>
                         </div>
                     </div>
@@ -590,6 +620,13 @@
                             <div class="settings-section">
                                 <div class="settings-section-title">Keyboard shortcuts</div>
                                 <div class="settings-section-desc">Customize keyboard shortcuts for various actions in WikiShield.</div>
+                                <div class="settings-section compact inline" id="repeat-control-scripts">
+                                    <div class="settings-section-content">
+                                        <div class="settings-section-title">Repeat control scripts</div>
+                                        <div class="settings-section-desc">Allow control scripts to be triggered repeatedly when holding down keys</div>
+                                    </div>
+                                    <toggle-input id="repeat-control-scripts-toggle" value="true"></toggle-input>
+                                </div>
                                 <button type="button" id="settings-new-control-script" class="add-action-button new-control-script"><span class="fa fa-plus"></span> Add new action</button>
                             </div>
                         </div>
@@ -643,7 +680,15 @@
                         </div>
 
                         <div class="app hidden">
-                            <div class="settings-section">
+                            <div class="settings-section" data-electron="false">
+                                <div class="settings-section-title">Launch behavior</div>
+                                <div class="settings-section-desc">Choose whether WikiShield should open inthe current tabor a new tab when launched.</div>
+                                <div id="settings-launch-behavior" class="settings-radio-group">
+                                    <div class="settings-radio-option selected" data-value="current_tab">Open in current tab</div>
+                                    <div class="settings-radio-option" data-value="new_tab">Open in new tab</div>
+                                </div>
+                            </div>
+                            <!-- <div class="settings-section">
                                 <div class="settings-section-title">App theme</div>
                                 <div class="settings-section-desc">Choose between light mode, dark mode, or automatic switching based on system settings.</div>
                                 <div id="settings-app-theme" class="settings-radio-group">
@@ -651,7 +696,7 @@
                                     <div class="settings-radio-option selected" data-value="auto">Auto</div>
                                     <div class="settings-radio-option" data-value="dark">Dark mode</div>
                                 </div>
-                            </div>
+                            </div> -->
                             <div class="settings-section">
                                 <div class="settings-section-title">Startup animation</div>
                                 <div class="settings-section-desc">Enable or disable the startup animation when launching WikiShield.</div>
@@ -832,20 +877,24 @@
                                 </div>
                             </div>
 
-                            <div class="settings-section" id="ollama-cors-setup">
-                                <div class="settings-section-title">CORS Setup Required</div>
+                            <div class="settings-section" id="ollama-setup">
+                                <div class="settings-section-title">Setup required</div>
                                 <div class="settings-section-desc">
-                                    <strong>Environment Variable:</strong> <code>OLLAMA_ORIGINS</code><br>
-                                    <strong>Value:</strong> <code>https://*.wikipedia.org</code>
-
-                                    <br><br>
-
                                     <details>
                                         <summary><strong>Windows (Permanent)</strong></summary>
                                         <ol class="pad-list">
-                                            <li>Open <em>System Properties → Environment Variables</em></li>
-                                            <li>Create a new variable named <code>OLLAMA_ORIGINS</code></li>
-                                            <li>Set the value to <code>https://*.wikipedia.org</code></li>
+                                            <li>Press <code>Win + R</code>, type <code>sysdm.cpl</code>, and press Enter</li>
+                                            <li>Go to the "Advanced" tab and click on "Environment Variables"</li>
+                                            <li>Create a new variable under "System variables"</li>
+                                            <li>Set the name to <code>OLLAMA_HOST</code> and the value to <code>http://127.0.0.11434</code>
+                                                <ul class="pad-list">
+                                                    <li><strong>NOTE:</strong> You can change the port (11434) if that port is already in use, but make sure to update the "Server URL" setting in WikiShield accordingly</li>
+                                                </ul>
+                                            </li>
+                                            <li>Click "OK" to save the variable</li>
+                                            <li>Create another variable under "System variables"</li>
+                                            <li>Set the name to <code>OLLAMA_ORIGINS</code> and the value to <code>https://*.wikipedia.org</code></li>
+                                            <li>Click "OK" to save the variable, you can now close the Environment Variables and System Properties windows</li>
                                             <li>Restart Ollama</li>
                                         </ol>
                                     </details>
@@ -853,15 +902,17 @@
                                     <details>
                                         <summary><strong>Windows (Temporary)</strong></summary>
                                         <pre>
-                                                $env:OLLAMA_ORIGINS="https://*.wikipedia.org"
-                                        ollama serve
-                                        </pre>
+$env:OLLAMA_HOST="http://127.0.0.11434"
+$env:OLLAMA_ORIGINS="https://*.wikipedia.org"
+ollama serve</pre>
                                     </details>
 
                                     <details>
                                         <summary><strong>macOS / Linux</strong></summary>
                                         Add the following to <code>~/.bashrc</code> or <code>~/.zshrc</code>:
-                                        <pre>export OLLAMA_ORIGINS="https://*.wikipedia.org"</pre>
+                                        <pre>
+export OLLAMA_HOST="http://127.0.0.11434"
+export OLLAMA_ORIGINS="https://*.wikipedia.org"</pre>
                                         Then run:
                                         <pre>source ~/.bashrc && ollama serve</pre>
                                     </details>

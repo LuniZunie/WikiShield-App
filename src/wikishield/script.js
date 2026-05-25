@@ -1,9 +1,12 @@
-import "./elements/manager.js";
+require("./electron.js");
 
-import { WikiShield } from "./core/wikishield.js";
-import { StorageManager } from "./data/storage/manager.js";
 
-import { Killswitch } from "./wikipedia/killswitch.js";
+require("./elements/manager.js");
+
+const { WikiShield } = require("./core/wikishield.js");
+const { StorageManager } = require("./data/storage/manager.js");
+
+const { Killswitch } = require("./wikipedia/killswitch.js");
 
 addEventListener("wheel", event => {
     if (event.target.closest(".no-scroll"))
@@ -18,14 +21,14 @@ addEventListener("wheel", event => {
 
 electron.menuEnabler();
 
-electron.mwapiLoaded(async (server, username, pendingChangesServers) => {
+electron.mwapiLoaded(async (server, username, pendingChangesServers, dev) => {
     if (StorageManager.okay(null, electron)) {
         document.querySelector("#rollback-needed .request-link").href = await fetch("https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q7765871&props=sitelinks/urls&format=json&origin=*")
             .then(res => res.json())
             .then(data => Object.values(data.entities.Q7765871.sitelinks).find(sitelink => sitelink.url.startsWith(`https://${server}/wiki/`))?.url || null)
             .catch(() => null) ?? "https://www.wikidata.org/wiki/Q7765871";
 
-        const ws = new WikiShield(server, username, pendingChangesServers);
+        const ws = new WikiShield(server, username, pendingChangesServers, dev);
         electron.onOpenBrowser(() => ws.open(null, false));
         electron.onOpenUrl(url => ws.open(url, false));
         electron.onOpenNotification(link => {
@@ -50,11 +53,11 @@ electron.mwapiLoaded(async (server, username, pendingChangesServers) => {
             const killswitch = new Killswitch(ws);
             killswitch.on("kill", () => {
                 alert("WikiShield has been temporarily disabled. Please contact the development team for more information.");
-                electron.quit();
+                window.close();
             });
             killswitch.on("force-update", () => {
                 alert("The current version of WikiShield is no longer supported. Please update to the latest version to continue using WikiShield.");
-                electron.quit();
+                window.close();
             });
             killswitch.on("update", () => {
                 electron.sendNotification({
@@ -65,7 +68,7 @@ electron.mwapiLoaded(async (server, username, pendingChangesServers) => {
 
             killswitch.on("unsafe", () => {
                 alert("Could not verify the integrity of WikiShield. Make sure you are connected to the internet. If the problem persists, please contact the development team.");
-                electron.quit();
+                window.close();
             });
             killswitch.on("okay", async () => {
                 addEventListener("keydown", event => ws.controller(event));
@@ -77,10 +80,10 @@ electron.mwapiLoaded(async (server, username, pendingChangesServers) => {
         }, { once: true });
     } else {
         alert("An error has occurred with the WikiShield storage system that could lead to data loss. For that reason, WikiShield has been automatically disabled. Please report this immediately to the development team.");
-        electron.quit();
+        window.close();
     }
 });
 electron.mwapiLoader().catch(err => {
     alert(`An error occurred while loading the WikiShield API:\n\n${err.stack || err}`);
-    electron.quit();
+    window.close();
 });

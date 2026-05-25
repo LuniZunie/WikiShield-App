@@ -407,47 +407,6 @@ function UpdateMenu(options = { }) {
                             disableDiscordRPC();
                     },
                     checked: glob.discordRPC
-                },
-                { type: "separator" },
-                {
-                    label: "Preferences",
-                    click() {
-                        if (glob.windows.main)
-                            glob.windows.main.webContents.send("open-settings");
-                    },
-                    enabled: options?.settings?.preferences ?? false
-                },
-                { type: "separator" },
-                {
-                    label: "Import",
-                    submenu: [
-                        {
-                            label: "From Clipboard",
-                            click() {
-                                if (glob.windows.main)
-                                    glob.windows.main.webContents.send("import-settings-from-clipboard");
-                            }
-                        },
-                        {
-                            label: "From Input",
-                            click() {
-                                if (glob.windows.main)
-                                    glob.windows.main.webContents.send("import-settings-from-input");
-                            }
-                        }
-                    ],
-                },
-                {
-                    label: "Export",
-                    submenu: [
-                        {
-                            label: "To Clipboard",
-                            click() {
-                                if (glob.windows.main)
-                                    glob.windows.main.webContents.send("export-settings-to-clipboard");
-                            }
-                        }
-                    ],
                 }
             ]
         },
@@ -577,26 +536,6 @@ function UpdateMenu(options = { }) {
                             glob.windows.main.webContents.send("open-url", `https://${glob.server}/wiki/Special:MyContributions`);
                     }
                 },
-            ],
-            enabled: options?.browser ?? false
-        },
-        {
-            label: "Email",
-            submenu: [
-                {
-                    label: "Email oversight",
-                    click() {
-                        if (glob.windows.main)
-                            glob.windows.main.webContents.send("open-url", `https://en.wikipedia.org/wiki/Special:EmailUser/Oversight`);
-                    }
-                },
-                {
-                    label: "Email emergency",
-                    click() {
-                        if (glob.windows.main)
-                            glob.windows.main.webContents.send("open-url", `https://en.wikipedia.org/wiki/Special:EmailUser/Emergency`);
-                    }
-                }
             ],
             enabled: options?.browser ?? false
         },
@@ -1452,11 +1391,11 @@ app.whenReady().then(async () => {
     ipcMain.on("log", (event, message, level) => Logger[level ?? "info"]?.(message));
     ipcMain.on("error", (event, message, detail) => dialog.showErrorBox(message, detail?.toString() ?? "No additional details provided."));
     ipcMain.handle("send-notification", async (event, options, url) => void(NotificationHandler.send(options, url)));
-    ipcMain.handle("local-storage", async (event, action, key, value) => {
+    ipcMain.on("local-storage", (event, action, key, value) => {
         switch (action) {
-            case "get": return store.get(key);
-            case "set": return store.set(key, value);
-            case "delete": return store.delete(key);
+            case "get": event.returnValue = store.get(key); break;
+            case "set": event.returnValue = store.set(key, value); break;
+            case "delete": event.returnValue = store.delete(key); break;
             default: throw new Error("Invalid local storage action");
         }
     });
@@ -1508,7 +1447,7 @@ app.whenReady().then(async () => {
         try {
             if (await CreateAPI(username)) {
                 if (glob.windows.main)
-                    glob.windows.main.webContents.send("mwapi-loaded", glob.server, username, MediaWikiAPI.pendingChangesServers);
+                    glob.windows.main.webContents.send("mwapi-loaded", glob.server, username, MediaWikiAPI.pendingChangesServers, __dev__);
             } else {
                 if (glob.windows.main)
                     glob.windows.main.close();
@@ -1639,19 +1578,6 @@ app.whenReady().then(async () => {
     ipcMain.on("quit", () => {
         glob.quitting = true;
         app.quit();
-    });
-
-    globalShortcut.register("escape", () => {
-        if (glob.windows.signin?.isFocused()) {
-            glob.windows.signin.close();
-            glob.windows.signin = null;
-        } else if (glob.windows.authorize?.isFocused()) {
-            glob.windows.authorize.close();
-            glob.windows.authorize = null;
-        } else if (glob.windows.translation?.isFocused()) {
-            glob.windows.translation.close();
-            glob.windows.translation = null;
-        }
     });
 
     BuildTray();

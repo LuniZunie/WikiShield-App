@@ -1,4 +1,4 @@
-export function sortDependencies(items) {
+module.exports.sortDependencies = function sortDependencies(items) {
     const map = new Map(items.map(item => [ item.id, item ]));
 
     const visited = new Set();

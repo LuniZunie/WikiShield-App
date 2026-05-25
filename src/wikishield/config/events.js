@@ -38,6 +38,35 @@ export const events = {
         }
     },
 
+    "next-queue": {
+        title: "Go to next queue",
+        icon: "fas fa-forward",
+
+        script: (ws, item, params) => {
+            const queues = Queue.types.map(type => ({ name: type, ...ws.store.settings.queue[type] }));
+            queues.sort((a, b) => a.order - b.order);
+
+            const index = queues.findIndex(queue => queue.name === ws.queue.current.type);
+            ws.queue.switch(queues[(index + 1) % queues.length].name);
+
+            return { valid: true };
+        }
+    },
+    "previous-queue": {
+        title: "Go to previous queue",
+        icon: "fas fa-forward",
+
+        script: (ws, item, params) => {
+            const queues = Queue.types.map(type => ({ name: type, ...ws.store.settings.queue[type] }));
+            queues.sort((a, b) => a.order - b.order);
+
+            const index = queues.findIndex(queue => queue.name === ws.queue.current.type);
+            ws.queue.switch(queues[(index - 1 + queues.length) % queues.length].name);
+
+            return { valid: true };
+        }
+    },
+
     "accept-pending-edit": {
         title: "Accept pending edit",
         icon: "fas fa-check",
@@ -352,10 +381,168 @@ export const events = {
                             return { valid: false, reason: "User cannot be reported because they are blocked." };
 
                         return await ws.api.append(WikiShield.config.pages.AIV, null, fullTrim(`
-                            * {{vandal|${item.user.name}}} &ndash; ${params.reason}${params.summary ? `: ${params.summary}` : ""} ~~~~
+                            * {{vandal|${item.user.name}}} &ndash; Vandalism past final warning ~~~~
                         `), ws.api.summary(`Reporting ${ws.api.user(item.user.name)}`), page => {
+                            const content = ws.util.getPageSections(page).find(section => section.title === "User-reported")?.content;
                             return {
-                                valid: !ws.util.getPageSections(page).find(section => section.title === "User-reported")?.content.includes(`{{vandal|${item.user.name}}`),
+                                valid: !(content?.includes(`{{vandal|${item.user.name}}`) || content?.includes(`{{IPVandal|${item.user.name}}`)),
+                                reason: "User has already been reported to AIV."
+                            };
+                        });
+                    })();
+
+                    if (!report.valid)
+                        return { valid: true }; // invalid but everything worked so no need to throw an error
+                    else {
+                        ws.store.statistics.reports_filed.total++;
+                        ws.store.statistics.reports_filed.AIV++;
+                    }
+                }
+
+            return { valid: true };
+        }
+    },
+    "warn-and-report": {
+        title: "Auto warn/report",
+        icon: "fas fa-exclamation-triangle",
+
+        parameters: (ws, item) => [
+            {
+                id: "warning",
+                title: "Warning template",
+
+                type: "choice",
+                options: Object.keys(warningsLookup),
+                default: Object.keys(warningsLookup)[0],
+            }
+        ],
+
+        progress: "Warning user",
+        valid: (ws, item, params) => {
+            if (!item)
+                return { valid: false, reason: "User can only be warned when an item is selected." };
+            return { valid: true };
+        },
+        script: async (ws, item, params) => {
+            const warning = getWarningFromLookup(params.warning);
+
+            await ws.gui.settings.waitForClose();
+            if (
+                (item.user.name === ws.api.username && await ws.gui.dialog.confirm(
+                    "Warning yourself",
+                    `You are about to warn yourself. Are you sure you want to proceed?`
+                ) === false) ||
+                (ws.store.whitelist.users.has(item.user.name) && await ws.gui.dialog.confirm(
+                    "User is whitelisted",
+                    `The user <a href="https://${ws.server}/wiki/User:${encodeURIComponent(item.user.name)}" target="_blank">${item.user.name}</a> is whitelisted. Are you sure you want to warn them?`
+                ) === false) ||
+                (ws.store.whitelist.pages.has(item.page.title) && await ws.gui.dialog.confirm(
+                    "Page is whitelisted",
+                    `The page <a href="https://${ws.server}/wiki/${encodeURIComponent(item.page.title)}" target="_blank">${item.page.title}</a> is whitelisted. Are you sure you want to warn the user about the edit on it?`
+                ) === false) ||
+                (item.tags?.some(tag => ws.store.whitelist.tags.has(tag)) && await ws.gui.dialog.confirm(
+                    "Edit is whitelisted",
+                    `This edit has one or more whitelisted tags. Are you sure you want to warn the user about it?`
+                ) === false)
+            )
+                return { valid: false, reason: "Warn cancelled by user." };
+
+            let oldLevel;
+            const warn = await (async () => {
+                const talk = `User talk:${item.user.name}`;
+                const monthSection = ws.util.monthSectionName();
+
+                const content = (await ws.api.getPagesContent([ talk ]))[talk] || "";
+                const sections = ws.util.getPageSections(content);
+
+                let section = "new";
+                const len = sections.length;
+                for (let i = 0; i < len; i++)
+                    if (sections[i].title === monthSection)
+                        section = i + 1;
+
+                let level;
+                oldLevel = ws.queue.getWarningLevel(content);
+                if (typeof warning.auto === "string")
+                    level = warning.auto;
+                else if (typeof warning.auto === "function")
+                    level = warning.auto(item, oldLevel);
+                else
+                    level = warning.auto[oldLevel];
+
+                const template = warning.templates.find(template => template.name === level.toString());
+                if (!template)
+                    return { valid: true }; // no warning to issue, still wanna check for reporting
+
+                let summary = "Message about ";
+                if (Queue.groups[item.type] === "edit") // kinda redundant but whatever
+                    summary += `[[Special:Diff/${item.id}|your edit]] on [[${item.page.title}]]`;
+                else if (item.type === "abuselog") {
+                    if (item.revid)
+                        summary += `[[Special:Diff/${item.revid}|your edit]] on [[${item.page.title}]]`;
+                    else
+                        summary += `[[Special:AbuseLog/${item.id}|your contribution]] on [[${item.page.title}]]`;
+                } else
+                    summary += `[[${item.page.title}]]`;
+
+                let newContent = "";
+                if (section === "new")
+                    newContent = `{{subst:${template.template}|${item.page.title}|${template.generic || ""}}} ~~~~`;
+                else
+                    newContent = `${sections[section - 1].heading}\n${sections[section - 1].content}\n\n{{subst:${template.template}|${item.page.title}|${template.generic || ""}}} ~~~~`;
+
+                const result = await ws.api.editSection(
+                    talk,
+                    section,
+                    monthSection,
+                    newContent,
+                    ws.api.summary(summary, `${warning.name} (${template.name})`)
+                );
+
+                if (result.valid) {
+                    ws.queue.talks.set(item.user.name, true);
+
+                    const levels = [ "0", "1", "2", "3", "4", "4im" ];
+                    if (levels.indexOf(level) > levels.indexOf(item.user.warning || "0"))
+                        ws.queue.warnings.set(item.user.name, level);
+
+                    ws.store.statistics.warnings_issued.total++;
+                    switch (level) {
+                        case "1": {
+                            ws.store.statistics.warnings_issued.level_1++;
+                        } break;
+                        case "2": {
+                            ws.store.statistics.warnings_issued.level_2++;
+                        } break;
+                        case "3": {
+                            ws.store.statistics.warnings_issued.level_3++;
+                        } break;
+                        case "4": {
+                            ws.store.statistics.warnings_issued.level_4++;
+                        } break;
+                        case "4im": {
+                            ws.store.statistics.warnings_issued.level_4im++;
+                        } break;
+                    }
+                }
+
+                return result;
+            })();
+            if (!warn.valid)
+                return warn;
+
+            if (oldLevel === "4" || oldLevel === "4im")
+                if (warning.reportable && ws.store.settings.auto_report.enabled && ws.store.settings.auto_report.for.has(params.warning)) {
+                    const report = await (async () => {
+                        if (await ws.api.areUsersBlocked([ item.user.name ])[item.user.name])
+                            return { valid: false, reason: "User cannot be reported because they are blocked." };
+
+                        return await ws.api.append(WikiShield.config.pages.AIV, null, fullTrim(`
+                            * {{vandal|${item.user.name}}} &ndash; Vandalism past final warning ~~~~
+                        `), ws.api.summary(`Reporting ${ws.api.user(item.user.name)}`), page => {
+                            const content = ws.util.getPageSections(page).find(section => section.title === "User-reported")?.content;
+                            return {
+                                valid: !(content?.includes(`{{vandal|${item.user.name}}`) || content?.includes(`{{IPVandal|${item.user.name}}`)),
                                 reason: "User has already been reported to AIV."
                             };
                         });
@@ -896,8 +1083,9 @@ export const events = {
             return await ws.api.append(WikiShield.config.pages.AIV, null, fullTrim(`
                 * {{vandal|${item.user.name}}} &ndash; ${params.reason}${params.summary ? `: ${params.summary}` : ""} ~~~~
             `), ws.api.summary(`Reporting ${ws.api.user(item.user.name)}`), page => {
+                const content = ws.util.getPageSections(page).find(section => section.title === "User-reported")?.content;
                 return {
-                    valid: !ws.util.getPageSections(page).find(section => section.title === "User-reported")?.content.includes(`{{vandal|${item.user.name}}`),
+                    valid: !(content?.includes(`{{vandal|${item.user.name}}`) || content?.includes(`{{IPVandal|${item.user.name}}`)),
                     reason: "User has already been reported to AIV."
                 };
             });
@@ -1142,7 +1330,7 @@ export const events = {
                     return {
                         valid: !sections.some(section => {
                             const content = section.content;
-                            if (content.match(new RegExp(`{{Luxotool\\|\\s*${ws.util.escapeRegex(item.user.name)}}}`, "i")))
+                            if (content.match(new RegExp(`{{Luxotool\\|(?:\\d+=)?\\s*${ws.util.escapeRegex(item.user.name)}}}`, "i")))
                                 return true;
                             else if (content.match(new RegExp(`{{MultiLock\\|(?:[^|}]*\\|)*(?:\\d+=)?\\s*${ws.util.escapeRegex(item.user.name)}(?:\\|hidename=1)?(?:\\||})`, "i")))
                                 return true;
@@ -1251,7 +1439,7 @@ export const events = {
                     return {
                         valid: !sections.some(section => {
                             const content = section.content;
-                            if (content.match(new RegExp(`{{LockHide\\|\\s*${ws.util.escapeRegex(item.user.name)}(\\|hidename=1)?}}`, "i")))
+                            if (content.match(new RegExp(`{{LockHide\\|(?:\\d+=)?\\s*${ws.util.escapeRegex(item.user.name)}(\\|hidename=1)?}}`, "i")))
                                 return true;
                             else if (content.match(new RegExp(`{{MultiLock\\|(?:[^|}]*\\|)*(?:\\d+=)?\\s*${ws.util.escapeRegex(item.user.name)}(?:\\|hidename=1)?(?:\\||})`, "i")))
                                 return true;
@@ -1546,6 +1734,86 @@ export const events = {
 
             ws.gui.renderQueue();
             return { valid: true };
+        }
+    },
+
+    "refresh-user-contributions": {
+        title: "Refresh user contributions",
+        icon: "fas fa-rotate",
+
+        progress: "Refreshing user contributions",
+        valid: (ws, item, params) => {
+            if (!item)
+                return { valid: false, reason: "User contributions can only be refreshed when an item is selected." };
+            return { valid: true };
+        },
+        script: async (ws, item, params) => {
+            try {
+                document.querySelector("#refresh-page-history").classList.add("refreshing");
+
+                const user = (await ws.api.parseUsers([ item.user.name ]))[0].user;
+
+                ws.queue.talks.set(item.user.name, user.talk);
+                ws.queue.contributions.set(item.user.name, user.contributions);
+                ws.queue.blocked.set(item.user.name, user.blocked);
+                ws.queue.blocks.set(item.user.name, user.blocks);
+
+                item.user.edits = Math.max(user.edits, user.contributions?.length || 0)
+                item.user.warning = ws.queue.getWarningLevel(user.talk || "");
+                item.user.warnings = ws.queue.getWarningHistory(user.talk || "");
+
+                delete item.user.cached_contributions
+
+                ws.gui.renderQueue();
+                if (ws.queue.current.item === item)
+                    ws.gui.newCurrentItem(item);
+
+                return { valid: true };
+            } catch (err) {
+                console.error(err);
+                return { valid: false, reason: "An error occurred while fetching user contributions." };
+            }
+        }
+    },
+    "refresh-page-history": {
+        title: "Refresh page history",
+        icon: "fas fa-rotate",
+
+        progress: "Refreshing page history",
+        valid: (ws, item, params) => {
+            if (!item)
+                return { valid: false, reason: "Page history can only be refreshed when an item is selected." };
+            else if (item.type === "users")
+                return { valid: false, reason: "Page history cannot be refreshed for user creations." };
+            return { valid: true };
+        },
+        script: async (ws, item, params) => {
+            try {
+                document.querySelector("#refresh-page-history").classList.add("refreshing");
+
+                const [ history, detailsData ] = await Promise.all([
+                    ws.api.getHistory(item.page.title),
+                    ws.api.getPagesDetails(item.page.title)
+                ]);
+                const details = detailsData[item.page.title];
+
+                ws.queue.histories.set(item.page.title, history);
+
+                item.page.metadata = details.metadata;
+                item.page.categories = details.categories;
+                item.page.protection = details.protection;
+
+                delete item.page.cached_history;
+
+                ws.gui.renderQueue();
+                if (ws.queue.current.item === item)
+                    ws.gui.newCurrentItem(item);
+
+                return { valid: true };
+            } catch (err) {
+                console.error(err);
+                return { valid: false, reason: "An error occurred while fetching page history." };
+            }
         }
     },
 

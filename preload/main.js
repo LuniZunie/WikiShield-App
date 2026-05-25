@@ -5,18 +5,17 @@ contextBridge.exposeInMainWorld("electron", {
     getLanguage: () => ipcRenderer.invoke("get-language"),
 
     mwapiLoader: () => ipcRenderer.invoke("mwapi-loader"),
-    mwapiLoaded: callback => ipcRenderer.on("mwapi-loaded", (event, server, username, pendingChangesServers) => callback(server, username, pendingChangesServers)),
+    mwapiLoaded: callback => ipcRenderer.on("mwapi-loaded", (event, server, username, pendingChangesServers, dev) => callback(server, username, pendingChangesServers, dev)),
     mwapi: (action, ...args) => ipcRenderer.invoke("mwapi", action, ...args),
-    eventstream: callback => ipcRenderer.on("eventstream-data", (event, data) => callback(data)),
 
     menuEnabler: opts => ipcRenderer.send("menu-enabler", opts),
 
     setBadgeCount: count => ipcRenderer.send("set-badge-count", count),
     sendNotification: (options, url) => ipcRenderer.invoke("send-notification", options, url),
     localStorage: {
-        get: key => ipcRenderer.invoke("local-storage", "get", key),
-        set: (key, value) => ipcRenderer.invoke("local-storage", "set", key, value),
-        delete: key => ipcRenderer.invoke("local-storage", "delete", key),
+        get: key => ipcRenderer.sendSync("local-storage", "get", key),
+        set: (key, value) => ipcRenderer.sendSync("local-storage", "set", key, value),
+        delete: key => ipcRenderer.sendSync("local-storage", "delete", key),
     },
 
     copyToClipboard: text => ipcRenderer.send("copy-to-clipboard", text),
@@ -31,13 +30,7 @@ contextBridge.exposeInMainWorld("electron", {
     onOpenBrowser: callback => ipcRenderer.on("open-browser", () => callback()),
     onOpenUrl: callback => ipcRenderer.on("open-url", (event, url) => callback(url)),
     onOpenNotification: callback => ipcRenderer.on("open-notification", (event, link) => callback(link)),
-    onOpenSettings: callback => ipcRenderer.on("open-settings", () => callback()),
     onOpenChangelog: callback => ipcRenderer.on("open-changelog", () => callback()),
-
-    onImportSettingsFromClipboard: callback => ipcRenderer.on("import-settings-from-clipboard", () => callback()),
-    onImportSettingsFromInput: callback => ipcRenderer.on("import-settings-from-input", () => callback()),
-
-    onExportSettingsToClipboard: callback => ipcRenderer.on("export-settings-to-clipboard", () => callback()),
 
     closePopup: id => ipcRenderer.send("close-popup", id),
     openExternal: url => ipcRenderer.send("open-external", url),

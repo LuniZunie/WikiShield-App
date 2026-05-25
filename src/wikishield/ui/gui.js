@@ -33,6 +33,7 @@ export class GUI {
 		this.settings = new Settings(this.ws);
 
 		this.intervals = {
+			DEFCON: null,
 			outdated: null,
 		};
 
@@ -42,6 +43,8 @@ export class GUI {
 	}
 
 	async build() {
+		this.updateDEFCON();
+
 		document.documentElement.style.colorScheme = { light: "only light", auto: "light dark", dark: "only dark" }[this.ws.store.UI.theme.app] || "light dark";
 
 		const shhhhh = {
@@ -51,7 +54,7 @@ export class GUI {
 				if (event.key === shhhhh.code[shhhhh.index]) {
 					if (++shhhhh.index === shhhhh.code.length) {
 						shhhhh.index = 0;
-						this.ws.open("https://ws.luni.me/konami-easter-egg", false);
+						this.ws.open("https://ws.luni.me/konami-easter-egg", "force");
 					}
 
 					return;
@@ -61,7 +64,7 @@ export class GUI {
 			}
 		};
 
-		window.addEventListener("keydown", shhhhh.function);
+		addEventListener("keydown", shhhhh.function);
 
 		this.updateAccessibility();
 
@@ -491,6 +494,36 @@ export class GUI {
 									$tooltip.appendChild($page);
 								});
 							} break;
+							case "email": {
+								this.createTooltip($href, "buttons", null, null, null, $tooltip => {
+									const $preview = document.createElement("div");
+									$preview.classList.add("button");
+									$preview.innerText = "Emergency";
+									$preview.addEventListener("click", event => {
+										this.ws.open(this.ws.page("Special:EmailUser/Emergency"), event.altKey);
+										$tooltip.remove();
+									});
+									$tooltip.appendChild($preview);
+
+									const $history = document.createElement("div");
+									$history.classList.add("button");
+									$history.innerText = "ArbCom";
+									$history.addEventListener("click", event => {
+										this.ws.open(this.ws.page("Special:EmailUser/Arbitration Committee"), event.altKey);
+										$tooltip.remove();
+									});
+									$tooltip.appendChild($history);
+
+									const $page = document.createElement("div");
+									$page.classList.add("button");
+									$page.innerText = "Oversight";
+									$page.addEventListener("click", event => {
+										this.ws.open(this.ws.page("Special:EmailUser/Oversight"), event.altKey);
+										$tooltip.remove();
+									});
+									$tooltip.appendChild($page);
+								});
+							} break;
 						}
 					} catch (error) {
 						this.ws.open($href.getAttribute("href"), event.altKey);
@@ -508,13 +541,18 @@ export class GUI {
 	}
 
 	async start() {
+		this.intervals.DEFCON = setInterval(this.updateDEFCON.bind(this), 6e4);
+		document.querySelector("#DEFCON").addEventListener("click", event => {
+			this.ws.open("https://en.wikipedia.org/w/index.php?tagfilter=mw-manual-revert%7Cmw-rollback%7Cmw-undo&title=Special%3ARecentChanges&urlversion=2", event.altKey);
+		});
+
 		this.settings.start();
 
 		document.querySelector("#app").classList.remove("hidden");
 		document.querySelector("#initial").classList.add("hidden");
 
 		document.querySelectorAll(".bottom-tool-trigger").forEach($trigger => {
-			$trigger.addEventListener("click", (e) => {
+			$trigger.addEventListener("click", e => {
 				e.stopPropagation();
 
 				const $item = $trigger.closest(".bottom-tool-item");
@@ -616,7 +654,7 @@ export class GUI {
 						$panel?.classList.remove("show");
 				}
 
-				if (!e.target.closest(".bottom-tool-menu"))
+				if (!e.target.closest(".bottom-tool-menu") && !e.target.closest(".confirmation-modal-overlay"))
 					this.closeMenus();
 			});
 		}
@@ -696,7 +734,6 @@ export class GUI {
 				if (width) {
 					$details.style.width = width;
 					document.querySelector("#main-container").style.width = `calc(100% - ${width})`;
-					// document.querySelector("#middle-top").style.width = `calc(100% - ${width})`;
 				}
 			}
 
@@ -758,10 +795,8 @@ export class GUI {
 
 				if (resize.active === $queueHandle)
 					document.querySelector("#right-container").style.width = `calc(100% - ${vw}vw)`;
-				else if (resize.active === $detailsHandle) {
+				else if (resize.active === $detailsHandle)
 					document.querySelector("#main-container").style.width = `calc(100% - ${vw}vw)`;
-					// document.querySelector("#middle-top").style.width = `calc(100% - ${vw}vw)`;
-				}
 			});
 		}
 
@@ -771,13 +806,21 @@ export class GUI {
 			electron.open?.("changelog");
 		}
 
-		this.addTooltipListener(document.querySelector("#clear-queue"));
+		this.addTooltipListener(document.querySelector("#settings-icon"));
+		document.querySelectorAll("#queue-top-right > span").forEach($el => this.addTooltipListener($el));
 
 		this.updateZenMode();
 		this.reorderQueues();
 		this.newCurrentItem(null);
 
+		document.querySelector("#settings-icon").addEventListener("click", () => {
+			this.settings.open();
+		});
+
 		this.events.button(document.querySelector("#clear-queue"), "clear-queue");
+
+		this.events.button(document.querySelector("#previous-item-button"), "previous-item");
+		this.events.button(document.querySelector("#next-item-button"), "next-item");
 
 		this.events.button(document.querySelector("#user-open-user-page"), "open-user-page");
 		this.events.button(document.querySelector("#user-open-user-talk"), "open-user-talk");
@@ -814,6 +857,12 @@ export class GUI {
 		this.events.submenu(document.querySelector("#edit-undo .submenu"), "undo-edit");
 
 		this.events.button(document.querySelector("#copy-link"), "copy-link");
+
+		this.events.button(document.querySelector("#refresh-user-contributions"), "refresh-user-contributions");
+		this.events.button(document.querySelector("#user-contributions > .footer"), "open-user-contributions");
+
+		this.events.button(document.querySelector("#refresh-page-history"), "refresh-page-history");
+		this.events.button(document.querySelector("#page-history > .footer"), "open-page-history");
 
 		Queue.types.forEach(type => {
 			this.events.button(document.querySelector(`#queue-tab-${type}`), `switch-to-${type}-queue`);
@@ -853,8 +902,21 @@ export class GUI {
 
 		setTimeout(() => this.update(), 1000);
 	}
+	async updateDEFCON() {
+		const DEFCON = await this.ws.getDEFCON();
 
-	generateItemHTML(item) {
+		const $DEFCON = document.querySelector("#DEFCON");
+		$DEFCON.title = `DEFCON-${DEFCON.level !== null ? DEFCON.level : "N/A"} (${DEFCON.info ? `${DEFCON.info} revert${+DEFCON.info === 1 ? "" : "s"} per minute` : "No data"})`;
+
+		const $dot = $DEFCON.querySelector(".dot");
+		$dot.className = "dot";
+		if (DEFCON.level !== null)
+			$dot.classList.add(`DEFCON-${DEFCON.level}`);
+
+		document.querySelector(".DEFCON-RPM").textContent = DEFCON.info ?? "N/A";
+	}
+
+	generateItemHTML(item, removeButton = false) {
 		const oresColor = this.getORESColor(item.ores);
 		const diffColor = "sizediff" in item ? this.ws.util.getChangeColor(item.sizediff) : undefined;
 
@@ -947,11 +1009,12 @@ export class GUI {
 				});
 				$body.appendChild($meta);
 
+				const user = item.performer ?? item.user;
 				{
-					const blocked = item.user.blocked;
+					const blocked = user.blocked;
 					const blockExpiry = this.ws.util.expiryToDate(blocked?.expiry);
-					const highlighted = this.ws.store.highlight.users.has(item.user.name);
-					const emptyTalk = item.user.talk === undefined;
+					const highlighted = this.ws.store.highlight.users.has(user.name);
+					const emptyTalk = user.talk === undefined;
 
 					const $user = CreateDOMElement("span", {
 						class: "user-chip"
@@ -974,7 +1037,7 @@ export class GUI {
 					$meta.appendChild($user);
 
 					const $icon = CreateDOMElement("i", {
-						class: `fas fa-${item.user.anon ? "user-secret" : "user"}`,
+						class: `fas fa-${user.anon ? "user-secret" : "user"}`,
 						style: {
 							"font-size": "11px"
 						}
@@ -1128,6 +1191,18 @@ export class GUI {
 			}
 		}
 
+		if (removeButton) {
+			const $remove = CreateDOMElement("div", {
+				class: "remove-button",
+			});
+			$item.appendChild($remove);
+
+			const $icon = CreateDOMElement("i", {
+				class: "fas fa-xmark",
+			});
+			$remove.appendChild($icon);
+		}
+
 		return $item.innerHTML;
 	}
 
@@ -1182,7 +1257,7 @@ export class GUI {
 				const $link = CreateDOMElement("a", {
 					content: item.page.title,
 					dataset: {
-						multipleHrefs: `${pageHref};title=${encodeURIComponent(item.page.title)}&${pageHref === "log" ? `log=${JSON.stringify(item)}` : `id=${item.page.id}`}`,
+						multipleHrefs: `${pageHref};title=${encodeURIComponent(item.page.title)}&${pageHref === "log" ? `log=${JSON.stringify(item)}` : `id=${item.id}`}`,
 
 						tooltip: item.page.title,
 						tooltipDelay: 500
@@ -1201,13 +1276,14 @@ export class GUI {
 				});
 				$header.appendChild($meta);
 
+				const user = item.performer ?? item.user;
 				{
-					const otherUsers = Object.keys(pending?.users ?? { }).filter(user => user !== item.user.name);
+					const otherUsers = Object.keys(pending?.users ?? { }).filter(pendingUser => pendingUser !== user.name);
 
-					const blocked = item.user.blocked;
+					const blocked = user.blocked;
 					const blockExpiry = this.ws.util.expiryToDate(blocked?.expiry);
-					const highlighted = this.ws.store.highlight.users.has(item.user.name);
-					const emptyTalk = item.user.talk === undefined;
+					const highlighted = this.ws.store.highlight.users.has(user.name);
+					const emptyTalk = user.talk === undefined;
 
 					const $user = CreateDOMElement("span", {
 						class: "user-chip"
@@ -1229,16 +1305,16 @@ export class GUI {
 					$meta.appendChild($user);
 
 					const $icon = CreateDOMElement("i", {
-						class: `fas fa-${otherUsers.length > 0 ? "users" : (item.user.anon ? "user-secret" : "user")}`,
+						class: `fas fa-${otherUsers.length > 0 ? "users" : (user.anon ? "user-secret" : "user")}`,
 					});
 					$user.appendChild($icon);
 
 					const $link = CreateDOMElement("a", {
-						content: item.user.name,
+						content: user.name,
 						dataset: {
-							multipleHrefs: `user;name=${encodeURIComponent(item.user.name)}`,
+							multipleHrefs: `user;name=${encodeURIComponent(user.name)}`,
 
-							tooltip: item.user.name,
+							tooltip: user.name,
 							tooltipDelay: 500
 						},
 						attributes: {
@@ -1400,7 +1476,7 @@ export class GUI {
 					class: "time",
 					content: this.ws.util.formatDuration(new Date(data.timestamp.old), new Date(data.timestamp.new)),
 					dataset: {
-						tooltip: `${new Date(data.timestamp.old).toLocaleString()}&emdash;${new Date(data.timestamp.new).toLocaleString()}`,
+						tooltip: `${new Date(data.timestamp.old).toLocaleString()}&mdash;${new Date(data.timestamp.new).toLocaleString()}`,
 						tooltipHtml: true,
 						tooltipDelay: 500,
 
@@ -1499,6 +1575,9 @@ export class GUI {
 	}
 
 	renderQueue(queue = null, current = null, type = null) {
+		document.querySelector("#previous-item-button").classList.toggle("disabled", !this.ws.queue.canGoPrevious());
+		document.querySelector("#next-item-button").classList.toggle("disabled", !this.ws.queue.canGoNext());
+
 		queue ??= this.ws.queue.current.queue;
 		current ??= this.ws.queue.current.item;
 		type ??= this.ws.queue.current.type;
@@ -1535,7 +1614,23 @@ export class GUI {
 				$el.classList.add("queue-item");
 				$el.dataset.id = item.id;
 				$el.dataset.type = type;
-				$el.innerHTML = this.generateItemHTML(item);
+				$el.innerHTML = this.generateItemHTML(item, type !== "pending");
+				$el.querySelector(".remove-button")?.addEventListener("click", e => {
+					e.stopPropagation();
+
+					const i = queue.findIndex(queueItem => queueItem.id === item.id);
+					if (i >= 0) {
+						if (item.id === current?.id)
+							this.ws.queue.next();
+						else {
+							queue.splice(i, 1);
+							this.ws.queue.queues[type].history.push({ ...item, history: performance.now() });
+							this.removeQueueItem(type, item.id);
+
+							this.renderQueue();
+						}
+					}
+				});
 
 				if (item.mentions.has && this.ws.store.settings.username_highlighting.enabled) {
 					$el.classList.add("mentions-me");
@@ -1552,6 +1647,7 @@ export class GUI {
 				});
 
 				$queue.appendChild($el);
+				dom.set(item.id, $el);
 				$el.querySelectorAll("[data-tooltip]").forEach($tooltip => this.addTooltipListener($tooltip));
 			}
 
@@ -1562,12 +1658,41 @@ export class GUI {
 				$queue.insertBefore($el, $previous.nextSibling);
 
 			$el.classList.toggle("current", item.id === current?.id);
+
 			$previous = $el;
 		}
 
 		for (const [ id, $el ] of dom.entries())
 			if (!queue.some(item => item.id === id))
 				$el.remove();
+
+		let historical = null;
+		for (const item of queue) {
+			if (item.history !== false)
+				historical = item;
+			else break;
+		}
+
+		$queue.querySelector(".historical-bar")?.remove();
+		if (historical !== null) {
+			const $bar = CreateDOMElement("div", {
+				class: "historical-bar"
+			});
+			$queue.insertBefore($bar, dom.get(historical.id).nextSibling);
+
+			const $label = CreateDOMElement("span", {
+				class: "label",
+			});
+			$bar.appendChild($label);
+
+			const $icon = CreateDOMElement("i", {
+				class: "fas fa-box-archive",
+				attributes: {
+					title: "All items above this line have been viewed",
+				}
+			});
+			$label.appendChild($icon);
+		}
 
 		if (this.ws.queue.queues[type].previous?.id !== current?.id) {
 			this.ws.queue.queues[type].previous = current;
@@ -1633,26 +1758,26 @@ export class GUI {
 
 		document.querySelectorAll("#right-top > div > :not(.hidden)").forEach(el => el.classList.add("hidden"));
 
-		const $contributions = document.querySelector("#user-contribs-content");
+		const $contributions = document.querySelector("#user-contributions > .queue-list");
 		$contributions.innerHTML = "";
 
-		const $history = document.querySelector("#page-history-content");
+		const $history = document.querySelector("#page-history > .queue-list");
 		$history.innerHTML = "";
 
-		document.querySelector("#user-contribs-count").classList.toggle("hidden", item === null);
-		document.querySelector("#user-warn-level").classList.toggle("hidden", item === null);
-		document.querySelector("#user-block-count").classList.add("hidden");
+		document.querySelector("#user-contributions > .header > .pills").innerHTML = "";
+		document.querySelector("#page-history > .header > .pills").innerHTML = "";
 
 		document.querySelector("#pending-changes-container").classList.toggle("hidden", !(this.ws.rights.review && this.ws.queue.pending.has(item?.id)));
 
 		this.updateHiddenItems(item);
 		if (item === null) {
 			this.generateEditDetails();
-			document.querySelector("#diff-container").innerHTML = "";
-			document.querySelector("#ai-analysis-container").classList.add("hidden");
 
-			document.querySelector("#page-metadata").innerHTML = "";
-			document.querySelector("#protection-indicator").innerHTML = "";
+			document.querySelector("#diff-container").innerHTML = "";
+			document.querySelector("#diff-scroll-up").classList.add("hidden");
+			document.querySelector("#diff-scroll-down").classList.add("hidden");
+
+			document.querySelector("#ai-analysis-container").classList.add("hidden");
 
 			if ([ ...document.querySelectorAll(`#queue-tabs > .queue-tab`) ].every(tab => getComputedStyle(tab).display === "none"))
 				document.querySelector("#diff-container").innerHTML = `
@@ -1706,8 +1831,6 @@ export class GUI {
 		document.querySelector("#user-report-uaa").classList.toggle("hidden", item?.user.anon);
 		document.querySelector("#user-request-global-lock").classList.toggle("hidden", item?.user.anon);
 
-		document.querySelector("#user-contribs-count").textContent = `${item.user.edits} edit${item.user.edits === 1 ? "" : "s"}`;
-
 		if (this.ws.AI) {
 			const storage = this.ws.store;
 			if (item.AI.edit === null && storage.settings.AI.edit_analysis.enabled)
@@ -1752,7 +1875,6 @@ export class GUI {
 				} break;
 				case "watchlist": {
 					this.ws.store.statistics.watchlist_changes_reviewed.total++;
-					this.ws.api.markWatchlistSeen(item.page.title, item.id);
 				} break;
 				case "users": {
 					this.ws.store.statistics.users_reviewed.total++;
@@ -1760,130 +1882,130 @@ export class GUI {
 			}
 		}
 
-		const $warnings = document.querySelector("#user-warn-level");
 		{
-			$warnings.style.backgroundColor = warningTemplateColors[item.user.warning] || "grey";
-			$warnings.textContent = item.user.warning;
-
-			if (item.user.warning === "0") {
-				$warnings.dataset.tooltip = "No warnings on record";
-				$warnings.dataset.tooltipHtml = false;
-			} else {
-				const warnings = item.user.warnings;
-				if (warnings.length > 0) {
-					const $tooltip = document.createElement("div");
-
-					const $title = document.createElement("div");
-					$title.classList.add("tooltip-title");
-					$title.textContent = `Warnings for ${item.user.name}`;
-					$tooltip.appendChild($title);
-
-					for (const warning of warnings) {
-						const $warning = document.createElement("div");
-						$warning.classList.add("tooltip-item", "user-warnings");
-						$tooltip.appendChild($warning);
-
-						const $level = document.createElement("span");
-						$level.classList.add("tooltip-item-level");
-						$level.textContent = `${warning.template}${warning.level}`;
-						$warning.appendChild($level);
-
-						const $details = document.createElement("div");
-						$details.classList.add("tooltip-item-details");
-						$warning.appendChild($details);
-
-						const $user = document.createElement("span");
-						$user.classList.add("tooltip-item-user");
-						$user.textContent = warning.username ? `by User:${warning.username}` : "by Unknown";
-						$details.appendChild($user);
-
-						$details.appendChild(document.createElement("br"));
-
-						const $date = document.createElement("span");
-						$date.classList.add("tooltip-item-date");
-						$details.appendChild($date);
-
-						if (warning.timestamp) {
-							$date.dataset.time = warning.timestamp;
-							$date.dataset.timeFormat = "notification";
-							$date.textContent = this.ws.util.formatNotificationTime(new Date(warning.timestamp));
-						} else
-							$date.textContent = "Date unknown";
-					}
-
-					$warnings.dataset.tooltip = $tooltip.innerHTML;
-					$warnings.dataset.tooltipHtml = true;
-				}
-			}
-
-			const $temp = $warnings.cloneNode(true); // to get rid of old tooltip listeners
-			$warnings.parentNode.replaceChild($temp, $warnings);
-			this.addTooltipListener($temp);
+			const $editPill = CreateDOMElement("div", {
+				class: "pill",
+				content: `${item.user.edits.toLocaleString()} edit${item.user.edits === 1 ? "" : "s"}`,
+			});
+			document.querySelector("#user-contributions > .header > .pills").appendChild($editPill);
 		}
 
-		const $blocks = document.querySelector("#user-block-count");
-		if ($blocks) {
-			const blocks = item.user.blocks;
-			if (blocks.length > 0) {
+		if (item.user.warning !== "0") {
+			const $warnings = CreateDOMElement("div", {
+				class: `pill uw-${item.user.warning}`,
+			});
+			document.querySelector("#user-contributions > .header > .pills").appendChild($warnings);
+
+			$warnings.textContent = `uw-${item.user.warning}`;
+
+			const warnings = item.user.warnings;
+			if (warnings.length > 0) {
 				const $tooltip = document.createElement("div");
 
 				const $title = document.createElement("div");
 				$title.classList.add("tooltip-title");
-				$title.textContent = `Blocks for ${item.user.name}`;
+				$title.textContent = `Warnings for ${item.user.name}`;
 				$tooltip.appendChild($title);
 
-				for (const block of blocks) {
-					const $block = document.createElement("div");
-					$block.classList.add("tooltip-item", "user-blocks");
-					$tooltip.appendChild($block);
+				for (const warning of warnings) {
+					const $warning = document.createElement("div");
+					$warning.classList.add("tooltip-item", "user-warnings");
+					$tooltip.appendChild($warning);
 
 					const $level = document.createElement("span");
 					$level.classList.add("tooltip-item-level");
-					$level.innerHTML = block.parsedcomment || "No reason provided";
-					$block.appendChild($level);
+					$level.textContent = `${warning.template}${warning.level}`;
+					$warning.appendChild($level);
 
 					const $details = document.createElement("div");
 					$details.classList.add("tooltip-item-details");
-					$block.appendChild($details);
+					$warning.appendChild($details);
 
 					const $user = document.createElement("span");
 					$user.classList.add("tooltip-item-user");
-					$user.textContent = block.user ? `by User:${block.user}` : "by Unknown";
+					$user.textContent = warning.username ? `by User:${warning.username}` : "by Unknown";
 					$details.appendChild($user);
 
 					$details.appendChild(document.createElement("br"));
 
 					const $date = document.createElement("span");
-					$date.classList.add("tooltip-item-time");
+					$date.classList.add("tooltip-item-date");
 					$details.appendChild($date);
 
-					const $timestamp = document.createElement("span");
-					if (block.timestamp) {
-						$timestamp.dataset.time = block.timestamp;
-						$timestamp.dataset.timeFormat = "notification";
-						$timestamp.textContent = this.ws.util.formatNotificationTime(new Date(block.timestamp));
+					if (warning.timestamp) {
+						$date.dataset.time = warning.timestamp;
+						$date.dataset.timeFormat = "notification";
+						$date.textContent = this.ws.util.formatNotificationTime(new Date(warning.timestamp));
 					} else
-						$timestamp.textContent = "Date unknown";
-					$date.appendChild($timestamp);
-
-					const $duration = document.createElement("span");
-					$duration.textContent = `(for ${block.params?.duration || "an unknown duration"})`;
-					$date.appendChild($duration);
+						$date.textContent = "Date unknown";
 				}
 
-				$blocks.classList.remove("hidden");
-				$blocks.innerHTML = `${blocks.length}&times;`;
-				$blocks.dataset.tooltip = $tooltip.innerHTML;
-				$blocks.dataset.tooltipHtml = true;
-			} else {
-				$blocks.innerHTML = "";
-				delete $blocks.dataset.tooltip;
-				delete $blocks.dataset.tooltipHtml;
+				$warnings.dataset.tooltip = $tooltip.innerHTML;
+				$warnings.dataset.tooltipHtml = true;
 			}
 
-			const $temp = $blocks.cloneNode(true); // to get rid of old tooltip listeners
-			$blocks.parentNode.replaceChild($temp, $blocks);
-			this.addTooltipListener($temp);
+			this.addTooltipListener($warnings);
+		}
+
+		const blocks = item.user.blocks;
+		if (blocks.length > 0) {
+			const $blocks = CreateDOMElement("div", {
+				class: "pill ub",
+			});
+			document.querySelector("#user-contributions > .header > .pills").appendChild($blocks);
+
+			const $tooltip = document.createElement("div");
+
+			const $title = document.createElement("div");
+			$title.classList.add("tooltip-title");
+			$title.textContent = `Blocks for ${item.user.name}`;
+			$tooltip.appendChild($title);
+
+			for (const block of blocks) {
+				const $block = document.createElement("div");
+				$block.classList.add("tooltip-item", "user-blocks");
+				$tooltip.appendChild($block);
+
+				const $level = document.createElement("span");
+				$level.classList.add("tooltip-item-level");
+				$level.innerHTML = block.parsedcomment || "No reason provided";
+				$block.appendChild($level);
+
+				const $details = document.createElement("div");
+				$details.classList.add("tooltip-item-details");
+				$block.appendChild($details);
+
+				const $user = document.createElement("span");
+				$user.classList.add("tooltip-item-user");
+				$user.textContent = block.user ? `by User:${block.user}` : "by Unknown";
+				$details.appendChild($user);
+
+				$details.appendChild(document.createElement("br"));
+
+				const $date = document.createElement("span");
+				$date.classList.add("tooltip-item-time");
+				$details.appendChild($date);
+
+				const $timestamp = document.createElement("span");
+				if (block.timestamp) {
+					$timestamp.dataset.time = block.timestamp;
+					$timestamp.dataset.timeFormat = "notification";
+					$timestamp.textContent = this.ws.util.formatNotificationTime(new Date(block.timestamp));
+				} else
+					$timestamp.textContent = "Date unknown";
+				$date.appendChild($timestamp);
+
+				const $duration = document.createElement("span");
+				$duration.textContent = `(for ${block.params?.duration || "an unknown duration"})`;
+				$date.appendChild($duration);
+			}
+
+			$blocks.classList.remove("hidden");
+			$blocks.textContent = `${blocks.length} block${blocks.length === 1 ? "" : "s"}`;
+			$blocks.dataset.tooltip = $tooltip.innerHTML;
+			$blocks.dataset.tooltipHtml = true;
+
+			this.addTooltipListener($blocks);
 		}
 
 		{ // users whitelist & highlight buttons
@@ -2020,24 +2142,30 @@ export class GUI {
 					}
 				}
 
-				const $protection = document.querySelector("#protection-indicator");
-				if ($protection) {
-					$protection.innerHTML = "";
+				const protection = item.page.protection;
+				if (protection.protected || this.ws.queue.pending.has(item.id)) {
+					const $protection = CreateDOMElement("div", {
+						class: "pill"
+					});
+					document.querySelector("#page-history > .header > .pills").appendChild($protection);
 
-					const protection = item.page.protection;
 					if (protection.protected) {
 						let icon, tooltip;
 						switch (protection.level) {
 							case "sysop": {
-								icon = "P";
+								icon = "F";
 								tooltip = "Requires sysop right to edit";
 							} break;
+							case "template": {
+								icon = "T";
+								tooltip = "Requires template editor to edit";
+							} break;
 							case "extendedconfirmed": {
-								icon = "X";
+								icon = "EC";
 								tooltip = "Requires extended confirmed right to edit";
 							} break;
 							case "autoconfirmed": {
-								icon = "A";
+								icon = "AC";
 								tooltip = "Requires autoconfirmed right to edit";
 							} break;
 							default: {
@@ -2046,26 +2174,29 @@ export class GUI {
 							} break;
 						}
 
-						$protection.innerHTML = `<span class="protection-icon" data-tooltip="${tooltip}">${icon}</span>`;
+						$protection.innerHTML = `<i class="fas fa-lock"></i> <span class="protection-icon" data-tooltip="${tooltip}">${icon}</span>`;
 						this.addTooltipListener($protection.querySelector("[data-tooltip]"));
 					} else if (this.ws.queue.pending.has(item.id)) {
 						const comment = this.ws.queue.pending.get(item.id).pending.stability?.parsedcomment || "No comment provided";
 
 						const $icon = document.createElement("span");
 						$icon.classList.add("protection-icon");
-						$icon.textContent = "PC";
+						$icon.innerHTML = "<i class='fas fa-lock'></i> PC";
 						$icon.dataset.tooltip = comment;
 						$icon.dataset.tooltipHtml = true;
 						$protection.appendChild($icon);
 
 						this.addTooltipListener($protection.querySelector("[data-tooltip]"));
-					} else
-						$protection.innerHTML = "";
+					}
 				}
 
-				const $metadata = document.querySelector("#page-metadata");
-				if ($metadata)
-					$metadata.innerHTML = item.page.metadata.join(" &middot; ");
+				for (const metadata of item.page.metadata) {
+					const $metadata = CreateDOMElement("div", {
+						class: "pill",
+						content: metadata,
+					});
+					document.querySelector("#page-history > .header > .pills").appendChild($metadata);
+				}
 			} break;
 			case "logevent": {
 			} break;
@@ -2113,10 +2244,6 @@ export class GUI {
 					} else
 						$protection.innerHTML = "";
 				}
-
-				const $metadata = document.querySelector("#page-metadata");
-				if ($metadata)
-					$metadata.innerHTML = item.page.metadata.join(" &middot; ");
 			} break;
 		}
 
@@ -2186,9 +2313,12 @@ export class GUI {
 	updateDiffDisplay(item, consecutive) {
 		const $diff = document.querySelector("#diff-container");
 
-		if (!item)
+		if (!item) {
+			document.querySelector("#diff-scroll-up").classList.add("hidden");
+			document.querySelector("#diff-scroll-down").classList.add("hidden");
+
 			return;
-		else if (item === "loading") {
+		} else if (item === "loading") {
 			const $container = document.createElement("div");
 			$container.className = "loading-container";
 
@@ -2214,10 +2344,9 @@ export class GUI {
 		switch (Queue.groups[item.type]) {
 			case "edit": {
 				const pending = this.ws.queue.pending.get(item.id);
-				if (pending) {
-					console.log(pending);
+				if (pending)
 					$diff.innerHTML = `<table>${item.diff ?? "<em>No diff available</em>"}</table>`;
-				} else if (consecutive && item.consecutive?.count > 1) {
+				else if (consecutive && item.consecutive?.count > 1) {
 					document.querySelector("#consecutive-edits-tab").classList.add("selected");
 
 					if (item.consecutive.diff ?? true)
@@ -2230,7 +2359,7 @@ export class GUI {
 					$diff.innerHTML = `<table>${item.diff ?? "<em>No diff available</em>"}</table>`;
 				}
 
-				if (this.ws.store.settings.username_highlighting.enabled) { // TODO
+				if (this.ws.store.settings.username_highlighting.enabled) {
 					const username = this.ws.api.username;
 					if (username) {
 						if (item.mentions.diff)
@@ -2241,7 +2370,7 @@ export class GUI {
 
 						if (item.mentions.comment)
 							if (item.comment && this.ws.util.match(username, item.comment))
-								document.querySelector("#middle-top .middle-top-comment .summary").classList.add("ws-username-highlight");
+								document.querySelector("#edit-details > .subheader > .item-comment > .text").classList.add("ws-username-highlight");
 					}
 				}
 			} break;
@@ -2485,7 +2614,7 @@ export class GUI {
 
 						if (item.mentions.comment)
 							if (item.comment && this.ws.util.match(username, item.comment))
-								document.querySelector("#middle-top .middle-top-comment .summary").classList.add("ws-username-highlight");
+								document.querySelector("#edit-details > .subheader > .item-comment > .text").classList.add("ws-username-highlight");
 					}
 				}
 			} break;
@@ -2494,11 +2623,19 @@ export class GUI {
 		$diff.querySelectorAll(":is(.mw-diff-movedpara-left, .mw-diff-movedpara-right)").forEach($el => {
 			const href = $el.href.split("#")[1];
 			delete $el.href;
+			$el.innerHTML = $el.classList.contains("mw-diff-movedpara-left") ? ">" : "<";
 			$el.addEventListener("click", e => {
 				e.preventDefault();
 				const $target = $diff.querySelector(`a[name="${href}"]`);
 				if ($target) {
-					$target.scrollIntoView({ behavior: "smooth", block: "center" });
+					const targetRect = $target.getBoundingClientRect();
+					const diffRect = $diff.getBoundingClientRect();
+					const elementOffset = targetRect.top - diffRect.top + $diff.scrollTop;
+					const targetScroll = elementOffset - (diffRect.height - targetRect.height) / 2;
+					$diff.scrollTo({
+						top: Math.max(0, targetScroll),
+						behavior: "smooth"
+					});
 
 					$diff.querySelectorAll(".flash-highlight").forEach($old => $old.classList.remove("flash-highlight"));
 
@@ -2515,10 +2652,19 @@ export class GUI {
 		const $scroll = $changes[0] ?? $lines[0];
 		if ($scroll)
 			requestAnimationFrame(() => {
-				$diff.scroll({ top: $scroll.offsetTop - $diff.clientHeight / 2, behavior: "smooth" });
+				const scrollRect = $scroll.getBoundingClientRect();
+				const diffRect = $diff.getBoundingClientRect();
+				const elementOffset = scrollRect.top - diffRect.top + $diff.scrollTop;
+				const targetScroll = elementOffset - (diffRect.height - scrollRect.height) / 2;
+				$diff.scrollTo({
+					top: Math.max(0, targetScroll),
+					behavior: "smooth"
+				});
 
 				function updateOffScreen() {
-					let above = false, below = false;
+					const $changes = $diff.querySelectorAll(":is(.diff-addedline, .diff-deletedline) .diffchange");
+
+					let $above = null, $below = null;
 					const rect = $diff.getBoundingClientRect();
 					for (const $change of $changes) {
 						let thisAbove = false, thisBelow = false;
@@ -2530,16 +2676,54 @@ export class GUI {
 							thisBelow = true;
 
 						if (!(thisAbove && thisBelow)) {
-							above ||= thisAbove;
-							below ||= thisBelow;
+							if (thisAbove)
+								$above = $change;
+							if ($below === null && thisBelow)
+								$below = $change;
 						}
 					}
+
+					const $scrollUp = document.querySelector("#diff-scroll-up");
+					$scrollUp.classList.toggle("hidden", !$above);
+					$scrollUp.onclick = () => {
+						const aboveRect = $above.getBoundingClientRect();
+						const diffRect = $diff.getBoundingClientRect();
+						const elementOffset = aboveRect.top - diffRect.top + $diff.scrollTop;
+						const targetScroll = elementOffset - (diffRect.height - aboveRect.height) / 2;
+						$diff.scrollTo({
+							top: Math.max(0, targetScroll),
+							behavior: "smooth"
+						});
+
+						$above.classList.add("flash-highlight");
+						setTimeout(() => $above?.classList?.remove("flash-highlight"), 3000);
+					};
+
+					const $scrollDown = document.querySelector("#diff-scroll-down");
+					$scrollDown.classList.toggle("hidden", !$below);
+					$scrollDown.onclick = () => {
+						const belowRect = $below.getBoundingClientRect();
+						const diffRect = $diff.getBoundingClientRect();
+						const elementOffset = belowRect.top - diffRect.top + $diff.scrollTop;
+						const targetScroll = elementOffset - (diffRect.height - belowRect.height) / 2;
+						$diff.scrollTo({
+							top: Math.max(0, targetScroll),
+							behavior: "smooth"
+						});
+
+						$below.classList.add("flash-highlight");
+						setTimeout(() => $below?.classList?.remove("flash-highlight"), 3000);
+					};
 				}
 
 				updateOffScreen();
 				$diff.onscroll = () => requestAnimationFrame(updateOffScreen);
 				window.onresize = () => requestAnimationFrame(updateOffScreen);
 			});
+		else {
+			document.querySelector("#diff-scroll-up").classList.add("hidden");
+			document.querySelector("#diff-scroll-down").classList.add("hidden");
+		}
 	}
 	#sanitizeInlineHtml(html) {
 		const allowed = new Set(["B", "I", "EM", "STRONG", "CODE", "SPAN", "BR"]);
@@ -2812,7 +2996,11 @@ export class GUI {
 			this.ws.audio.zengine.stop();
 
 		document.querySelectorAll("[data-zen-show]").forEach($el => {
-			$el.style.display = zen.enabled && !zen[$el.dataset.zenShow].enabled ? "none" : "";
+			const keys = $el.dataset.zenShow.split(",");
+			if (zen.enabled && !keys.some(key => zen[key]?.enabled))
+				$el.style.display = "none";
+			else
+				$el.style.display = "";
 		});
 	}
 
@@ -2837,7 +3025,7 @@ export class GUI {
 			}
 		});
 
-		const tab = queues.find(q => q.enabled)?.name;
+		const tab = queues.find(q => q.name === this.ws.queue.current.type) ? this.ws.queue.current.type : queues.find(q => q.enabled)?.name;
 		if (tab)
 			this.ws.queue.switch(tab);
 		else {
@@ -2885,48 +3073,70 @@ export class GUI {
 		$tooltip.offsetHeight; // Force reflow
 
 		const tooltipRect = $tooltip.getBoundingClientRect();
-		const w = tooltipRect.width, h = tooltipRect.height;
+		const tw = tooltipRect.width;
+		const th = tooltipRect.height;
 
 		const targetRect = $target.getBoundingClientRect();
-
+		const gap = 10;
 		const vw = innerWidth;
 		const vh = innerHeight;
 
-		const cx = (targetRect.left + targetRect.right - w) / 2;
-		const cy = (targetRect.top + targetRect.bottom - h) / 2;
+		// Position candidates: [name, x, y, shouldShift]
+		const positions = [
+			// Try below first
+			["bottom", (targetRect.left + targetRect.right) / 2 - tw / 2, targetRect.bottom + gap, true],
+			// Try above
+			["top", (targetRect.left + targetRect.right) / 2 - tw / 2, targetRect.top - th - gap, true],
+			// Try right
+			["right", targetRect.right + gap, (targetRect.top + targetRect.bottom) / 2 - th / 2, true],
+			// Try left
+			["left", targetRect.left - tw - gap, (targetRect.top + targetRect.bottom) / 2 - th / 2, true]
+		];
 
-		const fits = (left, top) => left >= 0 && left + w <= vw && top >= 0 && top + h <= vh;
+		let bestPosition = null;
+		let bestScore = -Infinity;
 
-		// Try primary positions first
-		if (fits(cx, targetRect.bottom + 10)) {
-			$tooltip.style.left = `${cx}px`;
-			$tooltip.style.top = `${targetRect.bottom + 10}px`;
-		} else if (fits(cx, targetRect.top - h - 10)) {
-			$tooltip.style.left = `${cx}px`;
-			$tooltip.style.top = `${targetRect.top - h - 10}px`;
-		} else if (fits(targetRect.right + 10, cy)) {
-			$tooltip.style.left = `${targetRect.right + 10}px`;
-			$tooltip.style.top = `${cy}px`;
-		} else if (fits(targetRect.left - w - 10, cy)) {
-			$tooltip.style.left = `${targetRect.left - w - 10}px`;
-			$tooltip.style.top = `${cy}px`;
-		} else {
-			const rightX = targetRect.right + 10;
-			if (rightX + w <= vw) {
-				const topY = Math.max(0, Math.min(cy, vh - h));
-				$tooltip.style.left = `${rightX}px`;
-				$tooltip.style.top = `${topY}px`;
-			} else {
-				const leftX = targetRect.left - w - 10;
-				if (leftX >= 0) {
-					const topY = Math.max(0, Math.min(cy, vh - h));
-					$tooltip.style.left = `${leftX}px`;
-					$tooltip.style.top = `${topY}px`;
-				} else {
-					$tooltip.style.left = `${Math.max(0, Math.min(cx, vw - w))}px`;
-					$tooltip.style.top = `${Math.max(0, Math.min(cy, vh - h))}px`;
+		for (const [name, x, y, canShift] of positions) {
+			let posX = x, posY = y;
+
+			// Check if position fits without wrapping
+			if (posX >= 0 && posX + tw <= vw && posY >= 0 && posY + th <= vh) {
+				// Perfect fit - score high
+				bestScore = 100;
+				bestPosition = [posX, posY];
+				break;
+			}
+
+			// If can shift, try to fit it within bounds
+			if (canShift) {
+				const shiftedX = Math.max(0, Math.min(posX, vw - tw));
+				const shiftedY = Math.max(0, Math.min(posY, vh - th));
+
+				// Check if shifted position overlaps target
+				const overlaps = !(shiftedX + tw <= targetRect.left ||
+					shiftedX >= targetRect.right ||
+					shiftedY + th <= targetRect.top ||
+					shiftedY >= targetRect.bottom);
+
+				// Score based on overlap and shift distance
+				const shiftDist = Math.abs(shiftedX - x) + Math.abs(shiftedY - y);
+				const score = overlaps ? -50 - shiftDist : 50 - shiftDist / 10;
+
+				if (score > bestScore) {
+					bestScore = score;
+					bestPosition = [shiftedX, shiftedY];
 				}
 			}
+		}
+
+		// Apply best position found
+		if (bestPosition) {
+			$tooltip.style.left = `${bestPosition[0]}px`;
+			$tooltip.style.top = `${bestPosition[1]}px`;
+		} else {
+			// Last resort fallback
+			$tooltip.style.left = `${Math.max(0, Math.min((targetRect.left + targetRect.right) / 2 - tw / 2, vw - tw))}px`;
+			$tooltip.style.top = `${Math.max(0, Math.min((targetRect.top + targetRect.bottom) / 2 - th / 2, vh - th))}px`;
 		}
 
 		$target.addEventListener("mousewheel", e => $tooltip.scrollBy({ left: e.deltaX, top: e.deltaY, behavior: "smooth" }));
@@ -2951,7 +3161,7 @@ export class GUI {
 			else if ($tooltip)
 				$tooltip.remove();
 
-			$tooltip = this.createTooltip($el, "", $el.dataset.tooltip, $el.dataset.tooltipHtml === "true", +$el.dataset.tooltipDelay || 10);
+			$tooltip = this.createTooltip($el, "", $el.dataset.tooltip, $el.dataset.tooltipHtml === "true", +$el.dataset.tooltipDelay || 100);
 		});
 
 		$el.addEventListener("mouseleave", () => {
@@ -3400,6 +3610,8 @@ export class GUI {
 	}
 
 	createWarnMenu(type, $container, item) {
+		removeEventListener("keydown", this.warningMenuKeyListener);
+
 		document.querySelectorAll(".levels-menu").forEach($menu => $menu.remove());
 		document.querySelectorAll(".warning-submenu").forEach($submenu => $submenu.remove());
 
@@ -3558,7 +3770,7 @@ export class GUI {
 				$submenu.appendChild($item);
 			}
 
-			$option.addEventListener("click", (e) => {
+			$option.addEventListener("click", e => {
 				e.stopPropagation();
 
 				const wasShown = $submenu.classList.contains("show");
@@ -3570,9 +3782,13 @@ export class GUI {
 				});
 
 				if (!wasShown) {
+					$option.classList.add("focus-opened");
+
 					$submenu.classList.add("show");
 					this.positionWarningSubmenu($submenu, $option);
 				} else {
+					$option.classList.remove("focus-opened");
+
 					$submenu.classList.remove("show");
 					document.body.querySelectorAll(".levels-menu.show").forEach($menu => $menu.classList.remove("show"));
 				}
@@ -3584,6 +3800,73 @@ export class GUI {
 			$noWarnings.className = "warning-menu-no-items";
 			$noWarnings.textContent = "No warnings available for this edit.";
 			$menu.appendChild($noWarnings);
+		}
+
+		addEventListener("keydown", this.warningMenuKeyListener);
+	}
+
+	warningMenuKeyListener(event) {
+		if (event.key === "Tab") {
+			const $activeMenu = document.querySelector("#warn-menu.show, #revert-menu.show");
+			if ($activeMenu) {
+				const $selectedMenu = $activeMenu.querySelector(":scope > div > .menu-option.focus-opened");
+				if ($selectedMenu) {
+					const $submenu = document.body.querySelector(".submenu.show");
+					if ($submenu) {
+						const $focusable = $submenu.querySelectorAll(":scope > .warning-menu-item");
+						if ($focusable.length > 0) {
+							const index = Array.from($focusable).indexOf($submenu.querySelector(".focus-visible"));
+							const nextIndex = (index + (event.shiftKey ? -1 : 1) + $focusable.length) % $focusable.length;
+
+							document.querySelectorAll(".focus-visible").forEach($item => $item.classList.remove("focus-visible"));
+							$focusable[nextIndex].classList.add("focus-visible");
+
+							event.preventDefault();
+						}
+					}
+				} else {
+					const $focusable = $activeMenu.querySelectorAll(
+						`:scope > div > .favorites-section > .favorites-container > .warning-menu-item,
+						 :scope > div > .menu-option`
+					);
+					if ($focusable.length > 0) {
+						const index = Array.from($focusable).indexOf($activeMenu.querySelector(".focus-visible"));
+						const nextIndex = (index + (event.shiftKey ? -1 : 1) + $focusable.length) % $focusable.length;
+
+						document.querySelectorAll(".focus-visible").forEach($item => $item.classList.remove("focus-visible"));
+						$focusable[nextIndex].classList.add("focus-visible");
+
+						event.preventDefault();
+					}
+				}
+			}
+		} else if (event.key === "Enter") {
+			const $activeMenu = document.querySelector("#warn-menu.show, #revert-menu.show");
+			if ($activeMenu) {
+				const $focused = document.querySelector(".focus-visible");
+				if ($focused) {
+					$focused.click();
+					event.preventDefault();
+				}
+			}
+		} else if (event.key === "Escape") {
+			const $activeMenu = document.querySelector("#warn-menu.show, #revert-menu.show");
+			if ($activeMenu) {
+				const $opened = document.querySelector(".focus-opened");
+				if ($opened) {
+					$opened.classList.remove("focus-opened");
+					$opened.classList.add("focus-visible");
+					$opened.click();
+				} else {
+					document.querySelectorAll(".bottom-tool-menu").forEach($menu => $menu.classList.remove("show"));
+					document.querySelectorAll(".bottom-tool-trigger").forEach($trigger => $trigger.classList.remove("active"));
+
+					document.querySelectorAll(".submenu").forEach($submenu => $submenu.classList.remove("show"));
+					document.querySelectorAll(".levels-menu").forEach($menu => $menu.classList.remove("show"));
+				}
+
+				event.preventDefault();
+			}
 		}
 	}
 

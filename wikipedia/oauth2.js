@@ -169,7 +169,7 @@ class Throttle {
     }
 }
 
-class MediaWikiOAuth2 {
+module.exports.MediaWikiOAuth2 = class MediaWikiOAuth2 {
     static get CLIENT() { return "381204bcce0506b309d1974167e399ac"; }
     // it actually does not matter that this is public, see https://phabricator.wikimedia.org/T323855, since the client is not confidential, we can ship the secret
     static get SECRET() { return "7b188b6e0d0d326e9aa668ef9630409ec4f3981d"; }
@@ -251,6 +251,20 @@ class MediaWikiOAuth2 {
         if (this.throttle.count % 100 === 0)
             Logger.info(`OAuth2 request count: ${this.throttle.count}, rate: ${this.throttle.per(60 * 1000)} rpm`);
 
+        try {
+            const folder = path.join(app.getPath("userData"), "logs");
+            const file = path.join(folder, "requests.txt");
+            fs.mkdir(folder, { recursive: true }, err => {
+                if (err) return;
+
+                fs.appendFile(file, `[${new Date().toISOString()}] ${method} ${url + (method === "GET" ? "" : `?${new URLSearchParams(params).toString()}`)}\n`, err => {
+                    if (err) return;
+                });
+            });
+        } catch (err) {
+            Logger.error("Failed to log OAuth2 request:", err);
+        }
+
         return await this.throttle.call(async () => {
             return await fetch(url, {
                 method,
@@ -287,9 +301,10 @@ class MediaWikiOAuth2 {
                     });
                     throw err;
                 }
+            }).catch(err => {
+                Logger.error(`Fetch failed: ${err.message}`);
+                throw err;
             });
         }, bypass);
     }
 }
-
-module.exports = { MediaWikiOAuth2 };

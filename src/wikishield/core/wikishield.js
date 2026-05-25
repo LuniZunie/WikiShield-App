@@ -45,7 +45,9 @@ export class WikiShield {
 		"ready": [ ],
 	};
 
-	constructor(server, username, pendingChangesServers) {
+	constructor(server, username, pendingChangesServers, dev) {
+		this.__DEV__ = dev;
+
 		this.started = false;
 
 		this.server = server;
@@ -273,6 +275,9 @@ export class WikiShield {
 
 		// keydown bc we want speedy response
 		if (event.type === "keydown") {
+			if (event.repeat && !this.store.settings.repeat_control_scripts)
+				return;
+
 			const shortcut = buildShortcut(event);
 			for (const script of this.store.control_scripts)
 				if (script.keys.every(key => key === shortcut)) {
@@ -394,6 +399,19 @@ export class WikiShield {
 		return continuity;
 	}
 
+	async getDEFCON() {
+		const page = "User:EnterpriseyBot/defcon";
+		const content = (await this.api.getPagesContent([ page ]))[page];
+
+		const level = content.match(/level\s*=\s*(\d+)/);
+		const info = content.match(/info\s*=\s*([\d.]+)/);
+
+		return {
+			level: level ? Number(level[1]).toLocaleString() : null,
+			info: info ? Number(info[1]).toLocaleString() : null,
+		};
+	}
+
 	export() {
 		this.time.save = performance.now();
 		this.store.statistics.session_time += this.time.save - this.time.load;
@@ -415,6 +433,8 @@ export class WikiShield {
 	}
 
 	async save() {
+		this.backup();
+
 		const data = this.export();
 		electron.saveAccount(this.api.username, `${Date.now()};${data}`);
 	}
@@ -422,7 +442,7 @@ export class WikiShield {
 	async load() {
 		try {
 			const save = [
-				await electron.localStorage.get(`WikiShield:BackupStorage-${this.api.username}`),
+				electron.localStorage.get(`WikiShield:BackupStorage-${this.api.username}`),
 				(await this.api.post({ action: "query", meta: "userinfo", uiprop: "options", format: "json" })).query.userinfo.options[`userjs-wikishield-storage`]
 			].reduce((latest, current) => {
 				current ??= "0;e30=";
@@ -446,7 +466,11 @@ export class WikiShield {
 	}
 
 	open(href, external) {
-		external ??= !this.store.settings.wikipedia_popups.enabled;
+		if (external === "force")
+			external = false;
+		else
+			external ||= !this.store.settings.wikipedia_popups.enabled;
+
 		if (external)
 			electron.openExternal(href);
 		else {

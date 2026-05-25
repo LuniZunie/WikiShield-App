@@ -1,3 +1,16 @@
+const { AI } = require("../ai/class.js");
+const { conditions } = require("../config/conditions.js");
+const { buildShortcut, controls, validateShortcut } = require("../config/control-keys.js");
+const { events } = require("../config/events.js");
+const { Queue } = require("../core/queue.js");
+const { WikiShield } = require("../core/wikishield.js");
+const { namespaces } = require("../data/namespaces.js");
+const { StorageManager } = require("../data/storage/manager.js");
+const { warningsLookup } = require("../data/warnings.js");
+const { sortDependencies } = require("../utilities/scripts.js");
+const { Text } = require("../utilities/text.js");
+const { GUI } = require("./gui.js");
+
 import { AI } from "../ai/class.js";
 import { conditions } from "../config/conditions.js";
 import { buildShortcut, controls, validateShortcut } from "../config/control-keys.js";
@@ -10,6 +23,8 @@ import { warningsLookup } from "../data/warnings.js";
 import { sortDependencies } from "../utilities/scripts.js";
 import { Text } from "../utilities/text.js";
 import { GUI } from "./gui.js";
+
+// TODO make watching, whitelisting, and highlighting require times as a param
 
 const formatTime = ms => {
 	const seconds = Math.floor(ms / 1000);
@@ -28,7 +43,7 @@ const formatTime = ms => {
 	return str.trim();
 };
 
-export class Settings {
+module.exports.Settings = class Settings {
 	#keypressListener;
 
 	#promiseResolve;
@@ -39,52 +54,6 @@ export class Settings {
 		this.ws.api.getTags().then(tags => {
 			this.wikipediaTags = tags;
 		});
-
-		electron.onImportSettingsFromClipboard(async () => {
-			const b64 = await electron.getClipboardText();
-			try {
-				const logs = await this.ws.noinit(b64);
-				StorageManager.output(logs, "Import for clipboard");
-
-				this.ws.gui.dialog.toast(
-					"Settings Imported",
-					`${new Text("%n issue").get(logs.filter(log => !log.expected).length)} encountered during import.`,
-					logs.filter(log => !log.expected).length > 0 ? "warning" : "success"
-				);
-			} catch (error) {
-				console.error(error);
-				this.ws.gui.dialog.toast("Import Failed", "The settings could not be imported from the clipboard.", "error");
-			}
-		});
-		electron.onImportSettingsFromInput(async () => {
-			const b64 = await this.ws.gui.dialog.input("Import Settings", "Paste your WikiShield settings data below:");
-			if (!b64)
-				return;
-
-			try {
-				const logs = await this.ws.noinit(b64);
-				StorageManager.output(logs, "Import from input");
-
-				this.ws.gui.dialog.toast(
-					"Settings Imported",
-					`${new Text("%n issue").get(logs.filter(log => !log.expected).length)} encountered during import.`,
-					logs.filter(log => !log.expected).length > 0 ? "warning" : "success"
-				);
-			} catch (error) {
-				console.error(error);
-				this.ws.gui.dialog.toast("Import Failed", "The settings could not be imported from the provided data.", "error");
-			}
-		});
-
-		electron.onExportSettingsToClipboard(async () => {
-			try {
-				await electron.copyToClipboard(await this.ws.export());
-				this.ws.gui.dialog.toast("Settings Exported", "The settings have been copied to the clipboard.", "success");
-			} catch (error) {
-				console.error(error);
-				this.ws.gui.dialog.toast("Export Failed", "The settings could not be copied to the clipboard.", "error");
-			}
-		});
 	}
 
 	get active() {
@@ -94,7 +63,7 @@ export class Settings {
 	controller(event) {
 		const key = event.key.toLowerCase();
 		if (!this.#keypressListener) {
-			if (key === "escape")
+			if (key === "escape" && event.type === "keydown")
 				this.close();
 
 			return;
@@ -216,7 +185,6 @@ export class Settings {
 	}
 
 	start() {
-		electron.onOpenSettings(this.open.bind(this));
 		electron.onOpenChangelog(() => void(this.open()) ?? this.changelog());
 
 		let cockBlock = 0;
@@ -445,6 +413,10 @@ export class Settings {
 		}
 
 		{
+			const $repeatScripts = document.querySelector("#repeat-control-scripts-toggle");
+			$repeatScripts.value = this.ws.store.settings.repeat_control_scripts;
+			$repeatScripts.addEventListener("change", e => this.ws.store.settings.repeat_control_scripts = $repeatScripts.value);
+
 			document.querySelector("#settings-new-control-script").addEventListener("click", async () => {
 				this.ws.store.control_scripts.unshift({
 					keys: [],
@@ -506,7 +478,7 @@ export class Settings {
 		}
 
 		{
-			{
+			if (false) {
 				const $theme = document.querySelector("#settings-app-theme");
 
 				document.querySelectorAll("#settings-app-theme .selected").forEach($el => $el.classList.remove("selected"));
@@ -534,6 +506,27 @@ export class Settings {
 					$dark.classList.add("selected");
 					this.ws.store.UI.theme.app = "dark";
 					document.documentElement.style.colorScheme = "only dark";
+				});
+			}
+
+			if (!window.isElectron) {
+				const $launch = document.querySelector("#settings-launch-behavior");
+
+				document.querySelectorAll("#settings-launch-behavior .selected").forEach($el => $el.classList.remove("selected"));
+				document.querySelector(`#settings-launch-behavior [data-value=${electron.localStorage.get("WikiShield:OpenExternally") ? "new_tab" : "current_tab"}]`).classList.add("selected");
+
+				const $current = $launch.querySelector("[data-value=current_tab]");
+				$current.addEventListener("click", () => {
+					$launch.querySelectorAll(".selected").forEach($el => $el.classList.remove("selected"));
+					$current.classList.add("selected");
+					electron.localStorage.set("WikiShield:OpenExternally", false);
+				});
+
+				const $new = $launch.querySelector("[data-value=new_tab]");
+				$new.addEventListener("click", () => {
+					$launch.querySelectorAll(".selected").forEach($el => $el.classList.remove("selected"));
+					$new.classList.add("selected");
+					electron.localStorage.set("WikiShield:OpenExternally", true);
 				});
 			}
 
@@ -740,7 +733,7 @@ export class Settings {
 					$container.classList.add("failed");
 					$container.classList.remove("testing", "connected");
 
-					$status.innerHTML = "<span class='fa fa-times-circle'></span> Failed to connect.<br><small>Make sure Ollama is running with CORS enabled (see instructions below)</small>";
+					$status.innerHTML = "<span class='fa fa-times-circle'></span> Failed to connect.<br><small>Make sure you have followed the setup instructions (see below)</small>";
 				}
 
 				$status.classList.remove("animate-loading-dots");
@@ -1029,7 +1022,7 @@ export class Settings {
 
 		{
 			document.querySelectorAll("#settings-container > .settings > .settings-right > .about [data-link]").forEach($el => {
-				$el.addEventListener("click", () => this.ws.open($el.dataset.link));
+				$el.addEventListener("click", event => this.ws.open($el.dataset.link, event.altKey));
 			});
 		}
 	}
@@ -1547,7 +1540,7 @@ export class Settings {
 					const parent = findParentAction(action, script);
 					const index = parent.actions.indexOf(action);
 					if (parent.actions.indexOf(action) === 0) {
-						if (parent.name !== "if") return;
+						if (parent.name !== "if" && parent.name !== "if not") return;
 
 						const grandparent = findParentAction(parent, script);
 						grandparent.actions.splice(grandparent.actions.indexOf(parent), 0, action);
@@ -1572,7 +1565,7 @@ export class Settings {
 					const parent = findParentAction(action, script);
 					const index = parent.actions.indexOf(action);
 					if (parent.actions.indexOf(action) === parent.actions.length - 1) {
-						if (parent.name !== "if") return;
+						if (parent.name !== "if" && parent.name !== "if not") return;
 
 						const grandparent = findParentAction(parent, script);
 						grandparent.actions.splice(grandparent.actions.indexOf(parent) + 1, 0, action);
@@ -1593,9 +1586,9 @@ export class Settings {
 
 				$item.querySelector(".delete-action").addEventListener("click", async e => {
 					this.ws.audio.playSound([ "ui", "click" ]);
-					if (e.ctrlKey || await this.ws.gui.dialog.confirm(
+					if (e.shiftKey || await this.ws.gui.dialog.confirm(
 						"Delete Action",
-						"Are you sure you want to delete this action?<br><small>Tip: Hold Ctrl while clicking to skip this confirmation.</small>",
+						"Are you sure you want to delete this action?<br><small>Tip: Hold <code>&lt;Shift&gt;</code> while clicking to skip this confirmation.</small>",
 						null,
 						true
 					)) {
@@ -1674,7 +1667,7 @@ export class Settings {
 						this.ws.audio.playSound([ "ui", "click" ]);
 						remove();
 					});
-					this.#keypressListener = (key, final) => {
+					this.#keypressListener = (key, final, event) => {
 						if (key === "escape")
 							remove();
 						else if (final) {
@@ -1711,9 +1704,9 @@ export class Settings {
 
 				$bottom.querySelector(".control-delete").addEventListener("click", async e => {
 					this.ws.audio.playSound([ "ui", "click" ]);
-					if (e.ctrlKey || await this.ws.gui.dialog.confirm(
+					if (e.shiftKey || await this.ws.gui.dialog.confirm(
 						"Delete Control Script",
-						"Are you sure you want to delete this control script? This action cannot be undone?<br><small>Tip: Hold Ctrl while clicking to skip this confirmation.</small>",
+						"Are you sure you want to delete this control script? This action cannot be undone?<br><small>Tip: Hold <code>&lt;Shift&gt;</code> while clicking to skip this confirmation.</small>",
 						null,
 						true
 					)) {

@@ -76,23 +76,23 @@ export class EventManager {
 			let callback = null;
 			switch (param.type) {
 				case "choice": {
-					const $select = document.createElement("select");
-					$select.dataset.paramid = param.id;
-					$el.appendChild($select);
+					const $input = document.createElement("select");
+					$input.dataset.paramid = param.id;
+					$el.appendChild($input);
 
 					const options = typeof param.options === "function" ? param.options(dependencies) : param.options;
 					for (const option of options ?? []) {
 						const $option = document.createElement("option");
 						$option.value = option;
 						$option.textContent = option;
-						$select.appendChild($option);
+						$input.appendChild($option);
 					}
 
 					if (cachedParams[param.id] !== undefined) {
-						$select.value = cachedParams[param.id];
+						$input.value = cachedParams[param.id];
 						actions[param.id] = cachedParams[param.id];
 					} else if ("default" in param) {
-						$select.value = _default;
+						$input.value = _default;
 						actions[param.id] = _default;
 					}
 
@@ -101,28 +101,28 @@ export class EventManager {
 						for (const dependent of param.dependencies ?? [])
 							dependencies[dependent] = actions[dependent];
 
-						const value = $select.value;
+						const value = $input.value;
 
 						const options = typeof param.options === "function" ? param.options(dependencies) : param.options;
-						$select.innerHTML = "";
+						$input.innerHTML = "";
 						for (const option of options ?? []) {
 							const $option = document.createElement("option");
 							$option.value = option;
 							$option.textContent = option;
-							$select.appendChild($option);
+							$input.appendChild($option);
 						}
 
 						if (options.includes(value))
-							$select.value = value;
+							$input.value = value;
 						else {
 							const _default = typeof param.default === "function" ? param.default(dependencies) : param.default;
-							$select.value = _default;
+							$input.value = _default;
 							actions[param.id] = _default;
 						}
 					};
 
-					$select.addEventListener("change", () => {
-						actions[param.id] = $select.value;
+					$input.addEventListener("change", () => {
+						actions[param.id] = $input.value;
 						for (const cb of dependencyMap.get(param.id) || [])
 							cb();
 					});

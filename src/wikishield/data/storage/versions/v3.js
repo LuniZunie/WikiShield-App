@@ -193,7 +193,9 @@ Version.v3 = class V3 extends Version {
                     high_contrast: false,
 
                     reduce_motion: false,
-                }
+                },
+
+                repeat_control_scripts: true
             },
             UI: {
                 theme: {
@@ -586,7 +588,9 @@ Version.v3 = class V3 extends Version {
                     high_contrast: defaults.settings.accessibility.high_contrast,
 
                     reduce_motion: defaults.settings.accessibility.reduce_motion,
-                }
+                },
+
+                repeat_control_scripts: this.sanitize([ "settings", "repeat_control_scripts" ], defaults.settings.repeat_control_scripts),
             },
             UI: {
                 theme: {
@@ -1377,6 +1381,12 @@ Version.v3 = class V3 extends Version {
                     if (typeof value !== "boolean")
                         this.reset("settings", "accessibility", "reduce_motion");
                 }
+            }
+
+            { // root.settings.repeat_control_scripts
+                const value = root.settings.repeat_control_scripts;
+                if (typeof value !== "boolean")
+                    this.reset("settings", "repeat_control_scripts");
             }
         }
 

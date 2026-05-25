@@ -1,4 +1,4 @@
-export function BuildPalette(steps, ...colors) {
+module.exports.BuildPalette = function BuildPalette(steps, ...colors) {
     const paper = document.createElement("canvas");
     paper.width = steps;
     paper.height = 1;

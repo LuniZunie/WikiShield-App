@@ -222,12 +222,6 @@ class Profanity {
             severity: 0.6,
             note: "British sexual slang for masturbation."
         },
-        {
-            term: "ball",
-            severity: 0.1,
-            note: "Common word with mild innuendo potential."
-        },
-        { term: "balls", severity: 0.2 },
         { term: "barf", severity: 0.3 },
         { term: "bastard", severity: 0.5 },
         {
@@ -375,17 +369,7 @@ class Profanity {
             note: "Phonetic sexual innuendo for 'cock's long'."
         },
         { term: "douche", severity: 0.5 },
-        {
-            term: "cornhol",
-            severity: 0.7,
-            note: "Vulgar sexual term, variant of 'cornhole'."
-        },
         { term: "cunt", severity: 0.7 },
-        {
-            term: "cvnt",
-            severity: 0.7,
-            note: "Obfuscated 'cunt'."
-        },
         {
             term: "cuck",
             severity: 0.4,
@@ -396,11 +380,6 @@ class Profanity {
             severity: 0.9,
             multiWord: true,
             note: "Racist slur against South Asians."
-        },
-        {
-            term: "constipat",
-            severity: 0.2,
-            note: "Medical term stem, crude context."
         },
         {
             term: "crime",
@@ -971,16 +950,6 @@ class Profanity {
             note: "Trolling variant/meme."
         },
         {
-            term: "lmao",
-            severity: 0.1,
-            note: "Internet slang, mild."
-        },
-        {
-            term: "lmfao",
-            severity: 0.3,
-            note: "Internet slang with profanity."
-        },
-        {
             term: "grief",
             severity: 0.3,
             note: "Gaming term for harassment."
@@ -1143,6 +1112,11 @@ class Profanity {
             severity: 0.7,
             multiWord: true
         },
+        {
+            term: "goon",
+            severity: 0.2,
+            multiWord: false
+        },
     ];
 
     constructor(lookalikes = {}) {
@@ -1275,6 +1249,7 @@ class Profanity {
         const segment = text.substring(Math.max(0, start - 8), Math.min(text.length, end + 8)).toLowerCase();
 
         const legitimatePatterns = [
+            /WMF/,
             /pass(word|phrase|port|enger|ion|ive|ed|ing|es|key|code|over|by|able)/i,
             /class(room|mate|ified|es|ic|y|ification)/i,
             /grass(land|hopper|y|es)/i,

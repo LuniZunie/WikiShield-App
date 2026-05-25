@@ -135,7 +135,10 @@ export class AudioManager {
 
     async init() {
         this.zengine = new Zengine();
+        this.zengine.debug = this.ws.__DEV__;
+
         await this.zengine.init();
+
         this.zengine.setMasterVolume(this.ws.store.settings.audio.volume["master.music.zen_mode"]);
     }
 

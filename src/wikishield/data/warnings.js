@@ -265,10 +265,6 @@ export const warnings = {
 					{ name: "3", template: "uw-unsourced3" },
 					{ name: "4", template: "uw-unsourced4" }
 				],
-
-				show(edit) {
-					return !edit?.page?.categories?.includes("Category:Living people");
-				}
 			},
 			{
 				reportable: true,
@@ -290,10 +286,6 @@ export const warnings = {
 					{ name: "4", template: "uw-biog4" },
 					{ name: "4im", template: "uw-biog4im" }
 				],
-
-				show(edit) {
-					return edit?.page?.categories?.includes("Category:Living people");
-				}
 			},
 			{
 				reportable: true,
@@ -630,7 +622,7 @@ export const warnings = {
 				summary: "[[WP:EW|edit warring]]",
 
 				auto(edit) {
-					return edit?.user?.edits < 500 ? "notice" : "warning";
+					return +edit?.user?.edits < 500 ? "notice" : "warning";
 				},
 				templates: [
 					{ name: "notice", template: "uw-ew-soft", color: "grey" },
@@ -797,10 +789,10 @@ export const warnings = {
 				summary: "no [[WP:ES|edit summary]] provided",
 
 				auto(edit) {
-					return edit?.user?.edits < 500 ? "newcomer" : "experienced";
+					return +edit?.user?.edits < 500 ? "newcomer" : "experienced";
 				},
 				templates: [
-					{ name: "newcomer", template: "uw-es" },
+					{ name: "notice", template: "uw-es" },
 					{ name: "experienced", template: "uw-es2" }
 				],
 			},

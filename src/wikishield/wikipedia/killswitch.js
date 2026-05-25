@@ -1,4 +1,4 @@
-export class Killswitch {
+module.exports.Killswitch = class Killswitch {
     static #page = "User:LuniZunie/JSON/Killswitch.json";
 
     static #soft = 11;

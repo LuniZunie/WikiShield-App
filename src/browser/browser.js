@@ -187,9 +187,8 @@ class Tab {
                 const activeTab = this.browser.getActiveTab();
                 if (activeTab)
                     activeTab.navigateTo(event.args[0]);
-            } else {
+            } else
                 this.browser.createTab(event.args[0]);
-            }
             return;
         }
 

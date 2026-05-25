@@ -52,16 +52,16 @@ export class Queue {
 		}));
 
 		this.cache = {
-			simple: new Memory({ size: 2500 }),
-			full: new Memory({ size: 500 })
+			simple: new Memory({ size: 1000 }),
+			full: new Memory({ size: 250 })
 		};
 
 		this.current = this.queues[Queue.types[0]];
 
 		this.pending = new Map();
-		this.watchlist = new Memory({ size: 10000 });
-		this.talks = new Memory({ size: 1000 });
-		this.warnings = new Memory({ size: 10000, timeout: 24 * 60 * 60 * 1000 }); // 1 day
+		this.watchlist = new Memory({ size: 1000 });
+		this.talks = new Memory({ size: 500 });
+		this.warnings = new Memory({ size: 1000, timeout: 24 * 60 * 60 * 1000 }); // 1 day
 		this.noWelcome = new Memory({ timeout: 60 * 60 * 1000 }); // 1 hour
 		this.histories = new Memory({ size: 1000 });
 		this.contributions = new Memory({ size: 1000 });
@@ -82,6 +82,8 @@ export class Queue {
 			return;
 		else if (this.current.type === "pending")
 			this.queues.pending.queue = this.queues.pending.queue.filter(item => this.pending.has(item.id));
+
+		document.querySelector("#clear-queue").classList.toggle("hidden", type === "pending");
 
 		this.current = this.queues[type];
 		if (!this.current.queue.some(item => item.id === this.current.item?.id))
@@ -343,10 +345,9 @@ export class Queue {
 						await this.add(type, filtered);
 					} break;
 				}
-
-				if (type !== "pending" && type !== "users")
-					await this.outdated(type);
 			}
+
+			await this.outdated();
 
 			this.backoff = Queue.refresh;
 		} catch (error) {
@@ -356,72 +357,68 @@ export class Queue {
 
 		setTimeout(() => this.fetch(), this.backoff);
 	}
-	async outdated(type) {
-		if (this.queues[type].queue.length === 0)
-			return;
+	async outdated() {
+		{ // pending
+			const remove = [ ];
+			for (const item of this.queues.pending.queue) {
+				if (item === this.current.item)
+					continue;
 
-		const remove = [ ];
-		switch (type) {
-			case "flagged": {
-				for (const item of this.queues[type].queue) {
-					if (item === this.current.item)
-						continue;
-
-					if (!this.pending.has(item.id))
-						remove.push(item);
-				}
-
-				if (remove.length > 0)
-					for (const item of remove) {
-						const i = this.queues[type].queue.indexOf(item);
-						if (i > -1) {
-							this.queues[type].queue.splice(i, 1);
-							this.ws.gui.removeQueueItem(type, item.id);
-						}
-					}
-			} break;
-			default: {
-				let queue = this.queues[type].queue;
-				if (type === "abuselog")
-					queue = queue.filter(item => item.revid);
-
-				const pages = [ ...new Set(queue.map(item => item.page.title)) ];
-				if (pages.length === 0)
-					return;
-
-				const latests = await this.ws.api.getLatestIds(pages);
-				for (const item of queue) {
-					let revid = item.id;
-					if (type === "abuselog") {
-						if (item.revid)
-							revid = item.revid;
-						else
-							continue;
-					}
-
-					const latest = latests[item.page.title];
-					if (latest && latest > revid)
-						remove.push([ item.id, revid ]);
-				}
-
-				if (remove.length > 0)
-					for (const [ id, revid ] of remove)
-						[ "recent", "watchlist", "abuselog" ].forEach(t => {
-							const prop = t === "abuselog" ? "revid" : "id";
-							if (revid === this.queues[t].item?.[prop])
-								return;
-
-							const i = this.queues[t].queue.findIndex(qItem => qItem[prop] === revid);
-							if (i > -1) {
-								this.queues[t].history.push({ ...this.queues[t].queue.splice(i, 1)[0], history: performance.now() });
-								this.ws.gui.removeQueueItem(t, id);
-							}
-						});
+				if (!this.pending.has(item.id))
+					remove.push(item);
 			}
+
+			if (remove.length > 0)
+				for (const item of remove) {
+					const i = this.queues.pending.queue.indexOf(item);
+					if (i > -1) {
+						this.queues.pending.queue.splice(i, 1);
+						this.ws.gui.removeQueueItem("pending", item.id);
+					}
+				}
 		}
 
-		if (remove.length > 0)
-			this.ws.gui.renderQueue(this.queues[type].queue, this.queues[type].item, type);
+		const pages = new Set();
+		const queues = [ "recent", "watchlist", "abuselog" ];
+		for (const type of queues)
+			this.queues[type].queue.forEach(item => {
+				if (type === "abuselog" && !item.revid)
+					return;
+				pages.add(item.page.title);
+			});
+
+		const latests = await this.ws.api.getLatestIds([ ...pages ]);
+		for (const type of queues) {
+			const remove = [ ];
+			for (const item of this.queues[type].queue) {
+				let revid = item.id;
+				if (type === "abuselog") {
+					if (item.revid)
+						revid = item.revid;
+					else
+						continue;
+				}
+
+				const latest = latests[item.page.title];
+				if (latest && latest > revid)
+					remove.push([ item.id, revid ]);
+			}
+
+			if (remove.length > 0)
+				for (const [ id, revid ] of remove) {
+					const prop = type === "abuselog" ? "revid" : "id";
+					if (revid === this.queues[type].item?.[prop])
+						continue;
+
+					const i = this.queues[type].queue.findIndex(qItem => qItem[prop] === revid);
+					if (i > -1) {
+						this.queues[type].queue.splice(i, 1);
+						this.ws.gui.removeQueueItem(type, id);
+					}
+				}
+		}
+
+		this.ws.gui.renderQueue();
 	}
 
 	async add(type, items) {
@@ -734,7 +731,7 @@ export class Queue {
 						tags: item.tags || [ ],
 
 						reverts: data.page.reverts,
-						consecutive: simple ? undefined : await ws.api.getConsecutiveEdits(item.title, item.revid, item.user, bypass), // TODO improve
+						consecutive: data.page.consecutive,
 
 						propagating: false,
 						reviewed: false,
@@ -1087,10 +1084,29 @@ export class Queue {
 		return result;
 	}
 
-	next() {
-		if (this.current.queue.length === 0)
-			return;
+	previous() {
+		const i = this.current.queue.findIndex(item => item.id === this.current.item?.id);
+		if (this.current.type === "pending") {
+			this.current.item = this.current.queue[Math.max(i - 1, 0)];
+			return this.ws.gui.renderQueue();
+		}
 
+		if (i <= 0) {
+			if (this.current.history.length === 0)
+				return;
+
+			this.current.queue.unshift(this.current.history.pop());
+			this.current.item = this.current.queue[0];
+
+			return this.ws.gui.renderQueue();
+		}
+
+		this.current.item = this.current.queue[i - 1];
+
+		this.ws.gui.renderQueue();
+	}
+
+	next() {
 		const i = this.current.queue.findIndex(item => item.id === this.current.item?.id);
 		if (i === -1) {
 			this.current.item = this.current.queue[0];
@@ -1105,6 +1121,9 @@ export class Queue {
 		const leaving = this.current.item;
 		const group = Queue.groups[leaving.type];
 		if (!leaving.reviewed && (group === "edit" || (group === "abuselog" && leaving.revid))) {
+			if (leaving.type === "watchlist")
+				this.ws.api.markWatchlistSeen(leaving.page.title, leaving.id);
+
 			const id = leaving.type === "abuselog" ? leaving.revid : leaving.id;
 			[ "recent", "watchlist", "abuselog" ].filter(t => t !== leaving.type).forEach(t => {
 				if (t === "abuselog")
@@ -1119,6 +1138,9 @@ export class Queue {
 					this.queues[t].queue = this.queues[t].queue.filter(item => {
 						if (item.id === id) {
 							this.queues[t].history.push({ ...item, history: performance.now() });
+							if (t === "watchlist")
+								this.ws.api.markWatchlistSeen(item.page.title, item.id);
+
 							return false;
 						}
 						return true;
@@ -1179,26 +1201,27 @@ export class Queue {
 		this.ws.gui.renderQueue();
 	}
 
-	previous() {
+	canGoPrevious() {
 		const i = this.current.queue.findIndex(item => item.id === this.current.item?.id);
-		if (this.current.type === "pending") {
-			this.current.item = this.current.queue[Math.max(i - 1, 0)];
-			return this.ws.gui.renderQueue();
-		}
+		if (i === -1)
+			return this.current.history.length > 0;
 
-		if (i <= 0) {
-			if (this.current.history.length === 0)
-				return;
+		if (this.current.type === "pending")
+			return i > 0;
+		else if (i === 0)
+			return this.current.history.length > 0;
+		else
+			return true;
+	}
+	canGoNext() {
+		const i = this.current.queue.findIndex(item => item.id === this.current.item?.id);
+		if (i === -1)
+			return Boolean(this.current.queue[0]);
 
-			this.current.queue.unshift(this.current.history.pop());
-			this.current.item = this.current.queue[0];
-
-			return this.ws.gui.renderQueue();
-		}
-
-		this.current.item = this.current.queue[i - 1];
-
-		this.ws.gui.renderQueue();
+		if (this.current.type === "pending")
+			return i < this.current.queue.length - 1;
+		else
+			return true;
 	}
 
 	clear(type) {
@@ -1310,6 +1333,7 @@ export class Queue {
 			item.propagating = new Promise(res => resolve = res);
 
 			const [ loaded ] = await this.generate(item.type, [ item.origin ], false, { bypass });
+			loaded.history = item.history;
 			Object.assign(item, loaded);
 
 			resolve();
@@ -1317,6 +1341,7 @@ export class Queue {
 		} else
 			this.generate(item.type, [ item.origin ], false, { bypass }).then(([ loaded ]) => {
 				const revid = item.revid;
+				loaded.history = item.history;
 				Object.assign(item, loaded);
 				item.revid = revid;
 			});
@@ -1346,7 +1371,6 @@ export class Queue {
 				let object;
 				if (this.cache.simple.has(revid)) {
 					const simple = this.cache.simple.get(revid);
-					console.warn("Using simple cache for revision load, some data may be missing", simple);
 					object = {
 						revid: simple.id,
 						parentid: simple.prior,
@@ -1356,7 +1380,7 @@ export class Queue {
 						user: simple.user.name,
 
 						timestamp: simple.timestamp,
-						parsedcomment: simple.parsedcomment,
+						parsedcomment: simple.comment,
 						tags: simple.origin.tags,
 
 						sizediff: simple.sizediff,

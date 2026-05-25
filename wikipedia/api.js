@@ -5,14 +5,13 @@ const { truncate } = require("../global/truncate/script.com.js");
 const { Memory } = require("../global/memory/script.com.js");
 const { Trie } = require("../global/trie/script.com.js");
 const { ORES } = require("./ores.js");
-const { EventStream } = require("./stream.js");
 
 const __servers__ = require("../servers.js");
 
 const __tags__ = new Set(__servers__.filter(s => s.tag).map(s => s.host));
 const __pendingChanges__ = new Set(__servers__.filter(s => s.pending_changes).map(s => s.host));
 
-class MediaWikiAPI {
+module.exports.MediaWikiAPI = class MediaWikiAPI {
     static cache = { };
 
     static get pendingChangesServers() {
@@ -51,12 +50,6 @@ class MediaWikiAPI {
     }
 
     constructor(glob, oauth, server, username) {
-        this.stream = new EventStream(server);
-        this.stream.connect();
-        this.stream.listen(data => {
-            glob.windows.main?.webContents.send("eventstream-data", data);
-        });
-
         this.glob = glob;
         this.oauth = oauth;
         this.server = server;
@@ -869,10 +862,12 @@ class MediaWikiAPI {
                     (async () => {
                         await Promise.all(items.map(async (item, i) => {
                             [
+                                result[i].data.page.consecutive,
                                 result[i].data.page.reverts,
                                 result[i].data.page.history,
                                 result[i].data.edit.diff
                             ] = await Promise.all([
+                                this.getConsecutiveEdits(item.item.title, item.item.revid, item.item.user, bypass, serverOverride),
                                 this.countPageReverts(item.item.title, this.username, bypass, serverOverride),
                                 this.getHistory(item.item.title, undefined, bypass, serverOverride),
                                 this.getDiff(item.prior || null, item.item.revid, "table", bypass, serverOverride),
@@ -1053,7 +1048,14 @@ class MediaWikiAPI {
                     const rev = this.cache.pending.get(item.revid);
 
                     if (!stability.has(item.title))
-                        stability.set(item.title, this.post({ action: "query", list: "logevents", letype: "stable", letitle: item.title, lelimit: 1 }));
+                        stability.set(item.title, this.post({
+                            action: "query",
+                            list: "logevents",
+                            letype: "stable",
+                            leprop: "ids|title|type|user|timestamp|comment|details|parsedcomment",
+                            letitle: item.title,
+                            lelimit: 1
+                        }));
                     item.stability = (await stability.get(item.title))?.query?.logevents?.[0] || { };
 
                     const page = rev.query?.pages?.[0];
@@ -1159,5 +1161,3 @@ class MediaWikiAPI {
         }
     }
 }
-
-module.exports = { MediaWikiAPI };

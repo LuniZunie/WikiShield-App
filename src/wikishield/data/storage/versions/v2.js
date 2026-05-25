@@ -1154,7 +1154,7 @@ Version.v2 = class V2 extends Version {
             { // root.settings.repeat_control_scripts
                 const value = root.settings.repeat_control_scripts;
                 if (typeof value !== "boolean")
-                    this.reset("settings", "repeat_control_scripts");  // TODO, deal with in v3, and the other option the own in new tab thing on startup
+                    this.reset("settings", "repeat_control_scripts");  // TODO, deal with in v3, and the other option the open in new tab thing on startup
             }
         }
 

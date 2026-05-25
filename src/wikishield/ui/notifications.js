@@ -124,8 +124,26 @@ export class Notifications {
                         { // body
                             const $body = document.createElement("div");
                             $body.classList.add("notification-body");
-                            $body.innerHTML = model.body;
+                            $body.innerHTML = model.parsed;
                             $content.appendChild($body);
+
+                            $body.querySelectorAll("[href]").forEach($link => {
+                                const href = $link.getAttribute("href");
+                                $link.setAttribute("href", new URL(href, `https://${this.ws.server}`).href);
+                            });
+                            $body.querySelectorAll("[src]").forEach($img => {
+                                const src = $img.getAttribute("src");
+                                $img.setAttribute("src", new URL(src, `https://${this.ws.server}`).href);
+                            });
+                            $body.querySelectorAll("[srcset]").forEach($img => {
+                                const srcset = $img.getAttribute("srcset");
+                                const newSrcset = srcset.split(",").map(part => {
+                                    const [ url, descriptor ] = part.trim().split(/\s+/, 2);
+                                    const newUrl = new URL(url, `https://${this.ws.server}`).href;
+                                    return descriptor ? `${newUrl} ${descriptor}` : newUrl;
+                                }).join(", ");
+                                $img.setAttribute("srcset", newSrcset);
+                            });
 
                             $body.querySelectorAll("a").forEach(link => {
                                 link.target = "_blank";
@@ -192,7 +210,6 @@ export class Notifications {
             notification.read = true;
             this.update(type);
 
-            console.log(notification.id);
             this.ws.api.postWithToken({
                 action: "echomarkread",
                 sections: type,
