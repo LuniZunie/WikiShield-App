@@ -25,4 +25,11 @@ export async function build() {
     document.body.innerHTML = doc.body.innerHTML; // load body after CSS so everything is styled on load
 
     await new Promise(requestAnimationFrame); // wait for next frame to ensure everything is rendered
+
+    document.querySelectorAll("[data-electron]").forEach($el => {
+        if ($el.dataset.electron === "false" && window.isElectron)
+            $el.style.display = "none";
+        else if ($el.dataset.electron === "true" && !window.isElectron)
+            $el.style.display = "none";
+    });
 }

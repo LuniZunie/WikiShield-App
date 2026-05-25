@@ -86,12 +86,13 @@ if (window.electron === undefined) {
             location.reload();
         }
     };
-} else
+} else {
     window.isElectron = true;
 
-document.querySelectorAll("[data-electron]").forEach($el => {
-    if ($el.dataset.electron === "false" && window.isElectron)
-        $el.remove();
-    else if ($el.dataset.electron === "true" && !window.isElectron)
-        $el.remove();
-});
+    document.querySelectorAll("[data-electron]").forEach($el => {
+        if ($el.dataset.electron === "false" && window.isElectron)
+            $el.style.display = "none !important";
+        else if ($el.dataset.electron === "true" && !window.isElectron)
+            $el.style.display = "none !important";
+    });
+}

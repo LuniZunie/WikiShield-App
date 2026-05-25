@@ -30,13 +30,26 @@ import { build } from "./build.js";
         "#pt-notifications"
     );
 
-    if ($link && electron.localStorage.get("WikiShield:OpenExternally") !== "true")
-        $link.addEventListener("click", event => {
-            event.preventDefault();
-            history.pushState({ page: "WikiShield" }, "", location.href);
+    if ($link) {
+        const $icon = $link.querySelector(":scope > a > span");
+        if ($icon) {
+            $icon.innerHTML = "WS";
+            $icon.style.fontWeight = "bold";
+            $icon.style.color = "var(--color-base, #202122)";
+            $icon.style.maskImage = "none";
+            $icon.style.webkitMaskImage = "none";
+            $icon.style.background = "transparent";
+            $icon.style.height = "auto";
+        }
 
-            start();
-        });
+        if (electron.localStorage.get("WikiShield:OpenExternally") !== "true")
+            $link.addEventListener("click", event => {
+                event.preventDefault();
+                history.pushState({ page: "WikiShield" }, "", location.href);
+
+                start();
+            });
+    }
 
     addEventListener("popstate", event => {
         if (event.state?.page === "WikiShield")

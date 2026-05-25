@@ -2990,7 +2990,7 @@ export class GUI {
 		this.ws.notifications.count();
 
 		const zen = this.ws.store.settings.zen_mode;
-		if (zen.enabled && zen.music.enabled)
+		if (zen.enabled && zen.music.enabled && window.isElectron)
 			this.ws.audio.zengine.start();
 		else
 			this.ws.audio.zengine.stop();
