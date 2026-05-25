@@ -23,7 +23,7 @@ import { build } from "./build.js";
     const $link = mw.util.addPortletLink(
         "p-personal",
         mw.util.getUrl("Wikipedia:WikiShield/run"),
-        "Run WikiShield",
+        "WikiShield",
         "pt-wikishield",
         "WikiShield",
         undefined,
