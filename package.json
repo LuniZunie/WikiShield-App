@@ -246,7 +246,7 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "WikiShield",
-      "installerFilename": "WikiShield-Setup-2.0.1.exe"
+      "artifactName": "WikiShield-Setup-2.0.2.exe"
     },
     "publish": {
       "provider": "github",
