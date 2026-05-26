@@ -200,7 +200,7 @@ crashReporter.start({ uploadToServer: false });
 
 // logging
 Logger.transports.file.file = path.join(app.getPath("userData"), "logs", "wikishield.log");
-Logger.transports.file.level = "debug";
+Logger.transports.file.level = __dev__ ? "debug" : "info";
 Logger.transports.file.format = "[{y}-{m}-{d} {h}:{i}:{s}] [{level}] {text}";
 
 // Auto-updater
