@@ -1,24 +1,39 @@
 ## Installation
 
 ### Windows
-- **Download**: [WikiShield-2.0.0-windows](https://github.com/LuniZunie/WikiShield-App/releases/download/v2.0.0/dist-windows-latest.zip)
-  - Unzip folder
-  - Run `WikiShield Setup 2.0.0.exe`
+Download the installer directly from the [GitHub Release](https://github.com/LuniZunie/WikiShield-App/releases/latest):
+- **Download**: `WikiShield-2.0.0-Setup.exe`
+- Run the installer and follow the on-screen instructions
+- The app will automatically register for updates
 
 ### macOS
-- **Download**: [WikiShield-2.0.0-macOS](https://github.com/LuniZunie/WikiShield-App/releases/download/v2.0.0/dist-macos-latest.zip)
-  - Unzip folder
-  - Run the appropriate installer for your Mac (Intel or Apple Silicon)
-    - **Intel**: `WikiShield-2.0.0.dmg`
-    - **Apple Silicon**: `WikiShield-2.0.0-arm64.dmg`
+Download the appropriate installer from the [GitHub Release](https://github.com/LuniZunie/WikiShield-App/releases/latest):
+- **Intel Macs**: `WikiShield-2.0.0.dmg`
+  - Double-click the .dmg file
+  - Drag WikiShield to Applications folder
+
+- **Apple Silicon (M1/M2/M3)**: `WikiShield-2.0.0-arm64.dmg`
+  - Double-click the .dmg file
+  - Drag WikiShield to Applications folder
+
+**Alternative**: If you prefer a zip archive:
+- **Intel**: `WikiShield-2.0.0-mac.zip`
+- **Apple Silicon**: `WikiShield-2.0.0-arm64-mac.zip`
 
 ### Linux
-- **Download**: [WikiShield-2.0.0-linux](https://github.com/LuniZunie/WikiShield-App/releases/download/v2.0.0/dist-ubuntu-latest.zip)
-  - Unzip folder
-  - Run the appropriate installer for your Linux distribution
-    - **Universal**: `WikiShield-2.0.0.AppImage` (works on all distributions)
-    - **Debian/Ubuntu/Linux Mint**: `WikiShield_2.0.0_amd64.deb`
-    - **Fedora/RHEL/CentOS**: `WikiShield-2.0.0.x86_64.rpm`
+Download the appropriate installer for your distribution from the [GitHub Release](https://github.com/LuniZunie/WikiShield-App/releases/latest):
+
+- **Universal (All Distributions)**: `WikiShield-2.0.0.AppImage`
+  - `chmod +x WikiShield-2.0.0.AppImage`
+  - `./WikiShield-2.0.0.AppImage`
+
+- **Debian/Ubuntu/Linux Mint**: `WikiShield_2.0.0_amd64.deb`
+  - `sudo apt install ./WikiShield_2.0.0_amd64.deb`
+
+- **Fedora/RHEL/CentOS**: `WikiShield-2.0.0.x86_64.rpm`
+  - `sudo dnf install WikiShield-2.0.0.x86_64.rpm`
+  - Or `sudo yum install WikiShield-2.0.0.x86_64.rpm` (older systems)
+
 ---
 
 ## Auto-Updates
