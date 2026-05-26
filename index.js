@@ -222,7 +222,7 @@ autoUpdater.on("download-progress", progressObj =>
 );
 autoUpdater.on("error", err => {
     Logger.error(`Auto-updater error: ${err == null ? "unknown" : (err.stack || err).toString()}`);
-    if (!(err.message.includes("net::") || err.message.includes("ENOTFOUND") || err.message.includes("404")))
+    if (!(err.message.includes("net::") || err.message.includes("ENOTFOUND") || err.message.includes("404") || err.message.includes("status 404") || err.message.includes("Cannot download")))
         dialog.showErrorBox("Update Error", `An error occurred while updating: ${err.message}`);
 });
 autoUpdater.on("update-downloaded", info =>
@@ -581,7 +581,7 @@ function UpdateMenu(options = { }) {
                                     });
                             })
                             .catch(err => {
-                                if (!(err.message.includes("net::") || err.message.includes("ENOTFOUND") || err.message.includes("404")))
+                                if (!(err.message.includes("net::") || err.message.includes("ENOTFOUND") || err.message.includes("404") || err.message.includes("status 404") || err.message.includes("Cannot download")))
                                     dialog.showErrorBox("Update Check Failed", `Failed to check for updates: ${err.message}`);
                                 Logger.error(`Manual update check failed: ${err.message}`);
                             });
@@ -1289,6 +1289,23 @@ async function CreateAPI(username = null, api = true) {
 app.whenReady().then(async () => {
     try {
         Logger.info(`Starting WikiShield v${app.getVersion()} on ${process.platform} ${process.arch}`);
+
+        // Verify critical dependencies are installed after updates
+        const criticalModules = ["electron-store", "electron-log", "electron-updater", "discord-rpc"];
+        const missingModules = [];
+        for (const mod of criticalModules) {
+            try {
+                require.resolve(mod);
+            } catch (e) {
+                missingModules.push(mod);
+            }
+        }
+        if (missingModules.length > 0) {
+            Logger.error(`Missing dependencies after update: ${missingModules.join(", ")}. This may indicate an incomplete installation.`);
+            dialog.showErrorBox("Installation Incomplete", `The update installation may have been interrupted. Missing: ${missingModules.join(", ")}\n\nPlease reinstall the application.`);
+            app.quit();
+            return;
+        }
 
         glob.accounts = Security.decryptAccounts(store.get("accounts", { }));
         glob.account = glob.accounts[store.get("account", null)] ?? null;

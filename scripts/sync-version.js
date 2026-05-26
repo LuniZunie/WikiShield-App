@@ -16,6 +16,9 @@ if (packageJson.config?.forge?.packagerConfig) {
     packageJson.config.forge.packagerConfig.buildVersion = version;
 }
 
+if (packageJson.config?.forge?.nsis)
+    packageJson.config.forge.nsis.installerFilename = `WikiShield-Setup-${version}.exe`;
+
 fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`, "utf8");
 
 console.log(`Updated all version fields to ${version}`);

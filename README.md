@@ -2,7 +2,7 @@
 
 ### Windows
 Download the installer directly from the [GitHub Release](https://github.com/LuniZunie/WikiShield-App/releases/latest):
-- **Download**: `WikiShield-2.0.1.Setup.exe`
+- **Download**: `WikiShield-2.0.1-Setup.exe`
 - Run the installer and follow the on-screen instructions
 - The app will automatically register for updates
 
