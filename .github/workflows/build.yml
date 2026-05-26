@@ -86,9 +86,22 @@ jobs:
             console.log('Release already exists or error:', e.message);
           }
 
-          // Upload all artifacts
+          // Upload all artifacts - only distributable files
           const artifactDir = './all-dist';
           const files = [];
+
+          // File patterns to include
+          const includePatterns = [
+            /\\.exe$/,         // Windows installers
+            /\\.msi$/,         // Windows MSI
+            /\\.dmg$/,         // macOS installers
+            /\\.zip$/,         // macOS zips
+            /\\.AppImage$/,    // Linux AppImage
+            /\\.deb$/,         // Linux deb
+            /\\.rpm$/,         // Linux rpm
+            /latest.*\\.yml$/,  // Latest metadata files
+            /builder-debug\\.yml\$/ // Builder debug files
+          ];
 
           function findFiles(dir) {
             const items = fs.readdirSync(dir);
@@ -97,7 +110,7 @@ jobs:
               const stat = fs.statSync(fullPath);
               if (stat.isDirectory()) {
                 findFiles(fullPath);
-              } else if (!item.startsWith('.')) {
+              } else if (includePatterns.some(p => p.test(item))) {
                 files.push(fullPath);
               }
             });
@@ -107,7 +120,11 @@ jobs:
 
           files.forEach(file => {
             console.log('Uploading:', file);
-            execSync(\`gh release upload \${tag} \${file}\`, { stdio: 'inherit' });
+            // Use --clobber to overwrite if file already exists
+            execSync(\`gh release upload \${tag} \"\${file}\" --clobber\`, {
+              stdio: 'inherit',
+              shell: '/bin/bash'
+            });
           });
 
           console.log('Release created successfully!');
