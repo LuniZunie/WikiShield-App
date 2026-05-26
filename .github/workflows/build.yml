@@ -76,11 +76,15 @@ jobs:
 
           console.log('Creating release for tag:', tag);
 
-          // Create release
-          const releaseData = JSON.parse(execSync(\`gh release create \${tag} --title \"WikiShield \${version}\" --draft=false\`, {
-            encoding: 'utf8',
-            stdio: ['pipe', 'pipe', 'ignore']
-          }).toString() || '{}');
+          try {
+            // Create release
+            execSync(\`gh release create \${tag} --title \"WikiShield \${version}\" --draft=false\`, {
+              stdio: 'inherit'
+            });
+          } catch (e) {
+            // Release might already exist, continue
+            console.log('Release already exists or error:', e.message);
+          }
 
           // Upload all artifacts
           const artifactDir = './all-dist';
