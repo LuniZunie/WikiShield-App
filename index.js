@@ -222,7 +222,7 @@ autoUpdater.on("download-progress", progressObj =>
 );
 autoUpdater.on("error", err => {
     Logger.error(`Auto-updater error: ${err == null ? "unknown" : (err.stack || err).toString()}`);
-    if (!(err.message.includes("net::") || err.message.includes("ENOTFOUND")))
+    if (!(err.message.includes("net::") || err.message.includes("ENOTFOUND") || err.message.includes("404")))
         dialog.showErrorBox("Update Error", `An error occurred while updating: ${err.message}`);
 });
 autoUpdater.on("update-downloaded", info =>
@@ -580,7 +580,11 @@ function UpdateMenu(options = { }) {
                                         buttons: [ "OK" ]
                                     });
                             })
-                            .catch(err => dialog.showErrorBox("Update Check Failed", `Failed to check for updates: ${err.message}`));
+                            .catch(err => {
+                                if (!(err.message.includes("net::") || err.message.includes("ENOTFOUND") || err.message.includes("404")))
+                                    dialog.showErrorBox("Update Check Failed", `Failed to check for updates: ${err.message}`);
+                                Logger.error(`Manual update check failed: ${err.message}`);
+                            });
                     }
                 },
                 { type: "separator" },
@@ -1291,7 +1295,9 @@ app.whenReady().then(async () => {
 
         const hasUpdateFile = fs.existsSync(path.join(process.resourcesPath, "app-update.yml"));
         if (!__dev__ && app.isPackaged && hasUpdateFile) {
-            const update = () => autoUpdater.checkForUpdates().catch(err => Logger.error(`Auto-updater initial check failed: ${err == null ? "unknown" : (err.stack || err).toString()}`));
+            const update = () => autoUpdater
+                .checkForUpdates()
+                .catch(err => Logger.error(`Auto-updater initial check failed: ${err == null ? "unknown" : (err.stack || err).toString()}`));
 
             setTimeout(update, 3000); // after 3 seconds
             setInterval(update, 10 * 60 * 1000); // every 10 minutes
