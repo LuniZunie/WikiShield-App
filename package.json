@@ -254,7 +254,7 @@
       "releaseType": "release"
     },
     "releaseInfo": {
-      "releaseNotesFile": ".github/RELEASE_NOTES.md"
+      "releaseNotesFile": "README.md"
     }
   }
 }

@@ -22,7 +22,7 @@ console.log(`Updated all version fields to ${version}`);
 
 // Also update release files in .github to keep templates in sync
 const releaseFiles = [
-    path.join(__dirname, "..", ".github", "RELEASE_NOTES.md"),
+    path.join(__dirname, "..", "README.md"),
 ];
 
 releaseFiles.forEach((filePath) => {
