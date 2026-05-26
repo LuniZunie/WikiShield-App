@@ -348,6 +348,15 @@ body {
     & a {
         text-decoration: none;
 
+        transition: color .2s ease;
+
+        /* Theme dependent */
+        color: rgba(143, 163, 255, 0.9);
+
+        &:hover {
+            /* Theme dependent */
+            color: rgba(143, 163, 255, 1);
+        }
         &:active {
             /* Theme dependent */
             color: rgba(143, 163, 255, .8);
@@ -873,6 +882,8 @@ body {
 
                     position: relative;
                     z-index: 2;
+
+                    overflow: auto hidden;
 
                     border-bottom: 2px solid;
                     border-right: 1px solid;

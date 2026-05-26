@@ -5,6 +5,7 @@ import WS_CSS from "../style.css";
 
 export async function build() {
     document.head.querySelectorAll("link[rel=stylesheet]").forEach(link => link.remove()); // Clear existing stylesheets
+    document.head.querySelectorAll("style").forEach(style => style.remove()); // Clear existing styles
 
     const parser = new DOMParser();
     const doc = parser.parseFromString(WS_HTML, "text/html");

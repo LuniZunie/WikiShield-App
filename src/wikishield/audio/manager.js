@@ -252,11 +252,10 @@ export class AudioManager {
             }
         });
 
-        try {
-            audio.play();
-        } catch (err) {
-            audio.reject(err);
-        }
+        if (window.ineractedWithPage)
+            await audio.play();
+        else
+            callback?.();
 
         return promise;
     }
@@ -280,7 +279,8 @@ export class AudioManager {
         audio.onended = cleanup;
         audio.onerror = cleanup;
 
-        await audio.play();
+        if (window.ineractedWithPage)
+            await audio.play();
     }
 
     stopPreviews() {

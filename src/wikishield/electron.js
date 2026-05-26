@@ -23,7 +23,7 @@ if (window.electron === undefined) {
         menuEnabler: () => { },
 
         setBadgeCount: () => { },
-        sendNotification: () => Promise.reject(new Error("Not running in Electron environment")),
+        sendNotification: () => { },
         localStorage: {
             get: key => localStorage.getItem(key),
             set: (key, value) => localStorage.setItem(key, value),
