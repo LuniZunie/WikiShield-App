@@ -14,7 +14,7 @@ import { buildShortcut } from "../config/control-keys.js";
 
 export class WikiShield {
 	static config = {
-		version: "2.0.0",
+		version: "2.0.2",
 
 		changelog: {
 			version: "6",
