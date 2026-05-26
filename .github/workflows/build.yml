@@ -13,23 +13,7 @@ permissions:
   contents: write
 
 jobs:
-  prepare-release:
-    runs-on: ubuntu-latest
-    outputs:
-      release_notes: ${{ steps.notes.outputs.notes }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Fetch all history for changelog generation
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
   build:
-    needs: prepare-release
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -49,22 +33,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build for macOS
-        if: matrix.os == 'macos-latest'
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: npm run build
-
-      - name: Build for Windows
-        if: matrix.os == 'windows-latest'
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: npm run build
-
-      - name: Build for Linux
-        if: matrix.os == 'ubuntu-latest'
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      - name: Build
         run: npm run build
 
       - name: Upload artifacts
@@ -72,3 +41,71 @@ jobs:
         with:
           name: dist-${{ matrix.os }}
           path: dist/**/*
+          retention-days: 1
+
+  create-release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-dist
+
+      - name: Create Release and Upload Assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node -e "
+          const fs = require('fs');
+          const path = require('path');
+          const { execSync } = require('child_process');
+
+          const tag = '${{ github.ref }}'.replace('refs/tags/', '');
+          const version = tag.replace('v', '');
+
+          console.log('Creating release for tag:', tag);
+
+          // Create release
+          const releaseData = JSON.parse(execSync(\`gh release create \${tag} --title \"WikiShield \${version}\" --draft=false\`, {
+            encoding: 'utf8',
+            stdio: ['pipe', 'pipe', 'ignore']
+          }).toString() || '{}');
+
+          // Upload all artifacts
+          const artifactDir = './all-dist';
+          const files = [];
+
+          function findFiles(dir) {
+            const items = fs.readdirSync(dir);
+            items.forEach(item => {
+              const fullPath = path.join(dir, item);
+              const stat = fs.statSync(fullPath);
+              if (stat.isDirectory()) {
+                findFiles(fullPath);
+              } else if (!item.startsWith('.')) {
+                files.push(fullPath);
+              }
+            });
+          }
+
+          findFiles(artifactDir);
+
+          files.forEach(file => {
+            console.log('Uploading:', file);
+            execSync(\`gh release upload \${tag} \${file}\`, { stdio: 'inherit' });
+          });
+
+          console.log('Release created successfully!');
+          console.log('View at: https://github.com/\${{ github.repository }}/releases/tag/\${tag}');
+          "
