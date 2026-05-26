@@ -24,6 +24,17 @@ const __dev__ = process.env.NODE_ENV === "development" || process.env.ELECTRON_E
 const __servers__ = require("./servers.js");
 const __userAgent__ = `WikiShield-App/${app.getVersion()} (https://en.wikipedia.org/wiki/Wikipedia:WikiShield; lunizunie@gmail.com)`;
 
+// process-wide unhandled error handling
+process.on("uncaughtException", (error, origin) => {
+    Logger.error(`Uncaught exception (${origin}): ${error.stack || error}`);
+    dialog.showErrorBox("An unexpected error occurred", `An unexpected error occurred (${origin}):\n\n${error.stack || error}`);
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+    Logger.error(`Unhandled promise rejection: ${reason.stack || reason}`);
+    dialog.showErrorBox("An unexpected error occurred", `An unexpected error occurred (unhandled promise rejection):\n\n${reason.stack || reason}`);
+});
+
 // global references
 const glob = {
     quitting: false,
@@ -65,11 +76,8 @@ if (process.platform === "win32")
     app.setAppUserModelId("me.luni.wikishield");
 
 // squirrel
-if (process.platform === "win32") {
-    if (process.argv.length === 1)
-        app.quit();
-
-    const updateExe = path.resolve(path.resolve(process.execPath, "..", "..", "Update.exe"));
+if (process.platform === "win32" && process.argv.length > 1 && process.argv[1].startsWith("--squirrel")) {
+    const updateExe = path.resolve(path.join(path.resolve(path.resolve(process.execPath, ".."), ".."), "Update.exe"));
     const spawner = (command, args) => {
         try {
             return spawn(command, args, { detached: true });
@@ -146,7 +154,7 @@ function logMemoryUsage() {
     });
 }
 
-  setInterval(() => {
+setInterval(() => {
     const memory = process.memoryUsage();
     Logger.debug("Memory Usage (Main Process):", {
         rss: `${(memory.rss / 1024 / 1024).toFixed(2)} MB`,
@@ -154,7 +162,7 @@ function logMemoryUsage() {
         heapUsed: `${(memory.heapUsed / 1024 / 1024).toFixed(2)} MB`,
         external: `${(memory.external / 1024 / 1024).toFixed(2)} MB`,
     });
-  }, 10000);
+}, 10000);
 
 // storage
 const store = new Store({
@@ -192,7 +200,7 @@ crashReporter.start({ uploadToServer: false });
 
 // logging
 Logger.transports.file.file = path.join(app.getPath("userData"), "logs", "wikishield.log");
-Logger.transports.file.level = __dev__ ? "debug" : "info";
+Logger.transports.file.level = "debug";
 Logger.transports.file.format = "[{y}-{m}-{d} {h}:{i}:{s}] [{level}] {text}";
 
 // Auto-updater
@@ -1275,91 +1283,45 @@ async function CreateAPI(username = null, api = true) {
 
 // app setup
 app.whenReady().then(async () => {
-    glob.accounts = Security.decryptAccounts(store.get("accounts", { }));
-    glob.account = glob.accounts[store.get("account", null)] ?? null;
+    try {
+        Logger.info(`Starting WikiShield v${app.getVersion()} on ${process.platform} ${process.arch}`);
 
-    const hasUpdateFile = fs.existsSync(path.join(process.resourcesPath, "app-update.yml"));
-    if (!__dev__ && app.isPackaged && hasUpdateFile) {
-        const update = autoUpdater.checkForUpdates().catch(err => Logger.error(`Auto-updater initial check failed: ${err == null ? "unknown" : (err.stack || err).toString()}`));
+        glob.accounts = Security.decryptAccounts(store.get("accounts", { }));
+        glob.account = glob.accounts[store.get("account", null)] ?? null;
 
-        setTimeout(update, 3000); // after 3 seconds
-        setInterval(update, 10 * 60 * 1000); // every 10 minutes
-    }
+        const hasUpdateFile = fs.existsSync(path.join(process.resourcesPath, "app-update.yml"));
+        if (!__dev__ && app.isPackaged && hasUpdateFile) {
+            const update = () => autoUpdater.checkForUpdates().catch(err => Logger.error(`Auto-updater initial check failed: ${err == null ? "unknown" : (err.stack || err).toString()}`));
 
-    ipcMain.on("open-external", (event, url) => Security.openExternal(url));
-
-    ipcMain.handle("get-oauth-version", async () => MediaWikiOAuth2.CLIENT);
-    ipcMain.handle("get-accounts", async () => [
-        glob.rememberAccounts,
-        Object.entries(glob.accounts).map(([ username, account ]) => ({
-            username, valid: account.valid, lastUsed: account.lastUsed, version: account.version
-        }))
-    ]);
-    ipcMain.on("set-remember-accounts", (event, remember) => {
-        glob.rememberAccounts = remember;
-        store.set("rememberAccounts", remember);
-        if (remember) {
-            store.set("accounts", Security.encryptAccounts(glob.accounts));
-            if (glob.account)
-                store.set("account", glob.account.username);
-        } else {
-            store.delete("account");
-            store.delete("accounts");
-        }
-    });
-
-    ipcMain.on("signin", (event, username) => {
-        glob.account = glob.accounts[username];
-        glob.account.lastUsed = new Date().toISOString();
-        if (glob.rememberAccounts) {
-            store.set("account", username);
-            store.set("accounts", Security.encryptAccounts(glob.accounts));
+            setTimeout(update, 3000); // after 3 seconds
+            setInterval(update, 10 * 60 * 1000); // every 10 minutes
         }
 
-        glob.windows.signin.close();
-        glob.windows.signin = null;
+        ipcMain.on("open-external", (event, url) => Security.openExternal(url));
 
-        BuildWindow.main();
-    });
-    ipcMain.on("delete-account", (event, username) => {
-        delete glob.accounts[username];
-        if (glob.rememberAccounts)
-            store.set("accounts", Security.encryptAccounts(glob.accounts));
-    });
-
-    ipcMain.handle("authorize", async () => {
-        BuildWindow.authorize();
-
-        glob.windows.authorize.once("closed", () => {
-            glob.windows.authorize = null;
-
-            if (glob.windows.signin && !glob.windows.signin.isDestroyed())
-                glob.windows.signin.webContents.send("signin-focus-window");
-            else if (glob.account === null)
-                BuildWindow.signin();
+        ipcMain.handle("get-oauth-version", async () => MediaWikiOAuth2.CLIENT);
+        ipcMain.handle("get-accounts", async () => [
+            glob.rememberAccounts,
+            Object.entries(glob.accounts).map(([ username, account ]) => ({
+                username, valid: account.valid, lastUsed: account.lastUsed, version: account.version
+            }))
+        ]);
+        ipcMain.on("set-remember-accounts", (event, remember) => {
+            glob.rememberAccounts = remember;
+            store.set("rememberAccounts", remember);
+            if (remember) {
+                store.set("accounts", Security.encryptAccounts(glob.accounts));
+                if (glob.account)
+                    store.set("account", glob.account.username);
+            } else {
+                store.delete("account");
+                store.delete("accounts");
+            }
         });
-    });
-    ipcMain.handle("handle-authorization", async () => {
-        try {
-            const oauth = new MediaWikiOAuth2(__userAgent__);
 
-            const controller = new AbortController();
-            glob.windows.authorize.once("closed", () => controller.abort());
-
-            const data = await oauth.authorize(glob, controller.signal);
-
-            const username = await MediaWikiAPI.getUsername(oauth, glob.server);
-            glob.accounts[username] = {
-                username,
-                accessToken: data.accessToken,
-                refreshToken: data.refreshToken,
-                expires: data.expires.toISOString(),
-                valid: true,
-                lastUsed: new Date().toISOString(),
-                version: MediaWikiOAuth2.CLIENT
-            };
-
+        ipcMain.on("signin", (event, username) => {
             glob.account = glob.accounts[username];
+            glob.account.lastUsed = new Date().toISOString();
             if (glob.rememberAccounts) {
                 store.set("account", username);
                 store.set("accounts", Security.encryptAccounts(glob.accounts));
@@ -1369,82 +1331,119 @@ app.whenReady().then(async () => {
             glob.windows.signin = null;
 
             BuildWindow.main();
-        } catch (err) {
-            glob.windows.authorize.close();
-            glob.windows.authorize = null;
+        });
+        ipcMain.on("delete-account", (event, username) => {
+            delete glob.accounts[username];
+            if (glob.rememberAccounts)
+                store.set("accounts", Security.encryptAccounts(glob.accounts));
+        });
 
-            if (glob.windows.signin && !glob.windows.signin.isDestroyed())
-                glob.windows.signin.webContents.send("authorization-failed", err?.message ?? "An unknown error occurred during authorization.");
-            else
-                BuildWindow.signin();
+        ipcMain.handle("authorize", async () => {
+            BuildWindow.authorize();
 
-            return;
-        }
-    });
+            glob.windows.authorize.once("closed", () => {
+                glob.windows.authorize = null;
 
-    ipcMain.on("copy-to-clipboard", (event, text) => clipboard.writeText(text));
+                if (glob.windows.signin && !glob.windows.signin.isDestroyed())
+                    glob.windows.signin.webContents.send("signin-focus-window");
+                else if (glob.account === null)
+                    BuildWindow.signin();
+            });
+        });
+        ipcMain.handle("handle-authorization", async () => {
+            try {
+                const oauth = new MediaWikiOAuth2(__userAgent__);
 
-    ipcMain.on("log", (event, message, level) => Logger[level ?? "info"]?.(message));
-    ipcMain.on("error", (event, message, detail) => dialog.showErrorBox(message, detail?.toString() ?? "No additional details provided."));
-    ipcMain.handle("send-notification", async (event, options, url) => void(NotificationHandler.send(options, url)));
-    ipcMain.on("local-storage", (event, action, key, value) => {
-        switch (action) {
-            case "get": event.returnValue = store.get(key); break;
-            case "set": event.returnValue = store.set(key, value); break;
-            case "delete": event.returnValue = store.delete(key); break;
-            default: throw new Error("Invalid local storage action");
-        }
-    });
+                const controller = new AbortController();
+                glob.windows.authorize.once("closed", () => controller.abort());
 
-    ipcMain.on("menu-enabler", (event, options) => { UpdateMenu(options); });
-    ipcMain.on("set-badge-count", async(event, count) => {
-        switch (process.platform) {
-            case "win32": {
-                if (!glob.windows.main)
-                    return;
+                const data = await oauth.authorize(glob, controller.signal);
 
-                try {
-                    const icon = await CreateBadgeIcon(glob.windows.main, count);
+                const username = await MediaWikiAPI.getUsername(oauth, glob.server);
+                glob.accounts[username] = {
+                    username,
+                    accessToken: data.accessToken,
+                    refreshToken: data.refreshToken,
+                    expires: data.expires.toISOString(),
+                    valid: true,
+                    lastUsed: new Date().toISOString(),
+                    version: MediaWikiOAuth2.CLIENT
+                };
+
+                glob.account = glob.accounts[username];
+                if (glob.rememberAccounts) {
+                    store.set("account", username);
+                    store.set("accounts", Security.encryptAccounts(glob.accounts));
+                }
+
+                glob.windows.signin.close();
+                glob.windows.signin = null;
+
+                BuildWindow.main();
+            } catch (err) {
+                glob.windows.authorize.close();
+                glob.windows.authorize = null;
+
+                if (glob.windows.signin && !glob.windows.signin.isDestroyed())
+                    glob.windows.signin.webContents.send("authorization-failed", err?.message ?? "An unknown error occurred during authorization.");
+                else
+                    BuildWindow.signin();
+
+                return;
+            }
+        });
+
+        ipcMain.on("copy-to-clipboard", (event, text) => clipboard.writeText(text));
+
+        ipcMain.on("log", (event, message, level) => Logger[level ?? "info"]?.(message));
+        ipcMain.on("error", (event, message, detail) => dialog.showErrorBox(message, detail?.toString() ?? "No additional details provided."));
+        ipcMain.handle("send-notification", async (event, options, url) => void(NotificationHandler.send(options, url)));
+        ipcMain.on("local-storage", (event, action, key, value) => {
+            switch (action) {
+                case "get": event.returnValue = store.get(key); break;
+                case "set": event.returnValue = store.set(key, value); break;
+                case "delete": event.returnValue = store.delete(key); break;
+                default: throw new Error("Invalid local storage action");
+            }
+        });
+
+        ipcMain.on("menu-enabler", (event, options) => { UpdateMenu(options); });
+        ipcMain.on("set-badge-count", async(event, count) => {
+            switch (process.platform) {
+                case "win32": {
                     if (!glob.windows.main)
                         return;
 
-                    if (!icon?.isEmpty())
-                        glob.windows.main.setOverlayIcon(icon, `You have ${count} unread notifications`);
-                    else
+                    try {
+                        const icon = await CreateBadgeIcon(glob.windows.main, count);
+                        if (!glob.windows.main)
+                            return;
+
+                        if (!icon?.isEmpty())
+                            glob.windows.main.setOverlayIcon(icon, `You have ${count} unread notifications`);
+                        else
+                            glob.windows.main.setOverlayIcon(null, "");
+                    } catch (err) {
+                        Logger.error(`Failed to set badge count on Windows: ${err.stack || err}`);
                         glob.windows.main.setOverlayIcon(null, "");
-                } catch (err) {
-                    Logger.error(`Failed to set badge count on Windows: ${err.stack || err}`);
-                    glob.windows.main.setOverlayIcon(null, "");
-                }
-            } break;
-            case "darwin": {
-                let text = "";
-                if (count > 0) text = count > 99 ? "99+" : count.toString();
-                app.dock.setBadge(text);
-            } break;
-            default: {
-                let text = "";
-                if (count > 0) text = count > 99 ? "99+" : count.toString();
-                app.setBadgeCount(text);
-            } break;
-        }
-    });
+                    }
+                } break;
+                case "darwin": {
+                    let text = "";
+                    if (count > 0) text = count > 99 ? "99+" : count.toString();
+                    app.dock.setBadge(text);
+                } break;
+                default: {
+                    let text = "";
+                    if (count > 0) text = count > 99 ? "99+" : count.toString();
+                    app.setBadgeCount(text);
+                } break;
+            }
+        });
 
-    ipcMain.handle("mwapi-loader", async event => {
-        const username = glob.account?.username ?? null;
-        if (username === null) {
-            if (glob.windows.main)
-                glob.windows.main.close();
-
-            BuildWindow.signin();
-            return;
-        }
-
-        try {
-            if (await CreateAPI(username)) {
-                if (glob.windows.main)
-                    glob.windows.main.webContents.send("mwapi-loaded", glob.server, username, MediaWikiAPI.pendingChangesServers, __dev__);
-            } else {
+        ipcMain.handle("mwapi-loader", async event => {
+            const username = glob.account?.username ?? null;
+            if (username === null) {
                 if (glob.windows.main)
                     glob.windows.main.close();
 
@@ -1452,127 +1451,148 @@ app.whenReady().then(async () => {
                 return;
             }
 
-        } catch (err) {
-            Logger.error(`Failed to create MediaWikiAPI for ${username ?? glob.account?.username ?? "unknown"}: ${err.stack || err}`);
-            throw err;
-        }
-    });
-    ipcMain.handle("mwapi", async (event, method, ...args) => {
-        try {
-            return await glob.mwapi[method](...args);
-        } catch (err) {
-            Logger.error(`MediaWikiAPI method ${method} failed: ${err.stack || err}`);
-            throw err;
-        }
-    });
+            try {
+                if (await CreateAPI(username)) {
+                    if (glob.windows.main)
+                        glob.windows.main.webContents.send("mwapi-loaded", glob.server, username, MediaWikiAPI.pendingChangesServers, __dev__);
+                } else {
+                    if (glob.windows.main)
+                        glob.windows.main.close();
 
-    { // save account
-        const promises = [ ];
-        ipcMain.on("save-account", async (event, username, data) => {
-            const promise = (async () => {
-                try {
-                    const result = await glob.mwapi.postWithToken({ action: "options", optionname: "userjs-wikishield-storage", optionvalue: data });
-                    if (result?.options === "success")
-                        Logger.debug(`Successfully saved account data for ${username}`);
-                    else
-                        Logger.error(`Failed to save account data for ${username}: unexpected API response`);
-                } catch (err) { Logger.error(`Failed to save account data for ${username}: ${err.stack || err}`); }
-            })();
-            promises.push(promise);
-            promise.finally(() => {
-                const index = promises.indexOf(promise);
-                if (index !== -1)
-                    promises.splice(index, 1);
-            });
-        });
-        app.on("before-quit", async event => {
-            glob.quitting = true;
+                    BuildWindow.signin();
+                    return;
+                }
 
-            if (quittingAfterRPCShutdown)
-                return;
-
-            const pending = [ ];
-
-            if (promises.length > 0)
-                pending.push(Promise.allSettled(promises));
-
-            if (RPC)
-                pending.push(disableDiscordRPC());
-
-            if (pending.length === 0)
-                return;
-
-            event.preventDefault();
-
-            await Promise.allSettled(pending);
-            quittingAfterRPCShutdown = true;
-            app.exit(0);
-        });
-    }
-
-    { // disabler
-        let disabled = false;
-        ipcMain.on("disable-app", (event, title, message) => {
-            if (disabled)
-                return;
-            disabled = true;
-
-            dialog.showErrorBox(title, message);
-
-            glob.quitting = true;
-            app.quit();
-        })
-    }
-
-    ipcMain.on("tab-urls-reply", (event, urls) => {
-        if (Array.isArray(urls) && urls.length > 0)
-            Popup.lastTabs = urls;
-    });
-
-    ipcMain.on("close-popup", async (event, id) => {
-        const popup = Popup.windows.get(id);
-        if (popup && !popup.isDestroyed())
-            popup.close();
-    });
-    ipcMain.handle("open-in-browser", async (event, url) => {
-        if (Popup.windows.size > 0) {
-            const first = Popup.windows.values().next().value;
-            if (first && !first.isDestroyed()) {
-                first.webContents.send("open-link-in-new-tab", url);
-                first.focus();
-                return;
+            } catch (err) {
+                Logger.error(`Failed to create MediaWikiAPI for ${username ?? glob.account?.username ?? "unknown"}: ${err.stack || err}`);
+                throw err;
             }
+        });
+        ipcMain.handle("mwapi", async (event, method, ...args) => {
+            try {
+                return await glob.mwapi[method](...args);
+            } catch (err) {
+                Logger.error(`MediaWikiAPI method ${method} failed: ${err.stack || err}`);
+                throw err;
+            }
+        });
+
+        { // save account
+            const promises = [ ];
+            ipcMain.on("save-account", async (event, username, data) => {
+                const promise = (async () => {
+                    try {
+                        const result = await glob.mwapi.postWithToken({ action: "options", optionname: "userjs-wikishield-storage", optionvalue: data });
+                        if (result?.options === "success")
+                            Logger.debug(`Successfully saved account data for ${username}`);
+                        else
+                            Logger.error(`Failed to save account data for ${username}: unexpected API response`);
+                    } catch (err) { Logger.error(`Failed to save account data for ${username}: ${err.stack || err}`); }
+                })();
+                promises.push(promise);
+                promise.finally(() => {
+                    const index = promises.indexOf(promise);
+                    if (index !== -1)
+                        promises.splice(index, 1);
+                });
+            });
+            app.on("before-quit", async event => {
+                glob.quitting = true;
+
+                if (quittingAfterRPCShutdown)
+                    return;
+
+                const pending = [ ];
+
+                if (promises.length > 0)
+                    pending.push(Promise.allSettled(promises));
+
+                if (RPC)
+                    pending.push(disableDiscordRPC());
+
+                if (pending.length === 0)
+                    return;
+
+                event.preventDefault();
+
+                await Promise.allSettled(pending);
+                quittingAfterRPCShutdown = true;
+                app.exit(0);
+            });
         }
 
-        return Popup.create(url);
-    });
+        { // disabler
+            let disabled = false;
+            ipcMain.on("disable-app", (event, title, message) => {
+                if (disabled)
+                    return;
+                disabled = true;
 
-    ipcMain.on("close-signin-window", () => {
-        if (glob.windows.signin) {
-            glob.windows.signin.close();
-            glob.windows.signin = null;
-        }
-    });
-    ipcMain.on("close-authorization-window", () => {
-        if (glob.windows.authorize) {
-            glob.windows.authorize.close();
-            glob.windows.authorize = null;
-        }
-    });
-    ipcMain.on("close-translation-window", () => {
-        if (glob.windows.translation) {
-            glob.windows.translation.close();
-            glob.windows.translation = null;
-        }
-    });
-    ipcMain.on("close-browser-window", (event) => {
-        const senderWindow = BrowserWindow.fromWebContents(event.sender);
-        if (senderWindow && !senderWindow.isDestroyed())
-            senderWindow.close();
-    });
+                dialog.showErrorBox(title, message);
 
-    BuildTray();
-    BuildWindow.main();
+                glob.quitting = true;
+                app.quit();
+            })
+        }
+
+        ipcMain.on("tab-urls-reply", (event, urls) => {
+            if (Array.isArray(urls) && urls.length > 0)
+                Popup.lastTabs = urls;
+        });
+
+        ipcMain.on("close-popup", async (event, id) => {
+            const popup = Popup.windows.get(id);
+            if (popup && !popup.isDestroyed())
+                popup.close();
+        });
+        ipcMain.handle("open-in-browser", async (event, url) => {
+            if (Popup.windows.size > 0) {
+                const first = Popup.windows.values().next().value;
+                if (first && !first.isDestroyed()) {
+                    first.webContents.send("open-link-in-new-tab", url);
+                    first.focus();
+                    return;
+                }
+            }
+
+            return Popup.create(url);
+        });
+
+        ipcMain.on("close-signin-window", () => {
+            if (glob.windows.signin) {
+                glob.windows.signin.close();
+                glob.windows.signin = null;
+            }
+        });
+        ipcMain.on("close-authorization-window", () => {
+            if (glob.windows.authorize) {
+                glob.windows.authorize.close();
+                glob.windows.authorize = null;
+            }
+        });
+        ipcMain.on("close-translation-window", () => {
+            if (glob.windows.translation) {
+                glob.windows.translation.close();
+                glob.windows.translation = null;
+            }
+        });
+        ipcMain.on("close-browser-window", (event) => {
+            const senderWindow = BrowserWindow.fromWebContents(event.sender);
+            if (senderWindow && !senderWindow.isDestroyed())
+                senderWindow.close();
+        });
+
+        BuildTray();
+        BuildWindow.main();
+    } catch (err) {
+        Logger.error(`Failed to initialize app: ${err.stack || err}`);
+        dialog.showErrorBox("Initialization Error", `An error occurred while initializing the app:\n\n${err.stack || err}`);
+        app.quit();
+    }
+}).catch(err => {
+    Logger.error(`Failed to initialize app: ${err.stack || err}`);
+    dialog.showErrorBox("Initialization Error", `An error occurred while initializing the app:\n\n${err.stack || err}`);
+    app.quit();
 });
 
 app.on("window-all-closed", () => {

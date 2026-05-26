@@ -45,10 +45,12 @@
     "@electron-forge/maker-rpm": "^7.5.0",
     "@electron-forge/maker-squirrel": "^7.5.0",
     "@electron-forge/maker-zip": "^7.5.0",
+    "@octokit/rest": "^20.1.2",
     "electron": "^39.2.7",
     "electron-builder": "^26.0.12",
     "electron-icon-builder": "^2.0.1",
     "electron-winstaller": "^5.4.0",
+    "terser-webpack-plugin": "^5.3.10",
     "webpack-cli": "^7.0.2"
   },
   "dependencies": {
@@ -61,6 +63,7 @@
     "electron-squirrel-startup": "^1.0.1",
     "electron-store": "^8.2.0",
     "electron-updater": "^6.6.2",
+    "node-fetch": "^2.7.0",
     "webpack": "^5.107.2"
   },
   "config": {
@@ -128,6 +131,7 @@
     "appId": "com.ws.app",
     "productName": "WikiShield",
     "generateUpdatesFilesForAllChannels": true,
+    "asar": false,
     "directories": {
       "output": "dist",
       "buildResources": "assets"
