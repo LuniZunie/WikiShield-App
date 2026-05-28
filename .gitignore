@@ -5,8 +5,6 @@
 /out
 /dist
 /dist-web
-/build
-!/build/entitlements.mac.plist
 /.webpack-cache
 
 # Logs
