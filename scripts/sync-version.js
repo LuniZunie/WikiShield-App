@@ -16,9 +16,8 @@ if (packageJson.config?.forge?.packagerConfig) {
     packageJson.config.forge.packagerConfig.buildVersion = version;
 }
 
-if (packageJson.build?.nsis) {
+if (packageJson.build?.nsis)
     packageJson.build.nsis.artifactName = `WikiShield-Setup-${version}.exe`;
-}
 
 fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`, "utf8");
 
@@ -45,3 +44,14 @@ releaseFiles.forEach((filePath) => {
         console.error(`Failed to update ${filePath}:`, err);
     }
 });
+
+// Update version.js
+const versionJsPath = path.join(__dirname, "..", "src", "wikishield", "data", "version.js");
+try {
+    if (fs.existsSync(versionJsPath)) {
+        fs.writeFileSync(versionJsPath, `export const VERSION = "${version}";`, "utf8");
+        console.log(`Updated version in ${versionJsPath}`);
+    }
+} catch (err) {
+    console.error(`Failed to update ${versionJsPath}:`, err);
+}

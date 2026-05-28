@@ -1263,7 +1263,7 @@ export class GUI {
 						tooltipDelay: 500
 					},
 					attributes: {
-						href: null,
+						href: this.ws.page(item.page.title),
 					}
 				});
 				this.addTooltipListener($link);
@@ -1318,7 +1318,7 @@ export class GUI {
 							tooltipDelay: 500
 						},
 						attributes: {
-							href: null
+							href: this.ws.page(`User:${user.name}`),
 						}
 					});
 					this.addTooltipListener($link);

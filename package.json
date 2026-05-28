@@ -1,6 +1,6 @@
 {
   "name": "WikiShield",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "WikiShield is an anti-vandalism tool for Wikipedia.",
   "main": "index.js",
   "repository": {
@@ -19,7 +19,7 @@
     "test": "electron . --trace-warnings",
     "build": "electron-builder --publish never",
     "build-web": "webpack --mode production",
-    "version": "node scripts/sync-version.js",
+    "sync-version": "node scripts/sync-version.js",
     "publish": "node scripts/publish-release.js",
     "publish:win": "electron-builder --win --publish always",
     "publish:mac": "electron-builder --mac --publish always",
@@ -77,11 +77,11 @@
           "CompanyName": "WikiShield Team",
           "FileDescription": "WikiShield Application",
           "ProductName": "WikiShield",
-          "FileVersion": "2.0.2",
-          "ProductVersion": "2.0.2"
+          "FileVersion": "2.0.3",
+          "ProductVersion": "2.0.3"
         },
-        "appVersion": "2.0.2",
-        "buildVersion": "2.0.2"
+        "appVersion": "2.0.3",
+        "buildVersion": "2.0.3"
       },
       "makers": [
         {
@@ -162,7 +162,8 @@
       "!build/",
       "!build.js",
       "!dist/",
-      "!scripts/"
+      "!scripts/",
+      "node_modules/**"
     ],
     "afterPack": "./scripts/after-pack.js",
     "win": {
@@ -246,7 +247,7 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "WikiShield",
-      "artifactName": "WikiShield-Setup-2.0.2.exe"
+      "artifactName": "WikiShield-Setup-2.0.3.exe"
     },
     "publish": {
       "provider": "github",

@@ -1,3 +1,5 @@
+import { VERSION } from "../data/version.js";
+
 import { Utility } from "../utilities/helpers.js";
 import { AudioManager } from "../audio/manager.js";
 
@@ -14,7 +16,7 @@ import { buildShortcut } from "../config/control-keys.js";
 
 export class WikiShield {
 	static config = {
-		version: "2.0.2",
+		version: VERSION,
 
 		changelog: {
 			version: "6",

@@ -1301,10 +1301,39 @@ app.whenReady().then(async () => {
             }
         }
         if (missingModules.length > 0) {
-            Logger.error(`Missing dependencies after update: ${missingModules.join(", ")}. This may indicate an incomplete installation.`);
-            dialog.showErrorBox("Installation Incomplete", `The update installation may have been interrupted. Missing: ${missingModules.join(", ")}\n\nPlease reinstall the application.`);
-            app.quit();
-            return;
+            Logger.error(`Missing dependencies after update: ${missingModules.join(", ")}. Attempting automatic recovery...`);
+
+            try {
+                const { execSync } = require("child_process");
+                const appPath = app.getAppPath();
+                Logger.info(`Running npm install in ${appPath}...`);
+
+                execSync("npm install --production", {
+                    cwd: appPath,
+                    stdio: "inherit",
+                    timeout: 120000 // 2 minute timeout
+                });
+
+                delete require.cache[require.resolve(missingModules[0])];
+
+                let stillMissing = [];
+                for (const mod of missingModules)
+                    try {
+                        require.resolve(mod);
+                    } catch (e) {
+                        stillMissing.push(mod);
+                    }
+
+                if (stillMissing.length > 0)
+                    throw new Error(`Modules still missing after npm install: ${stillMissing.join(", ")}`);
+
+                Logger.info("Dependencies successfully recovered");
+            } catch (err) {
+                Logger.error(`Failed to recover dependencies: ${err.message}`);
+                dialog.showErrorBox("Installation Error", `The application is missing required modules and could not be recovered automatically.\n\nMissing: ${missingModules.join(", ")}\n\nError: ${err.message}\n\nPlease reinstall the application.`);
+                app.quit();
+                return;
+            }
         }
 
         glob.accounts = Security.decryptAccounts(store.get("accounts", { }));

@@ -46,8 +46,12 @@ export const events = {
             const queues = Queue.types.map(type => ({ name: type, ...ws.store.settings.queue[type] }));
             queues.sort((a, b) => a.order - b.order);
 
-            const index = queues.findIndex(queue => queue.name === ws.queue.current.type);
-            ws.queue.switch(queues[(index + 1) % queues.length].name);
+            const available = queues.filter(queue => queue.enabled);
+            if (available.length === 0)
+                return { valid: false, reason: "No queues are enabled." };
+
+            const index = available.findIndex(queue => queue.name === ws.queue.current.type);
+            ws.queue.switch(available[(index + 1) % available.length].name);
 
             return { valid: true };
         }
@@ -60,8 +64,12 @@ export const events = {
             const queues = Queue.types.map(type => ({ name: type, ...ws.store.settings.queue[type] }));
             queues.sort((a, b) => a.order - b.order);
 
-            const index = queues.findIndex(queue => queue.name === ws.queue.current.type);
-            ws.queue.switch(queues[(index - 1 + queues.length) % queues.length].name);
+            const available = queues.filter(queue => queue.enabled);
+            if (available.length === 0)
+                return { valid: false, reason: "No queues are enabled." };
+
+            const index = available.findIndex(queue => queue.name === ws.queue.current.type);
+            ws.queue.switch(available[(index - 1 + available.length) % available.length].name);
 
             return { valid: true };
         }
@@ -2258,8 +2266,8 @@ export const events = {
         icon: "fas fa-spa",
 
         script: (ws, item, params) => {
-            ws.store.settings.zen.enabled = !ws.store.settings.zen.enabled;
-            document.querySelector('#zen-mode-enable')?.classList.toggle("active", ws.store.settings.zen.enabled);
+            ws.store.settings.zen_mode.enabled = !ws.store.settings.zen_mode.enabled;
+            document.querySelector('#zen-mode-enable')?.classList.toggle("active", ws.store.settings.zen_mode.enabled);
 
             ws.gui.updateZenMode();
 
@@ -2280,7 +2288,7 @@ export const events = {
             const $consecutive = document.querySelector("#consecutive-edits-tab");
             if (!$consecutive.classList.contains("hidden")) {
                 if ($consecutive.classList.contains("selected"))
-                    document.querySelector("latest-edits-tab").click();
+                    document.querySelector("#latest-edits-tab").click();
                 else
                     $consecutive.click();
             }
