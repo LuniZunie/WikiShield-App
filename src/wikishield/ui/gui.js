@@ -879,6 +879,15 @@ export class GUI {
 	animation() {
 		try {
 			AutoScroll();
+
+			{
+				const $pc = document.querySelector("#pending-changes-container");
+				const $bottom = document.querySelector("#bottom-tools");
+
+				const bottomRect = $bottom.getBoundingClientRect();
+				$pc.style.top = `${bottomRect.top - $pc.offsetHeight}px`;
+				$pc.style.left = `${(bottomRect.left + bottomRect.right) / 2}px`;
+			}
 		} catch (error) { console.error("Error in animation loop:", error); }
 
 		requestAnimationFrame(() => this.animation());

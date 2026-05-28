@@ -2057,8 +2057,6 @@ body {
                             justify-content: space-between;
 
                             position: fixed;
-                            left: 50%;
-                            bottom: 63px;
                             z-index: 2;
 
                             transform: translateX(-50%);
