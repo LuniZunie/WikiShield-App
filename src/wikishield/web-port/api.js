@@ -68,10 +68,6 @@ export class MediaWikiAPI {
         };
     }
 
-    close() {
-        this.stream.disconnect();
-    }
-
     get cache() {
         return MediaWikiAPI.cache[this.server];
     }
