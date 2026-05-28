@@ -9,6 +9,7 @@ const {
 const Store = require("electron-store");
 const Logger = require("electron-log");
 const { autoUpdater } = require("electron-updater");
+const squirrelStartup = require("electron-squirrel-startup");
 
 const { generateRandomUUID } = require("./global/UUID/script.com.js");
 const { Security } = require("./app/security.js");
@@ -74,40 +75,6 @@ if (!gotTheLock)
 // process
 if (process.platform === "win32")
     app.setAppUserModelId("me.luni.wikishield");
-
-// squirrel
-if (process.platform === "win32" && process.argv.length > 1 && process.argv[1].startsWith("--squirrel")) {
-    const updateExe = path.resolve(path.join(path.resolve(path.resolve(process.execPath, ".."), ".."), "Update.exe"));
-    const spawner = (command, args) => {
-        try {
-            return spawn(command, args, { detached: true });
-        } catch (e) { }
-    };
-    const spawnerUpdate = args => spawner(updateExe, args);
-
-    const exeName = path.basename(process.execPath);
-    switch (process.argv[1]) {
-        case "--squirrel-install":
-        case "--squirrel-updated": {
-            spawnerUpdate([ "--createShortcut", exeName ]);
-            setTimeout(() => {
-                glob.quitting = true;
-                app.quit();
-            }, 1000);
-        } break;
-        case "--squirrel-uninstall": {
-            spawnerUpdate([ "--removeShortcut", exeName ]);
-            setTimeout(() => {
-                glob.quitting = true;
-                app.quit();
-            }, 1000);
-        } break;
-        case "--squirrel-obsolete": {
-            glob.quitting = true;
-            app.quit();
-        } break;
-    }
-}
 
 // GPU / media flags
 app.commandLine.appendSwitch("enable-gpu-rasterization");
@@ -203,20 +170,24 @@ Logger.transports.file.file = path.join(app.getPath("userData"), "logs", "wikish
 Logger.transports.file.level = __dev__ ? "debug" : "info";
 Logger.transports.file.format = "[{y}-{m}-{d} {h}:{i}:{s}] [{level}] {text}";
 
-// Auto-updater
+// Auto-updater configuration
 autoUpdater.logger = Logger;
 autoUpdater.autoDownload = true;
 autoUpdater.autoInstallOnAppQuit = true;
+autoUpdater.allowPrerelease = false;
+autoUpdater.allowDowngrade = false;
 
 autoUpdater.on("checking-for-update", () => Logger.debug("Checking for updates..."));
 autoUpdater.on("update-available", info => {
-    Logger.debug(`Update available: version ${info.version}`);
+    Logger.info(`Found version ${info.version} (url: ${info.files[0]?.url?.split('/').pop() || 'unknown'})`);
     NotificationHandler.send({
         title: "Update Available",
         body: `Version ${info.version} is available and will be downloaded automatically.`,
     });
 });
-autoUpdater.on("update-not-available", () => Logger.debug("No updates available."));
+autoUpdater.on("update-not-available", info => {
+    Logger.info(`Update for version ${app.getVersion()} is not available (latest version: ${info.version}, downgrade is disallowed).`);
+});
 autoUpdater.on("download-progress", progressObj =>
     Logger.debug(`Download speed: ${progressObj.bytesPerSecond} - Downloaded ${progressObj.percent.toFixed(2)}% (${progressObj.transferred}/${progressObj.total})`)
 );
@@ -225,12 +196,13 @@ autoUpdater.on("error", err => {
     if (!(err.message.includes("net::") || err.message.includes("ENOTFOUND") || err.message.includes("404") || err.message.includes("status 404") || err.message.includes("Cannot download")))
         dialog.showErrorBox("Update Error", `An error occurred while updating: ${err.message}`);
 });
-autoUpdater.on("update-downloaded", info =>
+autoUpdater.on("update-downloaded", info => {
+    Logger.info(`New version ${info.version} has been downloaded to ${autoUpdater.downloadedUpdateHelper?.cacheDir || 'pending directory'}`);
     NotificationHandler.send({
         title: "Update Ready to Install",
         body: `Version ${info.version} has been downloaded and will be installed on quit.`,
     })
-);
+});
 
 // external apps
 const DISCORD_RPC_CLIENT_ID = "1479626156545147131";
@@ -1288,53 +1260,11 @@ async function CreateAPI(username = null, api = true) {
 // app setup
 app.whenReady().then(async () => {
     try {
-        Logger.info(`Starting WikiShield v${app.getVersion()} on ${process.platform} ${process.arch}`);
-
-        // Verify critical dependencies are installed after updates
-        const criticalModules = ["electron-store", "electron-log", "electron-updater", "discord-rpc"];
-        const missingModules = [];
-        for (const mod of criticalModules) {
-            try {
-                require.resolve(mod);
-            } catch (e) {
-                missingModules.push(mod);
-            }
-        }
-        if (missingModules.length > 0) {
-            Logger.error(`Missing dependencies after update: ${missingModules.join(", ")}. Attempting automatic recovery...`);
-
-            try {
-                const { execSync } = require("child_process");
-                const appPath = app.getAppPath();
-                Logger.info(`Running npm install in ${appPath}...`);
-
-                execSync("npm install --production", {
-                    cwd: appPath,
-                    stdio: "inherit",
-                    timeout: 120000 // 2 minute timeout
-                });
-
-                delete require.cache[require.resolve(missingModules[0])];
-
-                let stillMissing = [];
-                for (const mod of missingModules)
-                    try {
-                        require.resolve(mod);
-                    } catch (e) {
-                        stillMissing.push(mod);
-                    }
-
-                if (stillMissing.length > 0)
-                    throw new Error(`Modules still missing after npm install: ${stillMissing.join(", ")}`);
-
-                Logger.info("Dependencies successfully recovered");
-            } catch (err) {
-                Logger.error(`Failed to recover dependencies: ${err.message}`);
-                dialog.showErrorBox("Installation Error", `The application is missing required modules and could not be recovered automatically.\n\nMissing: ${missingModules.join(", ")}\n\nError: ${err.message}\n\nPlease reinstall the application.`);
-                app.quit();
-                return;
-            }
-        }
+        const isUpdatedStart = process.argv.includes("--updated");
+        if (isUpdatedStart)
+            Logger.info(`Starting WikiShield v${app.getVersion()} on ${process.platform} ${process.arch} (update restart)`);
+        else
+            Logger.info(`Starting WikiShield v${app.getVersion()} on ${process.platform} ${process.arch}`);
 
         glob.accounts = Security.decryptAccounts(store.get("accounts", { }));
         glob.account = glob.accounts[store.get("account", null)] ?? null;
@@ -1345,8 +1275,8 @@ app.whenReady().then(async () => {
                 .checkForUpdates()
                 .catch(err => Logger.error(`Auto-updater initial check failed: ${err == null ? "unknown" : (err.stack || err).toString()}`));
 
-            setTimeout(update, 3000); // after 3 seconds
-            setInterval(update, 10 * 60 * 1000); // every 10 minutes
+            setTimeout(update, isUpdatedStart ? 5000 : 3000);
+            setInterval(update, 10 * 60 * 1000);
         }
 
         ipcMain.on("open-external", (event, url) => Security.openExternal(url));
