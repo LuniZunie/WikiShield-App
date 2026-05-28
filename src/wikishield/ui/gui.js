@@ -1888,6 +1888,9 @@ export class GUI {
 				case "users": {
 					this.ws.store.statistics.users_reviewed.total++;
 				} break;
+				case "abuselog": {
+					this.ws.store.statistics.abuselogs_reviewed.total++;
+				} break;
 			}
 		}
 

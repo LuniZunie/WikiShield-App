@@ -359,7 +359,8 @@ function UpdateMenu(options = { }) {
                 {
                     label: "Account Manager",
                     click: () => BuildWindow.signin()
-                }
+                },
+                ...(__mac__ ? [ { type: "separator" }, { role: "quit" } ] : [ ])
             ]
         },
         {
