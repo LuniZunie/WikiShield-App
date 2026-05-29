@@ -2,7 +2,7 @@ name: Build and Release
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  NODE_OPTIONS: --disable-warnings
+  NODE_OPTIONS: --no-warnings
 
 on:
   push:
