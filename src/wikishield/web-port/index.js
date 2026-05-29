@@ -29,7 +29,7 @@ import { build } from "./build.js";
         "pt-wikishield",
         "WikiShield",
         undefined,
-        "#pt-notifications"
+        "#pt-preferences"
     );
 
     if ($link) {

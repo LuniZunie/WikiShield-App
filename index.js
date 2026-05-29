@@ -39,12 +39,14 @@ process.on("unhandledRejection", (reason, promise) => {
 // global references
 const glob = {
     quitting: false,
+    updateInstalling: false,
 
     windows: {
         main: null,
         signin: null,
         authorize: null,
-        translation: null
+        translation: null,
+        updateSplash: null
     },
 
     window: {
@@ -76,6 +78,19 @@ if (!gotTheLock)
 if (process.platform === "win32")
     app.setAppUserModelId("me.luni.wikishield");
 
+// Check if updating
+const updateInstallCheck = () => {
+    const updateDir = path.join(path.dirname(app.getPath("exe")), "..\\Update.exe");
+    return fs.existsSync(updateDir) ||
+           process.argv.some(arg => arg.includes("squirrel")) ||
+           fs.existsSync(path.join(app.getPath("userData"), "pending-update"));
+};
+
+if (squirrelStartup || updateInstallCheck()) {
+    glob.updateInstalling = true;
+    Logger.info("Update installation detected, showing update splash screen");
+}
+
 // GPU / media flags
 app.commandLine.appendSwitch("enable-gpu-rasterization");
 app.commandLine.appendSwitch("enable-accelerated-video-decode");
@@ -91,6 +106,9 @@ if (process.defaultApp) {
     app.setAsDefaultProtocolClient("wikishield");
 
 app.on("second-instance", (event, argv) => {
+    if (glob.updateInstalling)
+        return ShowUpdateSplashScreen();
+
     const url = argv.find(arg => arg.startsWith("wikishield://"));
     if (url) {
         app.emit("open-url", event, url);
@@ -107,6 +125,9 @@ app.on("second-instance", (event, argv) => {
     } else if (glob.windows.signin && !glob.windows.signin.isDestroyed()) {
         glob.windows.signin.focus();
         glob.windows.signin.moveTop();
+    } else if (glob.windows.updateSplash && !glob.windows.updateSplash.isDestroyed()) {
+        glob.windows.updateSplash.focus();
+        glob.windows.updateSplash.moveTop();
     }
 });
 
@@ -200,7 +221,7 @@ autoUpdater.on("update-downloaded", info => {
     Logger.info(`New version ${info.version} has been downloaded to ${autoUpdater.downloadedUpdateHelper?.cacheDir || 'pending directory'}`);
     NotificationHandler.send({
         title: "Update Ready to Install",
-        body: `Version ${info.version} has been downloaded and will be installed on quit.`,
+        body: `Version ${info.version} has been downloaded and will be installed when you quit the app.`,
     })
 });
 
@@ -601,9 +622,50 @@ function BuildTray() {
     return tray;
 }
 
+function ShowUpdateSplashScreen() {
+    if (glob.windows.updateSplash && !glob.windows.updateSplash.isDestroyed())
+        return;
+
+    glob.windows.updateSplash = new BrowserWindow({
+        width: 500,
+        height: 300,
+        frame: false,
+        resizable: false,
+        maximizable: false,
+        minimizable: false,
+        backgroundColor: "#1e1e1e",
+        icon: nativeImage.createFromPath(path.join(__dirname, "assets", "icon.png")),
+        webPreferences: {
+            contextIsolation: true,
+            nodeIntegration: false,
+            enableRemoteModule: false,
+            sandbox: true,
+            disableBlinkFeatures: "Auxclick"
+        }
+    });
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{margin:0;padding:0;display:flex;justify-content:center;align-items:center;height:100vh;background:linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#ffffff;}.container{text-align:center;padding:40px;}.spinner{width:50px;height:50px;border:4px solid rgba(255, 255, 255, 0.2);border-top:4px solid #5a9fd4;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 20px;}@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}h1{margin:0 0 10px 0;font-size:24px;font-weight:600;}p{margin:0;font-size:14px;color:#b0b0b0;line-height:1.5;}</style></head><body><div class="container"><div class="spinner"></div><h1>Updating WikiShield</h1><p>Please wait while we install the latest version...<br/>This won't take long.</p></div></body></html>`;
+
+    glob.windows.updateSplash.loadURL("data:text/html;charset=utf-8," + encodeURIComponent(html));
+
+    glob.windows.updateSplash.setMenuBarVisibility(false);
+    glob.windows.updateSplash.setAlwaysOnTop(true);
+    glob.windows.updateSplash.center();
+    glob.windows.updateSplash.show();
+}
+
+function CloseUpdateSplashScreen() {
+    if (glob.windows.updateSplash && !glob.windows.updateSplash.isDestroyed()) {
+        glob.windows.updateSplash.close();
+        glob.windows.updateSplash = null;
+    }
+}
+
 class BuildWindow {
     static main() {
         if (glob.quitting) return;
+        if (glob.updateInstalling)
+            return ShowUpdateSplashScreen();
         if (glob.account === null)
             return BuildWindow.signin();
         else if (glob.windows.main)
@@ -1257,9 +1319,11 @@ async function CreateAPI(username = null, api = true) {
 app.whenReady().then(async () => {
     try {
         const isUpdatedStart = process.argv.includes("--updated");
-        if (isUpdatedStart)
+        if (isUpdatedStart) {
             Logger.info(`Starting WikiShield v${app.getVersion()} on ${process.platform} ${process.arch} (update restart)`);
-        else
+            glob.updateInstalling = false;
+            CloseUpdateSplashScreen();
+        } else
             Logger.info(`Starting WikiShield v${app.getVersion()} on ${process.platform} ${process.arch}`);
 
         glob.accounts = Security.decryptAccounts(store.get("accounts", { }));
@@ -1561,7 +1625,31 @@ app.whenReady().then(async () => {
         });
 
         BuildTray();
-        BuildWindow.main();
+
+        if (glob.updateInstalling) {
+            ShowUpdateSplashScreen();
+            const updateTimeout = setTimeout(() => {
+                Logger.warn("Update splash timeout after 30s, attempting to proceed");
+                glob.updateInstalling = false;
+                CloseUpdateSplashScreen();
+                BuildWindow.main();
+            }, 30000);
+
+            const updateCheckInterval = setInterval(() => {
+                if (!updateInstallCheck()) {
+                    Logger.info("Update installation completed");
+
+                    clearTimeout(updateTimeout);
+                    clearInterval(updateCheckInterval);
+
+                    glob.updateInstalling = false;
+
+                    CloseUpdateSplashScreen();
+                    BuildWindow.main();
+                }
+            }, 1000);
+        } else
+            BuildWindow.main();
     } catch (err) {
         Logger.error(`Failed to initialize app: ${err.stack || err}`);
         dialog.showErrorBox("Initialization Error", `An error occurred while initializing the app:\n\n${err.stack || err}`);
@@ -1574,6 +1662,7 @@ app.whenReady().then(async () => {
 });
 
 app.on("window-all-closed", () => {
+    CloseUpdateSplashScreen();
     if (!glob.quitting)
         app.quit();
 });

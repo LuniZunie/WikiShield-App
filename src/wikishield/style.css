@@ -875,6 +875,8 @@ body {
                     -webkit-user-select: none;
                             user-select: none;
 
+                    container-type: inline-size;
+
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
@@ -8707,5 +8709,21 @@ body {
             /* Theme dependent */
             border-color: rgba(255, 193, 7, 1);
         }
+    }
+}
+
+@container (max-width: 300px) {
+    #DEFCON {
+        padding: 8px 14px !important;
+
+        & > span {
+            display: none;
+        }
+    }
+}
+
+@container (max-width: 225px) {
+    #DEFCON {
+        display: none !important;
     }
 }

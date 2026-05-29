@@ -283,22 +283,29 @@ class MediaWikiOAuth2 {
                 } catch (err) {
                     const folder = path.join(app.getPath("userData"), "logs", "oauth2-responses");
                     const file = path.join(folder, `${Date.now()}.txt`);
-                    fs.mkdir(folder, { recursive: true }, err => {
-                        if (err) return;
-
-                        fs.writeFile(file, text, err => {
+                    try {
+                        fs.mkdir(folder, { recursive: true }, err => {
                             if (err) return;
 
-                            Logger.error(`Failed to parse OAuth2 response, saved to ${file} (rpm: ${this.throttle.per(60 * 1000)})`);
-                            fs.readdir(folder, (err, files) => {
+                            fs.writeFile(file, text, err => {
                                 if (err) return;
-                                const sortedFiles = files.map(f => ({ name: f, time: fs.statSync(path.join(folder, f)).mtime.getTime() }))
-                                    .sort((a, b) => b.time - a.time);
-                                for (let i = 100; i < sortedFiles.length; i++)
-                                    fs.unlink(path.join(folder, sortedFiles[i].name), () => { });
+
+                                Logger.error(`Failed to parse OAuth2 response, saved to ${file} (rpm: ${this.throttle.per(60 * 1000)})`);
+                                fs.readdir(folder, (err, files) => {
+                                    if (err) return;
+                                    const sortedFiles = files.map(f => {
+                                        try {
+                                            return { name: f, time: fs.statSync(path.join(folder, f)).mtime.getTime() };
+                                        } catch (err) { return null; }
+                                    }).filter(f => f !== null)
+                                        .sort((a, b) => b.time - a.time);
+                                    for (let i = 100; i < sortedFiles.length; i++)
+                                        fs.unlink(path.join(folder, sortedFiles[i].name), () => { });
+                                });
                             });
                         });
-                    });
+                    } catch (err) { }
+
                     throw err;
                 }
             }).catch(err => {
