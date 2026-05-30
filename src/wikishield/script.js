@@ -8,6 +8,8 @@ import { StorageManager } from "./data/storage/manager.js";
 import { Killswitch } from "./wikipedia/killswitch.js";
 
 export function run() {
+    addEventListener("click", () => window.ineractedWithPage = true, { once: true });
+
     addEventListener("wheel", event => {
         if (event.target.closest(".no-scroll"))
             return;

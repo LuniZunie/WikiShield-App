@@ -4,8 +4,6 @@ import { build } from "./build.js";
 {
     "use strict";
 
-    window.addEventListener("click", () => window.ineractedWithPage = true, { once: true });
-
     function start() {
         build().then(() => {
             run();

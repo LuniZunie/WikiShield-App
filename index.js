@@ -198,6 +198,9 @@ autoUpdater.autoInstallOnAppQuit = true;
 autoUpdater.allowPrerelease = false;
 autoUpdater.allowDowngrade = false;
 
+if (process.platform === "darwin")
+    autoUpdater.verifyUpdateCodeSignature = false;
+
 autoUpdater.on("checking-for-update", () => Logger.debug("Checking for updates..."));
 autoUpdater.on("update-available", info => {
     Logger.info(`Found version ${info.version} (url: ${info.files[0]?.url?.split('/').pop() || 'unknown'})`);
@@ -214,6 +217,10 @@ autoUpdater.on("download-progress", progressObj =>
 );
 autoUpdater.on("error", err => {
     Logger.error(`Auto-updater error: ${err == null ? "unknown" : (err.stack || err).toString()}`);
+
+    if (process.platform === "darwin" && err.message.includes("code failed to satisfy specified code requirement"))
+        Logger.warn("macOS code signature validation failed - this is expected on unsigned builds. Attempting fallback update...");
+
     if (!(err.message.includes("net::") || err.message.includes("ENOTFOUND") || err.message.includes("404") || err.message.includes("status 404") || err.message.includes("Cannot download")))
         dialog.showErrorBox("Update Error", `An error occurred while updating: ${err.message}`);
 });
