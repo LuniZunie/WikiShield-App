@@ -10,7 +10,7 @@ export const controls = new Set([
 ]);
 
 export const buildShortcut = event => {
-	const order = [ "ctrl", "shift", "alt" ];
+	const order = [ "ctrl", "shift", "alt", "meta" ];
 
 	const parts = [ ];
 	order.forEach(mod => {
