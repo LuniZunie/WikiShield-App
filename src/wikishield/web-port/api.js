@@ -184,32 +184,61 @@ export class MediaWikiAPI {
     }
 
     async append(title, section, content, summary, check = null, bypass, serverOverride) {
-        try {
-            if (check !== null) {
-                const text = (await this.getPagesContent([ title ], bypass, serverOverride))[title] || "";
-                return { needsCheck: true, text };
+        const append = async (title, section, content, summary, check = null, bypass, serverOverride) => {
+            try {
+                if (check !== null) {
+                    const text = (await this.getPagesContent([ title ], bypass, serverOverride))[title] || "";
+                    return { needsCheck: true, text };
+                }
+
+                const result = await this.postWithToken({ action: "edit", title, ...((section ?? null) === null ? { } : { section }), appendtext: `\n${content}`, summary }, "csrf", bypass, serverOverride);
+                if (result === "editconflict")
+                    return { valid: false, reason: "Edit conflict." };
+
+                return { valid: true };
+            } catch (err) { return void(Logger.error("Error appending to section:", err)) ?? { valid: false, reason: err.message }; }
+        };
+
+        if (typeof check === "function") {
+            const result = await append(title, section, content, summary, true, bypass, serverOverride);
+            if (result.needsCheck) {
+                const validity = await check(result.text);
+                if (!validity.valid)
+                    return { valid: false, reason: validity.reason || "Append check failed." };
+
+                return await append(title, section, content, summary, null, bypass, serverOverride);
             }
-
-            const result = await this.postWithToken({ action: "edit", title, ...((section ?? null) === null ? { } : { section }), appendtext: `\n${content}`, summary }, "csrf", bypass, serverOverride);
-            if (result === "editconflict")
-                return { valid: false, reason: "Edit conflict." };
-
-            return { valid: true };
-        } catch (err) { return void(Logger.error("Error appending to section:", err)) ?? { valid: false, reason: err.message }; }
+            return result;
+        }
+        return await append(title, section, content, summary, null, bypass, serverOverride);
     }
     async editSection(title, index, section, content, summary, check = null, bypass, serverOverride) {
-        try {
-            if (check !== null) {
-                const text = (await this.getPagesContent([ title ], bypass, serverOverride))[title] || "";
-                return { needsCheck: true, text };
+        const editSection = async (title, index, section, content, summary, check = null, bypass, serverOverride) => {
+            try {
+                if (check !== null) {
+                    const text = (await this.getPagesContent([ title ], bypass, serverOverride))[title] || "";
+                    return { needsCheck: true, text };
+                }
+
+                const result = await this.postWithToken({ action: "edit", title, section: index, sectiontitle: section, text: content, summary }, "csrf", bypass, serverOverride);
+                if (result === "editconflict")
+                    return { valid: false, reason: "Edit conflict." };
+
+                return { valid: true };
+            } catch (err) { return void(Logger.error("Error editing section:", err)) ?? { valid: false, reason: err.message }; }
+        };
+
+        if (typeof check === "function") {
+            const result = await editSection(title, index, section, content, summary, true, bypass, serverOverride);
+            if (result.needsCheck) {
+                const validity = await check(result.text);
+                if (!validity.valid)
+                    return { valid: false, reason: validity.reason || "Edit section check failed." };
+                return await editSection(title, index, section, content, summary, null, bypass, serverOverride);
             }
-
-            const result = await this.postWithToken({ action: "edit", title, section: index, sectiontitle: section, text: content, summary }, "csrf", bypass, serverOverride);
-            if (result === "editconflict")
-                return { valid: false, reason: "Edit conflict." };
-
-            return { valid: true };
-        } catch (err) { return void(Logger.error("Error editing section:", err)) ?? { valid: false, reason: err.message }; }
+            return result;
+        }
+        return await editSection(title, index, section, content, summary, null, bypass, serverOverride);
     }
 
     async acceptPendingEdit(id, summary, bypass, serverOverride) {

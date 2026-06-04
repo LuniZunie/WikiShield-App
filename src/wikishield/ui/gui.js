@@ -887,6 +887,10 @@ export class GUI {
 				const bottomRect = $bottom.getBoundingClientRect();
 				$pc.style.top = `${bottomRect.top - $pc.offsetHeight}px`;
 				$pc.style.left = `${(bottomRect.left + bottomRect.right) / 2}px`;
+
+				const $diff = document.querySelector("#diff-container > table");
+				if ($diff)
+					$diff.style.marginBottom = `${window.innerHeight - bottomRect.top}px`;
 			}
 		} catch (error) { console.error("Error in animation loop:", error); }
 
@@ -2323,6 +2327,9 @@ export class GUI {
 	}
 
 	updateDiffDisplay(item, consecutive) {
+		if (this.ws.mobile)
+			consecutive = true;
+
 		const $diff = document.querySelector("#diff-container");
 
 		if (!item) {

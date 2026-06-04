@@ -7,6 +7,8 @@ import { StorageManager } from "./data/storage/manager.js";
 
 import { Killswitch } from "./wikipedia/killswitch.js";
 
+window.isMobile = false; // TODO detect mobile properly
+
 export function run() {
     addEventListener("click", () => window.ineractedWithPage = true, { once: true });
 
@@ -30,7 +32,9 @@ export function run() {
                 .then(data => Object.values(data.entities.Q7765871.sitelinks).find(sitelink => sitelink.url.startsWith(`https://${server}/wiki/`))?.url || null)
                 .catch(() => null) ?? "https://www.wikidata.org/wiki/Q7765871";
 
-            const ws = new WikiShield(server, username, pendingChangesServers, dev);
+            const ws = new WikiShield(window.isMobile, server, username, pendingChangesServers, dev);
+            document.body.classList.toggle("mobile", window.isMobile);
+
             electron.onOpenBrowser(() => ws.open(null, false));
             electron.onOpenUrl(url => ws.open(url, false));
             electron.onOpenNotification(link => {

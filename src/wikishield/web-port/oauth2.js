@@ -60,7 +60,7 @@ export class MediaWikiOAuth2 {
 
             return await this.api.ajax({ ...params, origin }, { url, method, ...(origin ? { xhrFields: { withCredentials: true } } : { }) })
                 .catch(error => {
-                    console.error(`[WikiSHield] Failed to parse OAuth2 response (rpm: ${this.throttle.per(6e4)}):`, error);
+                    console.error(`[WikiShield] Failed to parse "OAuth2" response (rpm: ${this.throttle.per(6e4)}):`, error);
                     throw error;
                 });
         }, bypass);

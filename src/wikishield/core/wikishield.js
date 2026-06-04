@@ -47,7 +47,9 @@ export class WikiShield {
 		"ready": [ ],
 	};
 
-	constructor(server, username, pendingChangesServers, dev) {
+	constructor(mobile, server, username, pendingChangesServers, dev) {
+		this.mobile = mobile;
+
 		this.__DEV__ = dev;
 
 		this.started = false;

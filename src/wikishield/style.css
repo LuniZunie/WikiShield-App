@@ -326,7 +326,7 @@
 body {
     --transparency: 1;
 
-    font-size: clamp(14px, 3vw, 16px);
+    font-size: clamp(10px, 3vw, 16px);
 
     /* Theme dependent */
     color: rgba(241, 245, 255, 1);
@@ -8708,6 +8708,24 @@ body {
 
             /* Theme dependent */
             border-color: rgba(255, 193, 7, 1);
+        }
+    }
+
+    &.mobile {
+        #queue {
+            display: none !important;
+        }
+
+        #right-details {
+            display: none !important;
+        }
+
+        #right-container {
+            width: 100% !important;
+
+            #main-container {
+                width: 100% !important;
+            }
         }
     }
 }
