@@ -1316,7 +1316,7 @@ export const events = {
                 (Number(Object.entries(sections).find(([ , section ]) => section.level === 2 && section.title === "Requests for global (un)block")?.[0]) + 1) || undefined,
                 `\n${fullTrim(`
                     === Global block for ${item.user.name} ===
-                    {{Status|}} <!-- Do not remove this template -->
+                    {{Status}} <!-- Do not remove this template -->
                     * {{Luxotool|${item.user.name}}}
                     ${reason ? `${reason} ` : ""} <small>([[:en:WP:WikiShield|WikiShield]])</small> ~~~~
                 `)}`,
@@ -1425,7 +1425,7 @@ export const events = {
                 (Number(Object.entries(sections).find(([ , section ]) => section.level === 2 && section.title === "Requests for global (un)lock and (un)hiding")?.[0]) + 1) || undefined,
                 `\n${fullTrim(`
                     === Global lock${user} ===
-                    {{Status|}} <!-- Do not remove this template -->
+                    {{Status}} <!-- Do not remove this template -->
                     * {{LockHide|${item.user.name}${params.hide_username === "Yes" ? "|hidename=1" : ""}}}
                     ${reason ? `${reason} ` : ""} <small>([[:en:WP:WikiShield|WikiShield]])</small> ~~~~
                 `)}`,
