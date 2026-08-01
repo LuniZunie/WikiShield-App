@@ -4,6 +4,7 @@ import COMMON_CSS from "../../common/style.css";
 import WS_CSS from "../style.css";
 
 export async function build() {
+    document.head.querySelectorAll("link[rel=icon]").forEach(link => link.remove()); // Clear existing icons
     document.head.querySelectorAll("link[rel=stylesheet]").forEach(link => link.remove()); // Clear existing stylesheets
     document.head.querySelectorAll("style").forEach(style => style.remove()); // Clear existing styles
 
@@ -13,6 +14,9 @@ export async function build() {
     document.title = doc.title;
     doc.head.querySelectorAll("link[rel=stylesheet]").forEach(link => {
         document.head.appendChild(Object.assign(document.createElement("link"), { rel: "stylesheet", href: link.href }));
+    });
+    doc.head.querySelectorAll("link[rel=icon]").forEach(link => {
+        document.head.appendChild(Object.assign(document.createElement("link"), { rel: "icon", href: link.href }));
     });
 
     const styles = [ COMMON_CSS, WS_CSS ]
