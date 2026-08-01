@@ -1061,13 +1061,13 @@ export const events = {
 
                 type: "choice",
                 options: [
-                    "Vandalism past final warning",
-                    "Vandalism-only account",
-                    "Vandalism after recent release of block",
-                    "Spambot or compromised account",
-                    "Long-term abuse",
+                    "Vandalism past final warning.",
+                    "Vandalism-only account.",
+                    "Vandalism after recent release of block.",
+                    "Spambot or compromised account.",
+                    "Long-term abuse.",
                 ],
-                default: "Vandalism past final warning",
+                default: "Vandalism past final warning.",
             },
             {
                 id: "summary",
@@ -1124,12 +1124,12 @@ export const events = {
 
                 type: "choice",
                 options: [
-                    "Disruptive username",
-                    "Offensive username",
-                    "Promotional username",
-                    "Misleading username"
+                    "Disruptive username.",
+                    "Offensive username.",
+                    "Promotional username.",
+                    "Misleading username."
                 ],
-                default: "Disruptive username",
+                default: "Disruptive username.",
             },
             {
                 id: "summary",
