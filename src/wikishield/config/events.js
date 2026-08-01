@@ -1061,13 +1061,13 @@ export const events = {
 
                 type: "choice",
                 options: [
-                    "Vandalism past final warning.",
-                    "Vandalism-only account.",
-                    "Vandalism after recent release of block.",
-                    "Spambot or compromised account.",
-                    "Long-term abuse.",
+                    "Vandalism past final warning",
+                    "Vandalism-only account",
+                    "Vandalism after recent release of block",
+                    "Spambot or compromised account",
+                    "Long-term abuse",
                 ],
-                default: "Vandalism past final warning.",
+                default: "Vandalism past final warning",
             },
             {
                 id: "summary",
@@ -1099,7 +1099,7 @@ export const events = {
                 return { valid: false, reason: "User cannot be reported because they are blocked." };
 
             return await ws.api.append(WikiShield.config.pages.AIV, null, fullTrim(`
-                * {{vandal|${item.user.name}}} &ndash; ${params.reason}${params.summary ? `: ${params.summary}` : ""} ~~~~
+                * {{vandal|${item.user.name}}} &ndash; ${params.reason}${params.summary ? `: ${params.summary}` : "."} ~~~~
             `), ws.api.summary(`Reporting ${ws.api.user(item.user.name)}`), page => {
                 const content = ws.util.getPageSections(page).find(section => section.title === "User-reported")?.content;
                 return {
@@ -1124,12 +1124,12 @@ export const events = {
 
                 type: "choice",
                 options: [
-                    "Disruptive username.",
-                    "Offensive username.",
-                    "Promotional username.",
-                    "Misleading username."
+                    "Disruptive username",
+                    "Offensive username",
+                    "Promotional username",
+                    "Misleading username"
                 ],
-                default: "Disruptive username.",
+                default: "Disruptive username",
             },
             {
                 id: "summary",
@@ -1165,7 +1165,7 @@ export const events = {
             const username = params.reason === "Offensive username" ? "offensive username" : ws.api.user(item.user.name);
 
             return await ws.api.append(WikiShield.config.pages.UAA, null, fullTrim(`
-                * {{user-uaa|${item.user.name}}} &ndash; ${params.reason}${params.summary ? `: ${params.summary}` : ""} ~~~~
+                * {{user-uaa|${item.user.name}}} &ndash; ${params.reason}${params.summary ? `: ${params.summary}` : "."} ~~~~
             `), ws.api.summary(`Reporting ${username}`), page => {
                 return {
                     valid: !ws.util.getPageSections(page).find(section => section.title === "User-reported")?.content.includes(`{{user-uaa|${item.user.name}}`),
