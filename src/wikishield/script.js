@@ -52,7 +52,7 @@ export function run() {
             ws.on("ready", async () => {
                 { // needs 1,000 edits and 7 day account because of ratelimits
                     const { editcount, registrationdate } = await ws.api.account();
-                    if (editcount < 1000 || Date.now() - new Date(registrationdate).getTime() < 6.048e8) {
+                    if ((editcount < 1000 || Date.now() - new Date(registrationdate).getTime() < 6.048e8) && !dev) {
                         alert("WikiShield requires an account that is at least 7 days old and has at least 1,000 edits to function. Please meet these requirements and try again.");
                         if (electron.isElectron)
                             window.close();

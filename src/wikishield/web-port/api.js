@@ -329,9 +329,9 @@ export class MediaWikiAPI {
         } catch (err) { return void(Logger.error("Error unwatching page:", err)) ?? { valid: false, reason: err.message }; }
     }
 
-    async parse(wt, title, preview = false, bypass, serverOverride) {
+    async parse(wt, title, preview = false, summary = false, bypass, serverOverride) {
         title ??= undefined;
-        const cacheKey = [ title, wt ].filter(item => item !== undefined);
+        const cacheKey = [ title, wt, preview, summary ].filter(item => item !== undefined);
 
         if (this.cache.parse.has(...cacheKey))
             return this.cache.parse.get(...cacheKey);
@@ -341,10 +341,13 @@ export class MediaWikiAPI {
                 action: "parse",
                 prop: "text",
                 preview,
-                text: wt,
+                ...(summary ? { summary: wt } : { text: wt }),
                 title,
-                contentmodel: "wikitext"
-            }, bypass, serverOverride))?.parse?.text || "";
+                contentmodel: "wikitext",
+                disablelimitreport: true,
+                disableeditsection: true,
+                disabletoc: true,
+            }, bypass, serverOverride))?.parse?.[summary ? "parsedsummary" : "text"];
             this.cache.parse.set(...cacheKey, text);
             return text;
         } catch (err) { return void(Logger.error("Error parsing wikitext:", err)) ?? ""; }
@@ -925,7 +928,7 @@ export class MediaWikiAPI {
                         [
                             result[i].data.parsedcomment,
                         ] = await Promise.all([
-                            this.parse(item.comment, undefined, false, bypass, serverOverride)
+                            this.parse(item.comment, undefined, false, true, bypass, serverOverride)
                         ]);
                     }));
                 })(),
@@ -1048,7 +1051,7 @@ export class MediaWikiAPI {
                 if (query.recentchanges)
                     data.recent = data.recent.concat(query.recentchanges);
                 if (query.oldreviewedpages)
-                    data.pending = data.pending.concat(query.oldreviewedpages).slice(0, 100); // pending changes feed can be very large, so we limit it to 100 entries
+                    data.pending = data.pending.concat(query.oldreviewedpages);
                 if (query.logevents)
                     data.users = data.users.concat(query.logevents.filter(entry => !entry.temp));
                 if (query.watchlist)
@@ -1057,6 +1060,7 @@ export class MediaWikiAPI {
                     data.abuselog = data.abuselog.concat(query.abuselog);
             });
 
+            data.pending = data.pending.slice(0, 10);
             if (data.pending.length > 0) {
                 const stability = new Map();
                 const temp = { };

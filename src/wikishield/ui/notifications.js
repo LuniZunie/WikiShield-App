@@ -39,16 +39,15 @@ export class Notifications {
                 notformat: "model"
             })).responses.flatMap(response => response.query?.notifications?.list || []);
             await Promise.all(response.map(async n =>
-                this.ws.api.parse(n["*"].body).then(parsed => { return void (n["*"].parsed = parsed) ?? n; })
+                this.ws.api.parse(n["*"].body, void(0), void(0), true).then(parsed => { return void(n["*"].parsed = parsed) ?? n; })
             ));
 
             let update = false;
-            for (const n of response) {
+            for (const n of response)
                 if (!this[type].some(existing => existing.id === n.id && existing.read === n.read)) {
                     this[type].unshift(n);
                     update = true;
                 }
-            }
 
             if (update) {
                 const zen = this.ws.store.settings.zen_mode;

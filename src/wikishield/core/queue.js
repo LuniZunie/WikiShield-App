@@ -280,6 +280,9 @@ export class Queue {
 
 								delete repeats[item.revid];
 
+								if (this.ws.__DEV__)
+									return filtered.push(item);
+
 								const edits = editCounts[item.user] ?? this.bypass.get(item.user) ?? 0;
 								if (edits > max) {
 									this.bypass.set(item.user, edits);
@@ -1440,12 +1443,12 @@ export class Queue {
 		const sections = this.ws.util.getPageSections(text);
 		for (const section of sections)
 			if (section.title === month) {
-				const templates = section.content.match(/<\!-- Template:[\w-]+?(\d(?:i?m)?) -->/g);
+				const templates = section.content.match(/<!-- Template:[\w-]+?(\d(?:i?m)?) -->/g);
 				if (templates === null)
 					break;
 
 				const filtered = [ ...templates.map(t => {
-					const match = t.match(/<\!-- Template:[\w-]+?(\d(?:i?m)?) -->/);
+					const match = t.match(/<!-- Template:[\w-]+?(\d(?:i?m)?) -->/);
 					return match ? match[1].toString() : "0";
 				}), highestLevel ].map(level => [ level, levels.indexOf(level) ]);
 
