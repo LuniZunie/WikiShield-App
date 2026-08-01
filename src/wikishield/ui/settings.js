@@ -889,6 +889,8 @@ export class Settings {
 			$popups.addEventListener("change", e => {
 				this.ws.store.settings.wikipedia_popups.enabled = $popups.value;
 			});
+			if (window.arePopupsBlocked)
+				document.querySelector("#wikipedia-popups-toggle").classList.add("disabled");
 
 			const $talkPageThanksForTemporaryUsersToggle = document.querySelector("#talk-page-thanks-for-temporary-users-toggle");
 			$talkPageThanksForTemporaryUsersToggle.value = this.ws.store.settings.talk_page_thanks_for_temporary_users.enabled;

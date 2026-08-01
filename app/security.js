@@ -4,7 +4,7 @@ const { safeStorage } = require('electron/main');
 class Security {
     static openExternal(url) {
         const protocol = new URL(url).protocol;
-        const protocols = ['http:', 'https:', 'mailto:', 'wikishield:', 'tel:', 'file:']; // yes, we allow file: protocol because malware would already need to be downloaded to exploit that
+        const protocols = [ "http:", "https:", "mailto:", "wikishield:", "tel", "file:" ]; // yes, we allow file: protocol because malware would already need to be downloaded to exploit that
         if (protocols.includes(protocol))
             return shell.openExternal(url);
         else

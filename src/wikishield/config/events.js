@@ -90,10 +90,12 @@ export const events = {
 
         progress: "Accepting pending edit",
         valid: (ws, item, params) => {
+            if (!item)
+                return { valid: false, reason: "No item selected." };
             if (!ws.rights.review)
                 return { valid: false, reason: "You do not have permission to review pending changes." };
             if (!ws.queue.pending.has(item.id))
-                return { valid: false, reason: "Pending edit can only be accepted when a pending edit is selected." };
+                return { valid: false, reason: "This edit is not pending review." };
             return { valid: true };
         },
         script: async (ws, item, params) => {
@@ -160,10 +162,12 @@ export const events = {
 
         progress: "Rejecting pending edit",
         valid: (ws, item, params) => {
+            if (!item)
+                return { valid: false, reason: "No item selected." };
             if (!ws.rights.review)
                 return { valid: false, reason: "You do not have permission to review pending changes." };
             if (!ws.queue.pending.has(item.id))
-                return { valid: false, reason: "Pending edit can only be rejected when a pending edit is selected." };
+                return { valid: false, reason: "This edit is not pending review." };
             return { valid: true };
         },
         script: async (ws, item, params) => {
@@ -235,6 +239,9 @@ export const events = {
 
         progress: "Reverting edit",
         valid: (ws, item, params) => {
+            if (!item)
+                return { valid: false, reason: "No item selected." };
+
             let type = item.type;
             if (type === "abuselog" && item.revid)
                 type = "edit"; // treat abuse log items with revids as edits for the sake of the revert menu
@@ -433,7 +440,7 @@ export const events = {
         progress: "Warning user",
         valid: (ws, item, params) => {
             if (!item)
-                return { valid: false, reason: "User can only be warned when an item is selected." };
+                return { valid: false, reason: "No item selected." };
             return { valid: true };
         },
         script: async (ws, item, params) => {
@@ -614,7 +621,7 @@ export const events = {
         progress: "Issuing warning to user",
         valid: (ws, item, params) => {
             if (!item)
-                return { valid: false, reason: "User can only be warned when an item is selected." };
+                return { valid: false, reason: "No item selected." };
             else if (params.level !== "auto" && getWarningFromLookup(params.warning)?.templates[params.level] === null)
                 return { valid: false, reason: "Selected warning template does not support automatic level selection." };
             return { valid: true };
@@ -753,6 +760,9 @@ export const events = {
 
         progress: "Rolling back edit",
         valid: (ws, item, params) => {
+            if (!item)
+                return { valid: false, reason: "No item selected." };
+
             let type = item.type;
             if (type === "abuselog" && item.revid)
                 type = "edit"; // treat abuse log items with revids as edits for the sake of the revert menu
@@ -831,6 +841,9 @@ export const events = {
 
         progress: "Rolling back good faith edit",
         valid: (ws, item, params) => {
+            if (!item)
+                return { valid: false, reason: "No item selected." };
+
             let type = item.type;
             if (type === "abuselog" && item.revid)
                 type = "edit"; // treat abuse log items with revids as edits for the sake of the revert menu
@@ -911,6 +924,9 @@ export const events = {
 
         progress: "Undoing edit",
         valid: (ws, item, params) => {
+            if (!item)
+                return { valid: false, reason: "No item selected." };
+
             let type = item.type;
             if (type === "abuselog" && item.revid)
                 type = "edit"; // treat abuse log items with revids as edits for the sake of the revert menu
@@ -960,6 +976,9 @@ export const events = {
 
         progress: "Restoring edit",
         valid: (ws, item, params) => {
+            if (!item)
+                return { valid: false, reason: "No item selected." };
+
             let type = item.type;
             if (type === "abuselog" && item.revid)
                 type = "edit"; // treat abuse log items with revids as edits for the sake of the revert menu
@@ -995,7 +1014,7 @@ export const events = {
         progress: "Sending message to user talk page",
         valid: (ws, item, params) => {
             if (!item)
-                return { valid: false, reason: "Message can only be sent when an item is selected." };
+                return { valid: false, reason: "No item selected." };
             return { valid: true };
         },
         script: async (ws, item, params) => {
@@ -1030,7 +1049,7 @@ export const events = {
         progress: "Sending message to page talk page",
         valid: (ws, item, params) => {
             if (!item)
-                return { valid: false, reason: "Message can only be sent when an item is selected." };
+                return { valid: false, reason: "No item selected." };
             return { valid: true };
         },
         script: async (ws, item, params) => {
@@ -1081,7 +1100,7 @@ export const events = {
         progress: "Reporting user to AIV",
         valid: (ws, item, params) => {
             if (!item)
-                return { valid: false, reason: "User can only be reported when an item is selected." };
+                return { valid: false, reason: "No item selected." };
             return { valid: true };
         },
         script: async (ws, item, params) => {
@@ -1143,7 +1162,7 @@ export const events = {
         progress: "Reporting user to UAA",
         valid: (ws, item, params) => {
             if (!item)
-                return { valid: false, reason: "User can only be reported when an item is selected." };
+                return { valid: false, reason: "No item selected." };
             else if (item.user.anon)
                 return { valid: false, reason: "User cannot be reported because they are anonymous." };
             return { valid: true };
@@ -1235,6 +1254,9 @@ export const events = {
 
         progress: "Requesting page protection",
         valid: (ws, item, params) => {
+            if (!item)
+                return { valid: false, reason: "No item selected." };
+
             let type = item.type;
             if (type === "abuselog" && item.revid)
                 type = "edit"; // treat abuse log items with revids as edits for the sake of the revert menu
@@ -1299,7 +1321,7 @@ export const events = {
         progress: "Requesting global block",
         valid: (ws, item, params) => {
             if (!item)
-                return { valid: false, reason: "Global block can only be requested when an item is selected." };
+                return { valid: false, reason: "No item selected." };
             return { valid: true };
         },
         script: async (ws, item, params) => {
@@ -1405,7 +1427,7 @@ export const events = {
         progress: "Requesting global lock",
         valid: (ws, item, params) => {
             if (!item)
-                return { valid: false, reason: "Global lock can only be requested when an item is selected." };
+                return { valid: false, reason: "No item selected." };
             else if (item.user.anon)
                 return { valid: false, reason: "Global lock cannot be requested for anonymous users." };
             return { valid: true };
@@ -1482,6 +1504,9 @@ export const events = {
 
         progress: "Thanking user",
         valid: (ws, item, params) => {
+            if (!item)
+                return { valid: false, reason: "No item selected." };
+
             let type = item.type;
             if (type === "abuselog" && item.revid)
                 type = "edit"; // treat abuse log items with revids as edits for the sake of the revert menu
@@ -1528,7 +1553,7 @@ export const events = {
         progress: "Welcoming user",
         valid: (ws, item, params) => {
             if (!item)
-                return { valid: false, reason: "User can only be welcomed when an item is selected." };
+                return { valid: false, reason: "No item selected." };
             else if (item.user?.talk !== undefined)
                 return { valid: false, reason: "User cannot be welcomed because their talk page is not empty." };
             return { valid: true };
@@ -1579,7 +1604,7 @@ export const events = {
         progress: "Watching page",
         valid: (ws, item, params) => {
             if (!item)
-                return { valid: false, reason: "Page can only be watched when an item is selected." };
+                return { valid: false, reason: "No item selected." };
             return { valid: true };
         },
         script: async (ws, item, params) => {
@@ -1597,7 +1622,7 @@ export const events = {
         progress: "Unwatching page",
         valid: (ws, item, params) => {
             if (!item)
-                return { valid: false, reason: "Page can only be unwatched when an item is selected." };
+                return { valid: false, reason: "No item selected." };
             return { valid: true };
         },
         script: async (ws, item, params) => {
@@ -1616,7 +1641,7 @@ export const events = {
         progress: "Adding user to whitelist",
         valid: (ws, item, params) => {
             if (!item)
-                return { valid: false, reason: "User can only be added to whitelist when an item is selected." };
+                return { valid: false, reason: "No item selected." };
             return { valid: true };
         },
         script: (ws, item, params) => {
@@ -1635,7 +1660,7 @@ export const events = {
         progress: "Removing user from whitelist",
         valid: (ws, item, params) => {
             if (!item)
-                return { valid: false, reason: "User can only be removed from whitelist when an item is selected." };
+                return { valid: false, reason: "No item selected." };
             return { valid: true };
         },
         script: (ws, item, params) => {
@@ -1652,7 +1677,7 @@ export const events = {
         progress: "Adding page to whitelist",
         valid: (ws, item, params) => {
             if (!item)
-                return { valid: false, reason: "Page can only be added to whitelist when an item is selected." };
+                return { valid: false, reason: "No item selected." };
             return { valid: true };
         },
         script: (ws, item, params) => {
@@ -1671,7 +1696,7 @@ export const events = {
         progress: "Removing page from whitelist",
         valid: (ws, item, params) => {
             if (!item)
-                return { valid: false, reason: "Page can only be removed from whitelist when an item is selected." };
+                return { valid: false, reason: "No item selected." };
             return { valid: true };
         },
         script: (ws, item, params) => {
@@ -1689,7 +1714,7 @@ export const events = {
         progress: "Adding user to highlighted users",
         valid: (ws, item, params) => {
             if (!item)
-                return { valid: false, reason: "User can only be added to highlighted users when an item is selected." };
+                return { valid: false, reason: "No item selected." };
             return { valid: true };
         },
         script: (ws, item, params) => {
@@ -1708,7 +1733,7 @@ export const events = {
         progress: "Removing user from highlighted users",
         valid: (ws, item, params) => {
             if (!item)
-                return { valid: false, reason: "User can only be removed from highlighted users when an item is selected." };
+                return { valid: false, reason: "No item selected." };
             return { valid: true };
         },
         script: (ws, item, params) => {
@@ -1725,7 +1750,7 @@ export const events = {
         progress: "Adding page to highlighted pages",
         valid: (ws, item, params) => {
             if (!item)
-                return { valid: false, reason: "Page can only be added to highlighted pages when an item is selected." };
+                return { valid: false, reason: "No item selected." };
             return { valid: true };
         },
         script: (ws, item, params) => {
@@ -1744,7 +1769,7 @@ export const events = {
         progress: "Removing page from highlighted pages",
         valid: (ws, item, params) => {
             if (!item)
-                return { valid: false, reason: "Page can only be removed from highlighted pages when an item is selected." };
+                return { valid: false, reason: "No item selected." };
             return { valid: true };
         },
         script: (ws, item, params) => {
@@ -1762,7 +1787,7 @@ export const events = {
         progress: "Refreshing user contributions",
         valid: (ws, item, params) => {
             if (!item)
-                return { valid: false, reason: "User contributions can only be refreshed when an item is selected." };
+                return { valid: false, reason: "No item selected." };
             return { valid: true };
         },
         script: async (ws, item, params) => {
@@ -1800,7 +1825,7 @@ export const events = {
         progress: "Refreshing page history",
         valid: (ws, item, params) => {
             if (!item)
-                return { valid: false, reason: "Page history can only be refreshed when an item is selected." };
+                return { valid: false, reason: "No item selected." };
             else if (item.type === "users")
                 return { valid: false, reason: "Page history cannot be refreshed for user creations." };
             return { valid: true };
@@ -1841,7 +1866,7 @@ export const events = {
 
         valid: (ws, item, params) => {
             if (!item)
-                return { valid: false, reason: "User page can only be opened when an item is selected." };
+                return { valid: false, reason: "No item selected." };
             return { valid: true };
         },
         script: (ws, item, params) => {
@@ -1855,7 +1880,7 @@ export const events = {
 
         valid: (ws, item, params) => {
             if (!item)
-                return { valid: false, reason: "User talk page can only be opened when an item is selected." };
+                return { valid: false, reason: "No item selected." };
             return { valid: true };
         },
         script: (ws, item, params) => {
@@ -1869,7 +1894,7 @@ export const events = {
 
         valid: (ws, item, params) => {
             if (!item)
-                return { valid: false, reason: "User contributions can only be opened when an item is selected." };
+                return { valid: false, reason: "No item selected." };
             return { valid: true };
         },
         script: (ws, item, params) => {
@@ -1883,7 +1908,7 @@ export const events = {
 
         valid: (ws, item, params) => {
             if (!item)
-                return { valid: false, reason: "User filter log can only be opened when an item is selected." };
+                return { valid: false, reason: "No item selected." };
             return { valid: true };
         },
         script: (ws, item, params) => {
@@ -1898,7 +1923,7 @@ export const events = {
 
         valid: (ws, item, params) => {
             if (!item)
-                return { valid: false, reason: "Page can only be opened when an item is selected." };
+                return { valid: false, reason: "No item selected." };
             return { valid: true };
         },
         script: (ws, item, params) => {
@@ -1912,7 +1937,7 @@ export const events = {
 
         valid: (ws, item, params) => {
             if (!item)
-                return { valid: false, reason: "Page talk can only be opened when an item is selected." };
+                return { valid: false, reason: "No item selected." };
             return { valid: true };
         },
         script: (ws, item, params) => {
@@ -1932,7 +1957,7 @@ export const events = {
 
         valid: (ws, item, params) => {
             if (!item)
-                return { valid: false, reason: "Page history can only be opened when an item is selected." };
+                return { valid: false, reason: "No item selected." };
             return { valid: true };
         },
         script: (ws, item, params) => {
@@ -1946,6 +1971,9 @@ export const events = {
         icon: "fas fa-file-lines",
 
         valid: (ws, item, params) => {
+            if (!item)
+                return { valid: false, reason: "No item selected." };
+
             let type = item.type;
             if (type === "abuselog" && item.revid)
                 type = "edit"; // treat abuse log items with revids as edits for the sake of the revert menu
@@ -1964,6 +1992,9 @@ export const events = {
         icon: "fas fa-code-compare",
 
         valid: (ws, item, params) => {
+            if (!item)
+                return { valid: false, reason: "No item selected." };
+
             let type = item.type;
             if (type === "abuselog" && item.revid)
                 type = "edit"; // treat abuse log items with revids as edits for the sake of the revert menu
@@ -1984,7 +2015,7 @@ export const events = {
 
         valid: (ws, item, params) => {
             if (!item)
-                return { valid: false, reason: "Link can only be copied when an item is selected." };
+                return { valid: false, reason: "No item selected." };
             return { valid: true };
         },
         script: (ws, item, params) => {
@@ -2022,6 +2053,9 @@ export const events = {
         icon: "fas fa-undo",
 
         valid: (ws, item, params) => {
+            if (!ws.queue.current.item)
+                return { valid: false, reason: "No item selected." };
+
             let type = item.type;
             if (type === "abuselog" && item.revid)
                 type = "edit"; // treat abuse log items with revids as edits for the sake of the revert menu
@@ -2063,8 +2097,8 @@ export const events = {
         icon: "fas fa-exclamation-triangle",
 
         valid: (ws, item, params) => {
-            if (!item)
-                return { valid: false, reason: "Warning menu is only available when an item is selected." };
+            if (!ws.queue.current.item)
+                return { valid: false, reason: "No item selected." };
             return { valid: true };
         },
         script: (ws, item, params) => {
@@ -2101,7 +2135,7 @@ export const events = {
 
         valid: (ws, item, params) => {
             if (!ws.queue.current.item)
-                return { valid: false, reason: "User menu is only available when an item is selected." };
+                return { valid: false, reason: "No item selected." };
             return { valid: true };
         },
         script: (ws, item, params) => {
@@ -2133,7 +2167,7 @@ export const events = {
 
         valid: (ws, item, params) => {
             if (!ws.queue.current.item)
-                return { valid: false, reason: "Page menu is only available when an item is selected." };
+                return { valid: false, reason: "No item selected." };
             return { valid: true };
         },
         script: (ws, item, params) => {
@@ -2164,6 +2198,9 @@ export const events = {
         icon: "fas fa-flag",
 
         valid: (ws, item, params) => {
+            if (!ws.queue.current.item)
+                return { valid: false, reason: "No item selected." };
+
             let type = ws.queue.current.item.type;
             if (type === "abuselog" && item.revid)
                 type = "edit"; // treat abuse log items with revids as edits for the sake of the revert menu
@@ -2289,6 +2326,9 @@ export const events = {
         icon: "fas fa-users",
 
         valid: (ws, item, params) => {
+            if (!ws.queue.current.item)
+                return { valid: false, reason: "No item selected." };
+
             const type = ws.queue.current.type;
             if (type !== "recent" && type !== "watchlist")
                 return { valid: false, reason: "Consecutive edits can only be viewed in the recent changes or watchlist queues." };

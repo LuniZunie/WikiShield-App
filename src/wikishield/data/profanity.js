@@ -280,9 +280,8 @@ class Profanity {
             severity: 0.5,
             note: "Variant spelling of 'bollocks'."
         },
-        { term: "clit", severity: 0.7 },
-        { term: "cock", severity: 0.7 },
-        { term: "cum", severity: 0.7 },
+        { term: "clit", severity: 0.3 },
+        { term: "cock", severity: 0.3 },
         {
             term: "brain dead",
             severity: 0.5,

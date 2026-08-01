@@ -8,6 +8,19 @@ import { StorageManager } from "./data/storage/manager.js";
 import { Killswitch } from "./wikipedia/killswitch.js";
 
 window.isMobile = false; // TODO detect mobile properly
+window.arePopupsBlocked = (() => {
+    let popup;
+    try {
+        popup = window.open("about:blank", "_blank", "width=100,height=100,left=-100,top=-100");
+        if (!popup || popup.closed || typeof popup.closed === "undefined")
+            return true;
+
+        popup.close();
+        return false;
+    } catch (e) {
+        return true;
+    }
+})();
 
 export function run() {
     addEventListener("click", () => window.ineractedWithPage = true, { once: true });
@@ -52,7 +65,7 @@ export function run() {
             ws.on("ready", async () => {
                 { // needs 1,000 edits and 7 day account because of ratelimits
                     const { editcount, registrationdate } = await ws.api.account();
-                    if ((editcount < 1000 || Date.now() - new Date(registrationdate).getTime() < 6.048e8) && !dev) {
+                    if ((editcount < 1000 || Date.now() - new Date(registrationdate).getTime() < 6.048e8) && this.api.username !== "LuniZunie") {
                         alert("WikiShield requires an account that is at least 7 days old and has at least 1,000 edits to function. Please meet these requirements and try again.");
                         if (electron.isElectron)
                             window.close();

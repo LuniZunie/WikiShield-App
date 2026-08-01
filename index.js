@@ -50,6 +50,8 @@ const glob = {
     },
 
     window: {
+        x: null,
+        y: null,
         width: null,
         height: null,
         isMaximized: true,
@@ -157,6 +159,8 @@ const store = new Store({
     clearInvalidConfig: true,
     defaults: {
         window: {
+            x: null,
+            y: null,
             width: null,
             height: null,
             isMaximized: true,
@@ -174,7 +178,7 @@ const store = new Store({
     }
 });
 
-glob.window = store.get("window", { width: null, height: null, isMaximized: true, isFullScreen: false });
+glob.window = store.get("window", { x: null, y: null, width: null, height: null, isMaximized: true, isFullScreen: false });
 
 glob.server = store.get("server", __servers__[0].host);
 
@@ -183,7 +187,7 @@ glob.rememberAccounts = store.get("rememberAccounts", false);
 glob.discordRPC = store.get("discordRPC", false);
 glob.notifications = store.get("notifications", true);
 
-// crash reporter
+// app crash reporter
 crashReporter.start({ uploadToServer: false });
 
 // logging
@@ -686,6 +690,8 @@ class BuildWindow {
         const primary = screen.getPrimaryDisplay();
         glob.windows.main = new BrowserWindow({
             modal: true,
+            x: glob.window.x ?? undefined,
+            y: glob.window.y ?? undefined,
             width: glob.window.width ?? primary.workAreaSize.width,
             height: glob.window.height ?? primary.workAreaSize.height,
             show: false,
@@ -796,7 +802,9 @@ class BuildWindow {
 
             glob.windows.main.webContents.send("beforeunload");
 
-            const [ width, height ] = glob.windows.main.getSize();
+            const { x, y, width, height } = glob.windows.main.getBounds();
+            glob.window.x = x;
+            glob.window.y = y;
             glob.window.width = width;
             glob.window.height = height;
             glob.window.isMaximized = glob.windows.main.isMaximized();
@@ -1529,14 +1537,10 @@ app.whenReady().then(async () => {
         { // save account
             const promises = [ ];
             ipcMain.on("save-account", async (event, username, data) => {
-                Logger.debug(`Saving account data for ${username}`);
                 const promise = (async () => {
                     try {
                         const result = await glob.mwapi.postWithToken({ action: "options", optionname: "userjs-wikishield-storage", optionvalue: data });
-                        Logger.debug(`API response for saving account data for ${username}: ${JSON.stringify(result)}`);
-                        if (result?.options === "success")
-                            Logger.debug(`Successfully saved account data for ${username}`);
-                        else
+                        if (result?.options !== "success")
                             Logger.error(`Failed to save account data for ${username}: unexpected API response`);
                     } catch (err) { Logger.error(`Failed to save account data for ${username}: ${err.stack || err}`); }
                 })();

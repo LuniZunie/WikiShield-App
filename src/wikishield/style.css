@@ -1640,6 +1640,8 @@ body {
 
                             font-size: .9em;
 
+                            overflow: auto hidden;
+
                             &.edit-war {
                                 /* Theme dependent */
                                 color: rgba(120, 27, 20, 1);
@@ -1720,6 +1722,10 @@ body {
                                         }
                                     }
                                 }
+                            }
+
+                            &::-webkit-scrollbar-thumb {
+                                background: rgba(0, 0, 0, .2);
                             }
                         }
 
@@ -8082,6 +8088,26 @@ body {
                                             }
                                         }
                                     }
+                                }
+                            }
+
+                            .disabled-note {
+                                display: none;
+
+                                font-size: .85em;
+                                margin-top: 4px;
+
+                                /* Theme dependent */
+                                color: rgba(255, 193, 7, 1);
+                            }
+
+                            &.disabled {
+                                pointer-events: none;
+
+                                opacity: .5;
+
+                                .disabled-note {
+                                    display: block;
                                 }
                             }
                         }

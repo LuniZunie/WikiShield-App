@@ -11,7 +11,6 @@ import { Settings } from "./settings.js";
 import { Queue } from "../core/queue.js";
 import { warnings, warningsLookup, warningTemplateColors, getWarningFromLookup } from "../data/warnings.js";
 import { BuildPalette } from "../utilities/build-palette.js";
-import { AutoScroll } from "./auto-scroll.js";
 
 export class GUI {
 	static palettes = {
@@ -24,6 +23,17 @@ export class GUI {
 		heat: BuildPalette(1000, "#ffffff", "#ff1818"),
 		grey: BuildPalette(1000, "#000000", "#ffffff"),
 	}
+
+	#cache = {
+		$pc: undefined,
+		$bottom: undefined,
+		$diff: undefined,
+
+		top: null,
+		left: null,
+
+		margin: null,
+	};
 
 	constructor(ws) {
 		this.ws = ws;
@@ -868,6 +878,7 @@ export class GUI {
 			this.events.button(document.querySelector(`#queue-tab-${type}`), `switch-to-${type}-queue`);
 		});
 
+		this.cache();
 		this.animation();
 		this.update();
 
@@ -876,21 +887,44 @@ export class GUI {
 		electron.menuEnabler({ browser: true, settings: { preferences: true }, help: { changelog: true } });
 	}
 
+	cache() {
+		this.#cache.$pc = document.querySelector("#pending-changes-container");
+		this.#cache.$bottom = document.querySelector("#bottom-tools");
+		this.#cache.$diff = document.querySelector("#diff-container > table");
+	}
+
 	animation() {
 		try {
-			AutoScroll();
+			const cache = this.#cache;
+			if (!cache.$pc?.isConnected)
+				cache.$pc = document.querySelector("#pending-changes-container");
+			if (!cache.$bottom?.isConnected)
+				cache.$bottom = document.querySelector("#bottom-tools");
 
-			{
-				const $pc = document.querySelector("#pending-changes-container");
-				const $bottom = document.querySelector("#bottom-tools");
+			if (cache.$pc && cache.$bottom) {
+				const bottomRect = cache.$bottom.getBoundingClientRect();
 
-				const bottomRect = $bottom.getBoundingClientRect();
-				$pc.style.top = `${bottomRect.top - $pc.offsetHeight}px`;
-				$pc.style.left = `${(bottomRect.left + bottomRect.right) / 2}px`;
+				const top = bottomRect.top - cache.$pc.offsetHeight;
+				const left = (bottomRect.left + bottomRect.right) / 2;
 
-				const $diff = document.querySelector("#diff-container > table");
-				if ($diff)
-					$diff.style.marginBottom = `${window.innerHeight - bottomRect.top}px`;
+				if (cache.top !== top) {
+					cache.$pc.style.top = `${top}px`;
+					cache.top = top;
+				}
+				if (cache.left !== left) {
+					cache.$pc.style.left = `${left}px`;
+					cache.left = left;
+				}
+
+				if (!cache.$diff?.isConnected)
+					cache.$diff = document.querySelector("#diff-container > table");
+				if (cache.$diff) {
+					const marginBottom = window.innerHeight - bottomRect.top;
+					if (cache.marginBottom !== marginBottom) {
+						cache.$diff.style.marginBottom = `${marginBottom}px`;
+						cache.marginBottom = marginBottom;
+					}
+				}
 			}
 		} catch (error) { console.error("Error in animation loop:", error); }
 

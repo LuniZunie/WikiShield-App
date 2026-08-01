@@ -191,7 +191,6 @@ export class WikiShield {
 			document.body.querySelector("#right-details").style.width = width;
 			document.body.querySelector("#right-top").style.width = width;
 			document.body.querySelector("#main-container").style.width = `calc(100% - ${width})`;
-			// document.body.querySelector("#middle-top").style.right = `calc(${width} + 1vmin)`;
 		}
 
 		this.gui.settings.update();
@@ -304,7 +303,7 @@ export class WikiShield {
 		};
 
 		if (base) {
-			item ??= this.queue.current.item || 1;
+			item ??= this.queue.current.item;
 
 			const allScripts = [ script ];
 			let totalActions = 0;
@@ -484,11 +483,13 @@ export class WikiShield {
 	open(href, external) {
 		if (external === "force")
 			external = false;
+		else if (window.arePopupsBlocked)
+			external = true;
 		else
 			external ||= !this.store.settings.wikipedia_popups.enabled;
 
 		if (external)
-			electron.openExternal(href);
+			electron.openExternal(href ?? "https://google.com/");
 		else {
 			electron.openInBrowser(href).then(popupId => {
 				if (popupId)

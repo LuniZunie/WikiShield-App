@@ -44,6 +44,9 @@ import { build } from "./build.js";
 
         if (electron.localStorage.get("WikiShield:OpenExternally") !== "true")
             $link.addEventListener("click", event => {
+                if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey)
+                    return;
+
                 event.preventDefault();
                 history.pushState({ page: "WikiShield" }, "", location.href);
 
