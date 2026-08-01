@@ -31,8 +31,8 @@ export const conditions = {
 	"revertable": {
 		title: "Current item is revertable",
 		check: (ws, item, params) => {
-			let type = item.type;
-            if (type === "abuselog" && item.revid)
+			let type = item?.type;
+            if (type === "abuselog" && item?.revid)
                 type = "edit"; // treat abuse log items with revids as edits for the sake of the revert menu
 
             if (Queue.groups[type] !== "edit")
@@ -43,7 +43,7 @@ export const conditions = {
 	"pending": {
 		title: "Current item is pending review",
 		check: (ws, item, params) => {
-			if (!ws.queue.pending.has(item.id))
+			if (!ws.queue.pending.has(item?.id))
                 return false;
             return true;
 		}
@@ -51,23 +51,23 @@ export const conditions = {
 
 	"user-registered": {
 		title: "Selected user is registered",
-		check: (ws, item, params) => item.user.anon === false
+		check: (ws, item, params) => item?.user?.anon === false
 	},
 	"user-ip": {
 		title: "Selected user is an IP address",
-		check: (ws, item, params) => item.user.ip === true
+		check: (ws, item, params) => item?.user?.ip === true
 	},
 	"user-temp": {
 		title: "Selected user is a temporary account",
-		check: (ws, item, params) => item.user.temp === true
+		check: (ws, item, params) => item?.user?.temp === true
 	},
 	"user-empty-talk": {
 		title: "Selected user's talk page is empty",
-		check: (ws, item, params) => item.user.talk === undefined
+		check: (ws, item, params) => item?.user?.talk === undefined
 	},
 	"user-blocked": {
 		title: "Selected user is blocked",
-		check: (ws, item, params) => item.user.blocked === true
+		check: (ws, item, params) => item?.user?.blocked === true
 	},
 	"user-edit-count": {
 		title: "Selected user's edit count is",
@@ -95,7 +95,7 @@ export const conditions = {
 			},
 		],
 		check: (ws, item, params) => {
-			const count = item.user.editcount === -1 ? Infinity : item.user.editcount || 0;
+			const count = item?.user?.editcount === -1 ? Infinity : item?.user?.editcount || 0;
 			const target = Number(params.count);
 			switch (params.condition) {
 				case "<": return count < target;
@@ -109,12 +109,12 @@ export const conditions = {
 	},
 	"user-final-warning": {
 		title: "Selected user at final warning level",
-		check: (ws, item, params) => item.user.warning === "4" || item.user.warning === "4im"
+		check: (ws, item, params) => item?.user?.warning === "4" || item?.user?.warning === "4im"
 	},
 	"user-has-warnings": {
 		title: "Selected user has no warnings",
 		check: (ws, item, params) => {
-			return item.user.warning !== "0";
+			return item?.user?.warning !== "0";
 		}
 	},
 
@@ -124,7 +124,7 @@ export const conditions = {
 	},
 	"edit-minor": {
 		title: "Edit is marked as minor",
-		check: (ws, item, params) => item.minor === true
+		check: (ws, item, params) => item?.minor === true
 	},
 	"edit-size": {
 		title: "Edit size is",
@@ -152,7 +152,7 @@ export const conditions = {
 			},
 		],
 		check: (ws, item, params) => {
-			const size = item.sizediff || 0;
+			const size = item?.sizediff || 0;
 			const target = Number(params.size);
 			switch (params.condition) {
 				case "<": return size < target;
@@ -191,7 +191,7 @@ export const conditions = {
 			},
 		],
 		check: (ws, item, params) => {
-			const size = Math.abs(item.sizediff || 0);
+			const size = Math.abs(item?.sizediff || 0);
 			const target = Number(params.size);
 			switch (params.condition) {
 				case "<": return size < target;
@@ -231,7 +231,7 @@ export const conditions = {
 			},
 		],
 		check: (ws, item, params) => {
-			const score = item.ores_score || 0;
+			const score = item?.ores_score || 0;
 			const target = Number(params.score);
 			switch (params.condition) {
 				case "<": return score < target;
@@ -246,43 +246,41 @@ export const conditions = {
 
 	"user-highlighted": {
 		title: "Selected user is highlighted",
-		check: (ws, item, params) => ws.store.highlight.users.has(item.user.name)
+		check: (ws, item, params) => ws.store.highlight.users.has(item?.user?.name)
 	},
 	"user-whitelisted": {
 		title: "Selected user is whitelisted",
-		check: (ws, item, params) => ws.store.whitelist.users.has(item.user.name)
+		check: (ws, item, params) => ws.store.whitelist.users.has(item?.user?.name)
 	},
 
 	"page-highlighted": {
 		title: "Selected page is highlighted",
-		check: (ws, item, params) => ws.store.highlight.pages.has(item.page.title)
+		check: (ws, item, params) => ws.store.highlight.pages.has(item?.page?.title)
 	},
 	"page-whitelisted": {
 		title: "Selected page is whitelisted",
-		check: (ws, item, params) => ws.store.whitelist.pages.has(item.page.title)
+		check: (ws, item, params) => ws.store.whitelist.pages.has(item?.page?.title)
 	},
 	"page-watched": {
 		title: "Selected page is watched",
-		check: (ws, item, params) => item.page.watched === true
+		check: (ws, item, params) => item?.page?.watched === true
 	},
 
 	"tag-highlighted": {
 		title: "Selected edit has a highlighted tag",
 		check: (ws, item, params) => {
-			for (const tag of item.tags) {
+			for (const tag of item?.tags || [ ])
 				if (ws.store.highlight.tags.has(tag))
 					return true;
-			}
 			return false;
 		}
 	},
 	"tag-whitelisted": {
 		title: "Selected edit has a whitelisted tag",
 		check: (ws, item, params) => {
-			for (const tag of item.tags) {
+			for (const tag of item.tags || [ ])
 				if (ws.store.whitelist.tags.has(tag))
 					return true;
-			}
 			return false;
 		}
 	},

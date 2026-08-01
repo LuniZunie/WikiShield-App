@@ -151,6 +151,16 @@ export class MediaWikiAPI {
         try {
             return await this.post({ ...params, token: await this.getToken(type, bypass, serverOverride) }, bypass, serverOverride);
         } catch (err) {
+            if (err === "badtoken" && !attempted) {
+                delete this.tokens[`${serverOverride ?? this.server}:${type}`];
+                try {
+                    return await this.postWithToken(params, type, bypass, serverOverride, true);
+                } catch (err) {
+                    Logger.error("Post with token error after retry:", err);
+                    throw err;
+                }
+            }
+
             Logger.error("Post with token error:", err);
             throw err;
         }

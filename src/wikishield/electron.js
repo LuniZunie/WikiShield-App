@@ -91,8 +91,8 @@ if (window.electron === undefined) {
 
     document.querySelectorAll("[data-electron]").forEach($el => {
         if ($el.dataset.electron === "false" && window.isElectron)
-            $el.style.display = "none !important";
+            $el.style.display = "none";
         else if ($el.dataset.electron === "true" && !window.isElectron)
-            $el.style.display = "none !important";
+            $el.style.display = "none";
     });
 }

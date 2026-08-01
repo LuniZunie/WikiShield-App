@@ -1529,9 +1529,11 @@ app.whenReady().then(async () => {
         { // save account
             const promises = [ ];
             ipcMain.on("save-account", async (event, username, data) => {
+                Logger.debug(`Saving account data for ${username}`);
                 const promise = (async () => {
                     try {
                         const result = await glob.mwapi.postWithToken({ action: "options", optionname: "userjs-wikishield-storage", optionvalue: data });
+                        Logger.debug(`API response for saving account data for ${username}: ${JSON.stringify(result)}`);
                         if (result?.options === "success")
                             Logger.debug(`Successfully saved account data for ${username}`);
                         else

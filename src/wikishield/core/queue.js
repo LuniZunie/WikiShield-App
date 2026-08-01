@@ -280,7 +280,7 @@ export class Queue {
 
 								delete repeats[item.revid];
 
-								if (this.ws.__DEV__)
+								if (this.ws.__DEV__ && this.ws.server === "test2.wikipedia.org")
 									return filtered.push(item);
 
 								const edits = editCounts[item.user] ?? this.bypass.get(item.user) ?? 0;
@@ -1243,13 +1243,13 @@ export class Queue {
 	async promptWelcome(item) {
 		if (this.ws.store.settings.auto_welcome.enabled)
 			return;
-		else if (!item.user.anon)
+		else if (!item.user?.anon)
 			return;
-		else if ((item.user.edits || 0) === 0) // don't welcome users with 0 edits
+		else if ((item.user?.edits || 0) === 0) // don't welcome users with 0 edits
 			return;
-		else if (item.user.talk === undefined)
+		else if (item.user?.talk === undefined)
 			return;
-		else if (this.noWelcome.has(item.user.name))
+		else if (this.noWelcome.has(item.user?.name))
 			return;
 
 		try {
@@ -1459,13 +1459,13 @@ export class Queue {
 	}
 
 	getWarningHistory(text) {
-		const warnings = [];
+		const warnings = [ ];
 
 		const month = this.ws.util.monthSectionName();
 		const sections = this.ws.util.getPageSections(text);
 		for (const section of sections)
 			if (section.title === month) {
-				const templateMatches = section.content.matchAll(/<\!-- Template:([\w-]+?)(\d(?:i?m)?) -->(.+?)(?=<\!-- Template:|$)/gs);
+				const templateMatches = section.content.matchAll(/<!-- Template:([\w-]+?)(\d(?:i?m)?) -->(.+?)(?=<!-- Template:|$)/gs);
 				for (let match of templateMatches) {
 					const templateName = match[1];
 					const level = match[2];

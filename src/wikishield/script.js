@@ -61,11 +61,11 @@ export function run() {
                     }
                 }
 
-                electron.onBeforeunload(async () => {
-                    await ws.save();
+                electron.onBeforeunload(() => {
+                    ws.backup();
                     electron.unloaded();
                 });
-                window.addEventListener("beforeunload", async () => await ws.save()); // TODO make this more robust
+                window.addEventListener("beforeunload", () => ws.backup());
 
                 const killswitch = new Killswitch(ws);
                 killswitch.on("kill", () => {

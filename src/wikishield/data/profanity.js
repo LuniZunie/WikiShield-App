@@ -870,11 +870,6 @@ class Profanity {
             note: "Violent language, but common word."
         },
         {
-            term: "bomb",
-            severity: 0.7,
-            note: "Terrorism/violence reference."
-        },
-        {
             term: "organi",
             severity: 0.1,
             note: "Word stem for organization."

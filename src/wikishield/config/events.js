@@ -298,13 +298,15 @@ export const events = {
                 }
             }
 
-            let oldLevel;
+            let warningTemplates, oldLevel;
             const warn = await (async () => {
                 const talk = `User talk:${item.user.name}`;
                 const monthSection = ws.util.monthSectionName();
 
                 const content = (await ws.api.getPagesContent([ talk ]))[talk] || "";
                 const sections = ws.util.getPageSections(content);
+
+                warningTemplates = ws.queue.getWarningHistory(content).map(warning => warning.template);
 
                 let section = "new";
                 const len = sections.length;
@@ -324,6 +326,8 @@ export const events = {
                 const template = warning.templates.find(template => template.name === level.toString());
                 if (!template)
                     return { valid: true }; // no warning to issue, still wanna check for reporting
+                else
+                    warningTemplates.push(template.template);
 
                 let summary = "Message about ";
                 if (Queue.groups[item.type] === "edit") // kinda redundant but whatever
@@ -388,8 +392,9 @@ export const events = {
                         if (await ws.api.areUsersBlocked([ item.user.name ])[item.user.name])
                             return { valid: false, reason: "User cannot be reported because they are blocked." };
 
+                        const attempts = warningTemplates.some(template => template.toLowerCase() === "uw-attempt");
                         return await ws.api.append(WikiShield.config.pages.AIV, null, fullTrim(`
-                            * {{vandal|${item.user.name}}} &ndash; Vandalism past final warning ~~~~
+                            * {{vandal|${item.user.name}}} &ndash; Vandalism past final warning. ${attempts ? `See also {{subst:filter log|username=${item.user.name}}}.` : ""}~~~~
                         `), ws.api.summary(`Reporting ${ws.api.user(item.user.name)}`), page => {
                             const content = ws.util.getPageSections(page).find(section => section.title === "User-reported")?.content;
                             return {
@@ -455,13 +460,15 @@ export const events = {
             )
                 return { valid: false, reason: "Warn cancelled by user." };
 
-            let oldLevel;
+            let warningTemplates, oldLevel;
             const warn = await (async () => {
                 const talk = `User talk:${item.user.name}`;
                 const monthSection = ws.util.monthSectionName();
 
                 const content = (await ws.api.getPagesContent([ talk ]))[talk] || "";
                 const sections = ws.util.getPageSections(content);
+
+                warningTemplates = ws.queue.getWarningHistory(content).map(warning => warning.template);
 
                 let section = "new";
                 const len = sections.length;
@@ -481,6 +488,8 @@ export const events = {
                 const template = warning.templates.find(template => template.name === level.toString());
                 if (!template)
                     return { valid: true }; // no warning to issue, still wanna check for reporting
+                else
+                    warningTemplates.push(template.template);
 
                 let summary = "Message about ";
                 if (Queue.groups[item.type] === "edit") // kinda redundant but whatever
@@ -545,8 +554,9 @@ export const events = {
                         if (await ws.api.areUsersBlocked([ item.user.name ])[item.user.name])
                             return { valid: false, reason: "User cannot be reported because they are blocked." };
 
+                        const attempts = warningTemplates.some(template => template.toLowerCase() === "uw-attempt");
                         return await ws.api.append(WikiShield.config.pages.AIV, null, fullTrim(`
-                            * {{vandal|${item.user.name}}} &ndash; Vandalism past final warning ~~~~
+                            * {{vandal|${item.user.name}}} &ndash; Vandalism past final warning. ${attempts ? `See also {{subst:filter log|username=${item.user.name}}}.` : ""}~~~~
                         `), ws.api.summary(`Reporting ${ws.api.user(item.user.name)}`), page => {
                             const content = ws.util.getPageSections(page).find(section => section.title === "User-reported")?.content;
                             return {
@@ -1519,7 +1529,7 @@ export const events = {
         valid: (ws, item, params) => {
             if (!item)
                 return { valid: false, reason: "User can only be welcomed when an item is selected." };
-            else if (item.user.talk !== undefined)
+            else if (item.user?.talk !== undefined)
                 return { valid: false, reason: "User cannot be welcomed because their talk page is not empty." };
             return { valid: true };
         },

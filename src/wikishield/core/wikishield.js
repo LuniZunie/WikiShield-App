@@ -233,7 +233,7 @@ export class WikiShield {
 			}
 
 			{ // backup
-				this.backup();
+				this.save();
 			}
 		} catch (error) {
 			console.error("Update error:", error);
@@ -416,12 +416,13 @@ export class WikiShield {
 		};
 	}
 
-	export() {
+	export(log = true) {
 		this.time.save = performance.now();
 		this.store.statistics.session_time += this.time.save - this.time.load;
 
 		const { string, logs } = this.storage.encode();
-		StorageManager.output(logs);
+		if (log)
+			StorageManager.output(logs);
 
 		return string;
 	}
@@ -431,15 +432,14 @@ export class WikiShield {
 		this.store.statistics.session_time += this.time.save - this.time.load;
 		this.time.load = this.time.save;
 
-		const { string } = this.storage.encode();
-		electron.localStorage.set(`WikiShield:BackupStorage-${this.api.username}`, `${Date.now()};${string}`);
+		electron.localStorage.set(`WikiShield:BackupStorage-${this.api.username}`, `${Date.now()};${this.export(false)}`);
 		return true;
 	}
 
 	async save() {
 		this.backup();
 
-		const data = `${Date.now()};${this.export()}`, username = this.api.username;
+		const data = `${Date.now()};${this.export(false)}`, username = this.api.username;
 		if (window.isFinite)
 			electron.saveAccount(username, data);
 		else {
@@ -457,7 +457,7 @@ export class WikiShield {
 		try {
 			const save = [
 				electron.localStorage.get(`WikiShield:BackupStorage-${this.api.username}`),
-				(await this.api.post({ action: "query", meta: "userinfo", uiprop: "options", format: "json" })).query.userinfo.options[`userjs-wikishield-storage`]
+				(await this.api.post({ action: "query", meta: "userinfo", uiprop: "options", format: "json" })).query.userinfo.options["userjs-wikishield-storage"]
 			].reduce((latest, current) => {
 				current ??= "0;e30=";
 				let timestamp = 0, data = current;
@@ -465,6 +465,8 @@ export class WikiShield {
 					[ timestamp, data ] = current.split(";", 2);
 					timestamp = parseInt(timestamp, 10);
 				}
+
+				console.debug(new Date(timestamp).toLocaleString(), "vs", new Date(latest?.timestamp ?? 0).toLocaleString());
 
 				if (timestamp > 0 && timestamp > (latest?.timestamp ?? 0))
 					return { timestamp, data };
