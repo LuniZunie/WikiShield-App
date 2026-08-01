@@ -8,21 +8,23 @@ import { StorageManager } from "./data/storage/manager.js";
 import { Killswitch } from "./wikipedia/killswitch.js";
 
 window.isMobile = false; // TODO detect mobile properly
-window.arePopupsBlocked = (() => {
-    let popup;
-    try {
-        popup = window.open("about:blank", "_blank", "width=100,height=100,left=-100,top=-100");
-        if (!popup || popup.closed || typeof popup.closed === "undefined")
-            return true;
-
-        popup.close();
-        return false;
-    } catch (e) {
-        return true;
-    }
-})();
+window.arePopupsBlocked = false;
 
 export function run() {
+    window.arePopupsBlocked = (() => {
+        let popup;
+        try {
+            popup = window.open("about:blank", "_blank", "width=100,height=100,left=-100,top=-100");
+            if (!popup || popup.closed || typeof popup.closed === "undefined")
+                return true;
+
+            popup.close();
+            return false;
+        } catch (e) {
+            return true;
+        }
+    })();
+
     addEventListener("click", () => window.ineractedWithPage = true, { once: true });
 
     addEventListener("wheel", event => {
