@@ -1338,7 +1338,7 @@ export const events = {
             if (await ws.api.isUserGloballyLocked(item.user.name))
                 return { valid: false, reason: "User is globally locked." };
 
-            const reason = params.reason === "Generic" ? params.summary : `${params.reason}. ${params.summary}`;
+            const reason = params.reason === "Generic" ? (params.summary || "") : `${params.reason}.${params.summary ? ` ${params.summary}` : ""}`;
 
             const page = (await ws.api.getPagesContent([ WikiShield.config.pages.SRG ], true, "meta.wikimedia.org"))[WikiShield.config.pages.SRG] || "";
             const sections = ws.util.getPageSections(page);
@@ -1446,7 +1446,7 @@ export const events = {
             if (await ws.api.isUserGloballyLocked(item.user.name))
                 return { valid: false, reason: "User is already globally locked." };
 
-            const reason = params.reason === "Generic" ? params.summary : `${params.reason}. ${params.summary}`;
+            const reason = params.reason === "Generic" ? (params.summary || "") : `${params.reason}.${params.summary ? ` ${params.summary}` : ""}`;
             const user = params.hide_username === "Yes" ? "" : ` for ${ws.api.centralAuthUser(item.user.name)}`;
 
             const page = (await ws.api.getPagesContent([ WikiShield.config.pages.SRG ], true, "meta.wikimedia.org"))[WikiShield.config.pages.SRG] || "";

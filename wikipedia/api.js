@@ -740,7 +740,7 @@ class MediaWikiAPI {
     async getConsecutiveEdits(page, revid, username, bypass, serverOverride) {
         try {
             const data = await this.continuous({
-                action: "query", prop: "revisions", titles: page, rvprop: "ids|timestamp|user|size|parsedcomment", rvlimit: "max", rvstartid: revid
+                action: "query", prop: "revisions", titles: page, rvprop: "ids|timestamp|user|size|parsedcomment|comment", rvlimit: "max", rvstartid: revid
             }, data => data.query?.pages?.[0]?.revisions.some(rev => rev.user !== username), bypass, serverOverride);
 
             const revisions = data.responses.flatMap(response => response.query?.pages?.[0]?.revisions || [ ]);

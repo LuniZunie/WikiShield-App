@@ -7,7 +7,7 @@ import { StorageManager } from "./data/storage/manager.js";
 
 import { Killswitch } from "./wikipedia/killswitch.js";
 
-window.isMobile = false; // TODO detect mobile properly
+window.isMobile = true; // TODO detect mobile properly
 window.arePopupsBlocked = false;
 
 export function run() {
@@ -25,9 +25,9 @@ export function run() {
         }
     })();
 
-    addEventListener("click", () => window.ineractedWithPage = true, { once: true });
+    window.addEventListener("click", () => window.ineractedWithPage = true, { once: true });
 
-    addEventListener("wheel", event => {
+    window.addEventListener("wheel", event => {
         if (event.target.closest(".no-scroll"))
             return;
 

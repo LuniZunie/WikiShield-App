@@ -650,6 +650,8 @@ export class Queue {
 				const parsed = await ws.api.parseEdits(items, simple, this.ws.store.settings.queue.ores_bias, bypass);
 				for (const temp of parsed) {
 					const { item, prior, data } = temp;
+					if (this.ws.mobile && !data.page?.consecutive?.diff)
+						continue;
 
 					const mentions = { comment: false, diff: false };
 					if (username)

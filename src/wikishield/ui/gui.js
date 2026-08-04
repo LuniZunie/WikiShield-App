@@ -12,6 +12,8 @@ import { Queue } from "../core/queue.js";
 import { warnings, warningsLookup, warningTemplateColors, getWarningFromLookup } from "../data/warnings.js";
 import { BuildPalette } from "../utilities/build-palette.js";
 
+import { SetupGestures } from "./mobile/gestures.js";
+
 export class GUI {
 	static palettes = {
 		traffic: BuildPalette(1000, "#78c675", "#fdff7a", "#fcff54", "#fbff12", "#ffc619", "#ff8812", "#f56214", "#f73214", "#fc0303", "#fc0303"),
@@ -360,7 +362,10 @@ export class GUI {
 		});
 
 		window.addEventListener("click", event => {
-			[...document.querySelectorAll(".tooltip.buttons")].forEach(elem => elem.remove());
+			if ([ ...document.querySelectorAll(".tooltip.buttons") ].map(elem => elem.remove()).length && !event.target.closest(".tooltip.buttons")) {
+				event.preventDefault();
+				event.stopPropagation();
+			}
 
 			const $href = event.target.closest("[href]");
 			if ($href) {
@@ -539,13 +544,15 @@ export class GUI {
 						this.ws.open($href.getAttribute("href"), event.altKey);
 					} finally {
 						event.preventDefault();
+						event.stopPropagation();
 					}
 				} else
 					this.ws.open($href.getAttribute("href"), event.altKey);
 
 				event.preventDefault();
+				event.stopPropagation();
 			}
-		});
+		}, { capture: true });
 
 		document.querySelector("#loading").classList.add("hidden");
 	}
@@ -885,21 +892,31 @@ export class GUI {
 		this.renderQueue();
 
 		electron.menuEnabler({ browser: true, settings: { preferences: true }, help: { changelog: true } });
+
+		if (this.ws.mobile)
+			SetupGestures(this.ws);
 	}
 
 	cache() {
 		this.#cache.$pc = document.querySelector("#pending-changes-container");
-		this.#cache.$bottom = document.querySelector("#bottom-tools");
+		this.#cache.$bottom = this.ws.mobile ? document.querySelector("#edit-detials") : document.querySelector("#bottom-tools");
 		this.#cache.$diff = document.querySelector("#diff-container > table");
 	}
 
 	animation() {
 		try {
 			const cache = this.#cache;
-			if (!cache.$pc?.isConnected)
+			if (!cache.$pc?.isConnected) {
 				cache.$pc = document.querySelector("#pending-changes-container");
-			if (!cache.$bottom?.isConnected)
-				cache.$bottom = document.querySelector("#bottom-tools");
+				cache.top = null;
+				cache.left = null;
+			}
+			if (!cache.$bottom?.isConnected) {
+				cache.$bottom = this.ws.mobile ? document.querySelector("#edit-detials") : document.querySelector("#bottom-tools");
+				cache.top = null;
+				cache.left = null;
+				cache.marginBottom = null;
+			}
 
 			if (cache.$pc && cache.$bottom) {
 				const bottomRect = cache.$bottom.getBoundingClientRect();
@@ -916,10 +933,12 @@ export class GUI {
 					cache.left = left;
 				}
 
-				if (!cache.$diff?.isConnected)
+				if (!cache.$diff?.isConnected) {
 					cache.$diff = document.querySelector("#diff-container > table");
+					cache.marginBottom = null;
+				}
 				if (cache.$diff) {
-					const marginBottom = window.innerHeight - bottomRect.top;
+					const marginBottom = this.ws.mobile ? 80 : window.innerHeight - bottomRect.top;
 					if (cache.marginBottom !== marginBottom) {
 						cache.$diff.style.marginBottom = `${marginBottom}px`;
 						cache.marginBottom = marginBottom;
@@ -1254,12 +1273,16 @@ export class GUI {
 	}
 
 	generateEditDetails(item, consecutive = false) {
+		const $details = document.querySelector("#edit-details");
+
+		if (this.ws.mobile)
+			$details.classList.toggle("hidden", !item);
+
 		if (!item)
-			return void(document.querySelector("#edit-details").innerHTML = "<div class='central'>Nothing selected</div>");
+			return void($details.innerHTML = "<div class='central'>Nothing selected</div>");
 
 		const pending = Queue.groups[item.type] === "edit" ? this.ws.queue.pending.get(item.id) : null;
 
-		const $details = document.querySelector("#edit-details");
 		$details.style.setProperty("--diff-color", "sizediff" in item ? this.ws.util.getChangeColor(item.sizediff) : undefined);
 		$details.innerHTML = "";
 
@@ -1411,109 +1434,114 @@ export class GUI {
 				const $text = CreateDOMElement("span", {
 					class: "text",
 					content: `${data.count} ${Text.pluralize("edit", data.count)} over the course of `,
+					style: {
+						"font-style": "italic"
+					},
 					dataset: {
-						tooltip: data.edits.map(edit => {
-							const $body = CreateDOMElement("div", {
-								style: {
-									"display": "flex",
-									"flex-direction": "column",
-									"gap": "6px"
-								}
-							});
-
-							{
-								const $header = CreateDOMElement("div", {
+						...(this.ws.mobile ? { } : {
+							tooltip: data.edits.map(edit => {
+								const $body = CreateDOMElement("div", {
 									style: {
 										"display": "flex",
-										"align-items": "center",
-										"gap": "6px",
-										"width": "100%",
-										"justify-content": "space-between",
-										"font-size": "13px"
+										"flex-direction": "column",
+										"gap": "6px"
 									}
 								});
-								$body.appendChild($header);
 
 								{
-									const $user = CreateDOMElement("span", {
+									const $header = CreateDOMElement("div", {
 										style: {
 											"display": "flex",
 											"align-items": "center",
-											"gap": "4px",
-											"font-weight": "500"
-										},
-										content: edit.user,
-									});
-									$header.appendChild($user);
-
-									const $icon = CreateDOMElement("i", {
-										class: `fas fa-${edit.anon ? "user-secret" : "user"}`,
-										style: {
-											"font-size": "11px",
-											"opacity": "0.7"
+											"gap": "6px",
+											"width": "100%",
+											"justify-content": "space-between",
+											"font-size": "13px"
 										}
 									});
-									$user.prepend($icon);
+									$body.appendChild($header);
+
+									{
+										const $user = CreateDOMElement("span", {
+											style: {
+												"display": "flex",
+												"align-items": "center",
+												"gap": "4px",
+												"font-weight": "500"
+											},
+											content: edit.user,
+										});
+										$header.appendChild($user);
+
+										const $icon = CreateDOMElement("i", {
+											class: `fas fa-${edit.anon ? "user-secret" : "user"}`,
+											style: {
+												"font-size": "11px",
+												"opacity": "0.7"
+											}
+										});
+										$user.prepend($icon);
+									}
+
+									{
+										const $time = CreateDOMElement("span", {
+											style: {
+												"display": "flex",
+												"align-items": "center",
+												"gap": "4px",
+												"font-size": "12px",
+												"opacity": "0.75",
+											},
+											content: this.ws.util.formatNotificationTime(new Date(edit.timestamp)),
+											dataset: {
+												time: edit.timestamp,
+												timeFormat: "notification",
+											}
+										});
+										$header.appendChild($time);
+
+										const $icon = CreateDOMElement("i", {
+											class: "fas fa-clock",
+											style: {
+												"font-size": "10px",
+												"opacity": "0.7"
+											}
+										});
+										$time.prepend($icon);
+									}
 								}
 
 								{
-									const $time = CreateDOMElement("span", {
+									const $comment = CreateDOMElement("div", {
 										style: {
 											"display": "flex",
-											"align-items": "center",
+											"align-items": "flex-start",
 											"gap": "4px",
 											"font-size": "12px",
-											"opacity": "0.75"
+											"opacity": "0.85",
+											"padding": "2px 0"
 										},
-										content: this.ws.util.formatNotificationTime(new Date(edit.timestamp)),
-										dataset: {
-											time: edit.timestamp,
-											timeFormat: "notification",
-										}
+										html: edit.comment || "No edit summary"
 									});
-									$header.appendChild($time);
+									$body.appendChild($comment);
 
 									const $icon = CreateDOMElement("i", {
-										class: "fas fa-clock",
+										class: "fas fa-comment",
 										style: {
 											"font-size": "10px",
-											"opacity": "0.7"
+											"opacity": "0.7",
+											"flex-shrink": "0",
+											"margin-top": "2px"
 										}
 									});
-									$time.prepend($icon);
+									$comment.prepend($icon);
 								}
-							}
 
-							{
-								const $comment = CreateDOMElement("div", {
-									style: {
-										"display": "flex",
-										"align-items": "flex-start",
-										"gap": "4px",
-										"font-size": "12px",
-										"opacity": "0.85",
-										"padding": "2px 0"
-									},
-									content: edit.comment || "No edit summary"
-								});
-								$body.appendChild($comment);
-
-								const $icon = CreateDOMElement("i", {
-									class: "fas fa-comment",
-									style: {
-										"font-size": "10px",
-										"opacity": "0.7",
-										"flex-shrink": "0",
-										"margin-top": "2px"
-									}
-								});
-								$comment.prepend($icon);
-							}
-
-							return $body.outerHTML;
-						}).join("<br>"),
-						tooltipHtml: true,
-						tooltipDelay: 500,
+								return $body.outerHTML;
+							}).join("<br>"),
+							tooltipHtml: true,
+							tooltipDelay: 500,
+						})
 					}
 				});
 				this.addTooltipListener($text);
@@ -1522,6 +1550,9 @@ export class GUI {
 				const $time = CreateDOMElement("span", {
 					class: "time",
 					content: this.ws.util.formatDuration(new Date(data.timestamp.old), new Date(data.timestamp.new)),
+					style: {
+						"font-style": "italic"
+					},
 					dataset: {
 						tooltip: `${new Date(data.timestamp.old).toLocaleString()}&mdash;${new Date(data.timestamp.new).toLocaleString()}`,
 						tooltipHtml: true,
@@ -1534,6 +1565,30 @@ export class GUI {
 				});
 				this.addTooltipListener($time);
 				$comment.appendChild($time);
+
+				if (this.ws.mobile)
+					$comment.appendChild(CreateDOMElement("div", {
+						class: "comments",
+						html: data.edits.map(edit => {
+							const $comment = CreateDOMElement("div", {
+								class: "comment",
+								html: edit.comment || "No edit summary"
+							});
+
+							const $time = CreateDOMElement("span", {
+								class: "time",
+								content: this.ws.util.formatNotificationTime(new Date(edit.timestamp)),
+								dataset: {
+									time: edit.timestamp,
+									timeFormat: "notification",
+								}
+							});
+							this.addTooltipListener($time);
+							$comment.insertBefore($time, $comment.firstChild);
+
+							return $comment.outerHTML;
+						}).join("<br>")
+					}));
 			} else if (item.has_comment) {
 				const $comment = CreateDOMElement("div", {
 					class: "item-comment",
@@ -1573,7 +1628,31 @@ export class GUI {
 				});
 				$subheader.appendChild($meta);
 
-				{
+				if (consecutive) {
+					if ("sizediff" in item?.consecutive) {
+						$details.style.setProperty("--diff-color", "sizediff" in item ? this.ws.util.getChangeColor(item.consecutive.sizediff) : undefined);
+						const $diff = CreateDOMElement("span", {
+							class: "diff-chip",
+							content: Math.abs(item.consecutive.sizediff).toLocaleString(),
+							dataset: {
+								tooltip: "Size difference",
+								tooltipDelay: 500
+							}
+						});
+						this.addTooltipListener($diff);
+						$meta.appendChild($diff);
+
+						if (item.consecutive.sizediff !== 0) {
+							const $icon = CreateDOMElement("i", {
+								class: `fas fa-${item.consecutive.sizediff > 0 ? "plus" : "minus"}`,
+								style: {
+									"font-size": "1em"
+								}
+							});
+							$diff.prepend($icon);
+						}
+					}
+				} else {
 					if (item.minor) {
 						const $minor = CreateDOMElement("span", {
 							class: "minor-chip",
@@ -1610,13 +1689,49 @@ export class GUI {
 							const $icon = CreateDOMElement("i", {
 								class: `fas fa-${item.sizediff > 0 ? "plus" : "minus"}`,
 								style: {
-									"font-size": "11px"
+									"font-size": "1em"
 								}
 							});
 							$diff.prepend($icon);
 						}
 					}
 				}
+			}
+		}
+
+		if (this.ws.mobile) {
+			const $header = $details.querySelector(".header");
+			const $subheader = $details.querySelector(".subheader");
+
+			{
+				$header.querySelector(".page-title > i").remove();
+			}
+
+			{
+				const $meta = $header.querySelector(".meta");
+
+				const $diff = $subheader.querySelector(".diff-chip");
+				if ($diff)
+					$meta.appendChild($diff);
+
+				const $minor = $subheader.querySelector(".minor-chip");
+				if ($minor) {
+					$minor.innerHTML = "minor";
+					$meta.appendChild($minor);
+				}
+			}
+
+			{
+				const $user = $header.querySelector(".user-chip");
+				$subheader.insertBefore($user, $subheader.firstChild);
+
+				$subheader.insertBefore(CreateDOMElement("span", { class: "separator", content: ":" }), $user.nextSibling);
+			}
+
+			{
+				const $comment = $subheader.querySelector(".item-comment");
+				if ($comment)
+					$comment.querySelector("i")?.remove();
 			}
 		}
 	}
@@ -2361,10 +2476,9 @@ export class GUI {
 	}
 
 	updateDiffDisplay(item, consecutive) {
+		const $diff = document.querySelector("#diff-container");
 		if (this.ws.mobile)
 			consecutive = true;
-
-		const $diff = document.querySelector("#diff-container");
 
 		if (!item) {
 			document.querySelector("#diff-scroll-up").classList.add("hidden");
@@ -3134,15 +3248,10 @@ export class GUI {
 		const vw = innerWidth;
 		const vh = innerHeight;
 
-		// Position candidates: [name, x, y, shouldShift]
 		const positions = [
-			// Try below first
 			["bottom", (targetRect.left + targetRect.right) / 2 - tw / 2, targetRect.bottom + gap, true],
-			// Try above
 			["top", (targetRect.left + targetRect.right) / 2 - tw / 2, targetRect.top - th - gap, true],
-			// Try right
 			["right", targetRect.right + gap, (targetRect.top + targetRect.bottom) / 2 - th / 2, true],
-			// Try left
 			["left", targetRect.left - tw - gap, (targetRect.top + targetRect.bottom) / 2 - th / 2, true]
 		];
 
@@ -3152,26 +3261,21 @@ export class GUI {
 		for (const [name, x, y, canShift] of positions) {
 			let posX = x, posY = y;
 
-			// Check if position fits without wrapping
 			if (posX >= 0 && posX + tw <= vw && posY >= 0 && posY + th <= vh) {
-				// Perfect fit - score high
 				bestScore = 100;
 				bestPosition = [posX, posY];
 				break;
 			}
 
-			// If can shift, try to fit it within bounds
 			if (canShift) {
 				const shiftedX = Math.max(0, Math.min(posX, vw - tw));
 				const shiftedY = Math.max(0, Math.min(posY, vh - th));
 
-				// Check if shifted position overlaps target
 				const overlaps = !(shiftedX + tw <= targetRect.left ||
 					shiftedX >= targetRect.right ||
 					shiftedY + th <= targetRect.top ||
 					shiftedY >= targetRect.bottom);
 
-				// Score based on overlap and shift distance
 				const shiftDist = Math.abs(shiftedX - x) + Math.abs(shiftedY - y);
 				const score = overlaps ? -50 - shiftDist : 50 - shiftDist / 10;
 
@@ -3182,12 +3286,10 @@ export class GUI {
 			}
 		}
 
-		// Apply best position found
 		if (bestPosition) {
 			$tooltip.style.left = `${bestPosition[0]}px`;
 			$tooltip.style.top = `${bestPosition[1]}px`;
 		} else {
-			// Last resort fallback
 			$tooltip.style.left = `${Math.max(0, Math.min((targetRect.left + targetRect.right) / 2 - tw / 2, vw - tw))}px`;
 			$tooltip.style.top = `${Math.max(0, Math.min((targetRect.top + targetRect.bottom) / 2 - th / 2, vh - th))}px`;
 		}
@@ -3204,6 +3306,8 @@ export class GUI {
 	}
 
 	addTooltipListener($el) {
+		if (this.ws.mobile)
+			return;
 		if (!$el.dataset.tooltip)
 			return;
 
@@ -3701,7 +3805,7 @@ export class GUI {
 				actions: [
 					{
 						name: "next-item",
-						params: {}
+						params: { }
 					},
 					((type === "reverts") ? ({
 						name: "rollback-edit",
@@ -3718,7 +3822,7 @@ export class GUI {
 					},
 					{
 						name: "highlight-user",
-						params: {}
+						params: { }
 					},
 				].concat(autoReporting.enabled && warning.reportable && autoReporting.for.has(warningTitle) ? [ reportObject ] : [])
 			});
@@ -3730,7 +3834,7 @@ export class GUI {
 				actions: [
 					{
 						name: "next-item",
-						params: {}
+						params: { }
 					},
 					{
 						name: "rollback-edit",

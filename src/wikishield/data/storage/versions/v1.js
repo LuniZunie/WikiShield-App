@@ -185,7 +185,7 @@ Version.v1 = class V1 extends Version {
                     actions: [
                         {
                             name: "nextEdit",
-                            params: {}
+                            params: { }
                         }
                     ]
                 },
@@ -194,7 +194,7 @@ Version.v1 = class V1 extends Version {
                     actions: [
                         {
                             name: "nextEdit",
-                            params: {}
+                            params: { }
                         }
                     ]
                 },
@@ -203,11 +203,11 @@ Version.v1 = class V1 extends Version {
                     actions: [
                         {
                             name: "nextEdit",
-                            params: {}
+                            params: { }
                         },
                         {
                             name: "rollback",
-                            params: {}
+                            params: { }
                         },
                         {
                             name: "warn",
@@ -236,7 +236,7 @@ Version.v1 = class V1 extends Version {
                         },
                         {
                             name: "highlightUser",
-                            params: {}
+                            params: { }
                         }
                     ]
                 },
@@ -245,7 +245,7 @@ Version.v1 = class V1 extends Version {
                     actions: [
                         {
                             name: "prevEdit",
-                            params: {}
+                            params: { }
                         }
                     ]
                 },
@@ -254,7 +254,7 @@ Version.v1 = class V1 extends Version {
                     actions: [
                         {
                             name: "openHistory",
-                            params: {}
+                            params: { }
                         }
                     ]
                 },
@@ -263,7 +263,7 @@ Version.v1 = class V1 extends Version {
                     actions: [
                         {
                             name: "openUserContribs",
-                            params: {}
+                            params: { }
                         }
                     ]
                 },
@@ -272,7 +272,7 @@ Version.v1 = class V1 extends Version {
                     actions: [
                         {
                             name: "thankUser",
-                            params: {}
+                            params: { }
                         }
                     ]
                 },
