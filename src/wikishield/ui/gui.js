@@ -879,7 +879,7 @@ export class GUI {
 		}
 
 		const version = WikiShield.config.changelog.version;
-		if (versiob.endsWith("-"))
+		if (version.endsWith("-"))
 			this.ws.store.changelog = version.replace(/-$/, "");
 		else if (version.endsWith("!") || version !== this.ws.store.changelog) {
 			this.ws.store.changelog = version.replace(/!$/, "");
