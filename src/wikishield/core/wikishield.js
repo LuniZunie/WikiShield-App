@@ -19,7 +19,7 @@ export class WikiShield {
 		version: VERSION,
 
 		changelog: {
-			version: "6",
+			version: "20", // suffixes: ! = force show, - = never show
 			HTML: fetch("https://raw.githubusercontent.com/LuniZunie/WikiShield-App/refs/heads/main/data/CHANGELOG.html")
 				.then(res => res.text())
 				.catch(() => "<em>Could not fetch changelog.</em>")

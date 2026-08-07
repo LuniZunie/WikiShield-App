@@ -6,7 +6,7 @@ import { fullTrim } from "../../../global/full-trim/script.esm.js";
 
 export const events = {
     "return": {
-        title: "End current action",
+        title: "End script",
         icon: "fas fa-circle-xmark",
     },
 

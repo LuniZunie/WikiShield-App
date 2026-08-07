@@ -2,21 +2,369 @@
     <h1><i class="fas fa-rocket"></i> What's New in WikiShield</h1>
     <p class="changelog-subtitle">Discover the latest features and improvements</p>
     <nav class="changelog-nav">
-        <a href="#changelog-version-7" class="changelog-nav-item active">2.0.0</a>
+        <a href="#changelog-version-20" class="changelog-nav-item active">2.1.0</a>
+        <a href="#changelog-version-7" class="changelog-nav-item">2.0.0</a>
         <a href="#changelog-version-6" class="changelog-nav-item">1.2.0</a>
-        <a href="#changelog-version-5" class="changelog-nav-item">1.1.2</a>
-        <a href="#changelog-version-4" class="changelog-nav-item">1.1.1</a>
         <a href="#changelog-version-3" class="changelog-nav-item">1.1.0</a>
     </nav>
 </div>
+<div id="changelog-version-20" class="changelog-version">
+    <div class="changelog-version-header">
+        <div class="version-badge-row">
+            <span class="version-badge">2.1.0</span>
+            <span class="version-tag latest">Latest</span>
+        </div>
+        <h1>Version 2.1.0</h1>
+        <p class="changelog-version-subtitle">8 August 2026, 00:00 UTC</p>
+    </div>
+    <div class="changelog-grid">
+        <div class="card featured">
+            <div class="card-icon"><i class="fas fa-phone"></i></div>
+            <h2>Mobile Support</h2>
+            <p>WikiShield is now available on mobile devices!</p>
+            <ul>
+                <li>Custom built for mobile devices</li>
+                <li>Includes swipe gestures for easier navigation</li>
+                <li>
+                    Supports iOS and Android devices
+                    <ul>
+                        <li><b>NOTE:</b> The mobile Wikipedia apps are not supported</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+        <div class="card">
+            <div class="card-icon"><i class="fas fa-code"></i></div>
+            <h2>Control Scripts</h2>
+            <p>New actions have been added to control scripts.</p>
+            <ul>
+                <li>Added a new "End script" action which ends the current script</li>
+                <li>Added a new "Send error message" action which sends an error message to the user</li>
+            </ul>
+        </div>
+        <div class="card">
+            <div class="card-icon"><i class="fas fa-cogs"></i></div>
+            <h2>Quality of Life</h2>
+            <ul>
+                <li>Removed multiple false positives from the profanity filter</li>
+                <li>Cleaned up multiple UI inconsistencies</li>
+            </ul>
+        </div>
+        <div class="card">
+            <div class="card-icon"><i class="fas fa-bug"></i></div>
+            <h2>Bug Fixes</h2>
+            <p>Multiple bug fixes and performance improvements.</p>
+            <ul>
+                <li>Fixed a bug where the "Vandalism fighter" welcome template would not work</li>
+                <li>Fixed a bug where the changelog would not open</li>
+                <li>Fixed an error during token refreshing forcing the user to refresh the page</li>
+                <li>Added a missing method to a class that caused a fatal error during memory cleanup</li>
+                <li>The browser button on the desktop app now opens the system browser&apos;s home page if popups are disabled</li>
+            </ul>
+        </div>
+        <div class="card">
+            <div class="card-icon"><i class="fas fa-ellipsis"></i></div>
+            <h2>Miscellaneous</h2>
+            <ul>
+                <li>Major code cleanup and refactoring</li>
+            </ul>
+        </div>
+    </div>
+</div>
+<div class="changelog-divider"></div>
+<div id="changelog-version-19" class="changelog-version">
+    <div class="changelog-version-header">
+        <div class="version-badge-row">
+            <span class="version-badge">2.0.12</span>
+        </div>
+        <h1>Version 2.0.12</h1>
+        <p class="changelog-version-subtitle">1 August 2026, 19:00 UTC</p>
+    </div>
+    <div class="changelog-grid">
+        <div class="card">
+            <div class="card-icon"><i class="fas fa-bug"></i></div>
+            <h2>Bug Fixes</h2>
+            <ul>
+                <li>Fixed a bug causing the popup detector to run on every Wikipedia page, even when the script was not running</li>
+            </ul>
+        </div>
+    </div>
+</div>
+<div class="changelog-divider"></div>
+<div id="changelog-version-18" class="changelog-version">
+    <div class="changelog-version-header">
+        <div class="version-badge-row">
+            <span class="version-badge">2.0.11</span>
+        </div>
+        <h1>Version 2.0.11</h1>
+        <p class="changelog-version-subtitle">1 August 2026, 18:15 UTC</p>
+    </div>
+    <div class="changelog-grid">
+        <div class="card">
+            <div class="card-icon"><i class="fas fa-bug"></i></div>
+            <h2>Bug Fixes</h2>
+            <ul>
+                <li>Fixed a fatal error due to a variable name mismatch</li>
+            </ul>
+        </div>
+    </div>
+</div>
+<div class="changelog-divider"></div>
+<div id="changelog-version-17" class="changelog-version">
+    <div class="changelog-version-header">
+        <div class="version-badge-row">
+            <span class="version-badge">2.0.10</span>
+        </div>
+        <h1>Version 2.0.10</h1>
+        <p class="changelog-version-subtitle">1 August 2026, 18:00 UTC</p>
+    </div>
+    <div class="changelog-grid">
+        <div class="card featured">
+            <div class="card-icon"><i class="fas fa-code"></i></div>
+            <h2>Control Scripts</h2>
+            <ul>
+                <li>If user has any &quot;uw-attempt&quot; warnings, reports will add a link to the user&apos;s filter log</li>
+                <li>Updated multiple messages to have better grammar and consistency</li>
+                <li>Improved error handling</li>
+            </ul>
+        </div>
+        <div class="card">
+            <div class="card-icon"><i class="fas fa-cogs"></i></div>
+            <h2>Quality of Life</h2>
+            <ul>
+                <li>Desktop app now remembers window position</li>
+                <li>Improved click interaction with portlet link</li>
+            </ul>
+        </div>
+        <div class="card">
+            <div class="card-icon"><i class="fas fa-bolt"></i></div>
+            <h2>Optimizations</h2>
+            <ul>
+                <li>Removed unnecessary $lpar;and intensive&rpar; animations</li>
+                <li>Added a cache for frequently lookedup elements</li>
+            </ul>
+        </div>
+        <div class="card">
+            <div class="card-icon"><i class="fas fa-bug"></i></div>
+            <h2>Bug Fixes</h2>
+            <ul>
+                <li>Added a check for popups being disabled to fix a bug regarding popus being disallowed</li>
+                <li>Fixed a bug causing save mismatches</li>
+                <li>Fixed a bug causing templates to be parsed in edit/log summaries</li>
+                <li>Fixed multiple errors during control scripts due to missing items in queue</li>
+                <li>Fixed an error forcing the user to refresh the page due to tokens expiring</li>
+                <li>Fixed a fatal error caused by too many pending changes being loaded</li>
+                <li>Fixed minor styling oversights</li>
+            </ul>
+        </div>
+    </div>
+</div>
+<div class="changelog-divider"></div>
+<div id="changelog-version-16" class="changelog-version">
+    <div class="changelog-version-header">
+        <div class="version-badge-row">
+            <span class="version-badge">2.0.9</span>
+        </div>
+        <h1>Version 2.0.9</h1>
+        <p class="changelog-version-subtitle">4 June 2026, 03:00 UTC</p>
+    </div>
+    <div class="changelog-grid">
+        <div class="card">
+            <div class="card-icon"><i class="fas fa-cogs"></i></div>
+            <h2>Quality of Life</h2>
+            <ul>
+                <li>Allow for scrolling beyond the end of the page to prevent elements from concealing diffs</li>
+            </ul>
+        </div>
+        <div class="card">
+            <div class="card-icon"><i class="fas fa-bug"></i></div>
+            <h2>Bug Fixes</h2>
+            <ul>
+                <li>Fixed a major error stoping the user-script from making reports to any noticeboard</li>
+                <li>Corrected typo</li>
+            </ul>
+        </div>
+    </div>
+</div>
+<div class="changelog-divider"></div>
+<div id="changelog-version-15" class="changelog-version">
+    <div class="changelog-version-header">
+        <div class="version-badge-row">
+            <span class="version-badge">2.0.8</span>
+        </div>
+        <h1>Version 2.0.8</h1>
+        <p class="changelog-version-subtitle">30 May 2026, 20:30 UTC</p>
+    </div>
+    <div class="changelog-grid">
+        <div class="card">
+            <div class="card-icon"><i class="fas fa-bug"></i></div>
+            <h2>Bug Fixes</h2>
+            <ul>
+                <li>Added missing "meta" key modifier for macOS users</li>
+                <li>Fixed a bug stopping audio from playing in ther desktop app</li>
+            </ul>
+        </div>
+    </div>
+</div>
+<div class="changelog-divider"></div>
+<div id="changelog-version-14" class="changelog-version">
+    <div class="changelog-version-header">
+        <div class="version-badge-row">
+            <span class="version-badge">2.0.7</span>
+        </div>
+        <h1>Version 2.0.7</h1>
+        <p class="changelog-version-subtitle">29 May 2026, 17:30 UTC</p>
+    </div>
+    <div class="changelog-grid">
+        <div class="card">
+            <div class="card-icon"><i class="fas fa-cogs"></i></div>
+            <h2>Quality of Life</h2>
+            <ul>
+                <li>Added an update splash screen</li>
+            </ul>
+        </div>
+        <div class="card">
+            <div class="card-icon"><i class="fas fa-bug"></i></div>
+            <h2>Bug Fixes</h2>
+            <ul>
+                <li>Fixed a UI bug causing the DEFCON icon to overlap other elements</li>
+                <li>Fixed a bug that caused the WikiShield portlet link to be misplaced</li>
+                <li>Fixed a fatal error caused while logging network errors</li>
+            </ul>
+        </div>
+    </div>
+</div>
+<div class="changelog-divider"></div>
+<div id="changelog-version-13" class="changelog-version">
+    <div class="changelog-version-header">
+        <div class="version-badge-row">
+            <span class="version-badge">2.0.6</span>
+        </div>
+        <h1>Version 2.0.6</h1>
+        <p class="changelog-version-subtitle">27 May 2026, 03:15 UTC</p>
+    </div>
+    <div class="changelog-grid">
+        <div class="card">
+            <div class="card-icon"><i class="fas fa-cogs"></i></div>
+            <h2>Quality of Life</h2>
+            <ul>
+                <li>Added a quit button for macOS</li>
+            </ul>
+        </div>
+        <div class="card">
+            <div class="card-icon"><i class="fas fa-bug"></i></div>
+            <h2>Bug Fixes</h2>
+            <ul>
+                <li>Added missing statistics related to abuse filter reviews</li>
+            </ul>
+        </div>
+    </div>
+</div>
+<div class="changelog-divider"></div>
+<div id="changelog-version-12" class="changelog-version">
+    <div class="changelog-version-header">
+        <div class="version-badge-row">
+            <span class="version-badge">2.0.5</span>
+        </div>
+        <h1>Version 2.0.5</h1>
+        <p class="changelog-version-subtitle">27 May 2026, 03:00 UTC</p>
+    </div>
+    <div class="changelog-grid">
+        <div class="card">
+            <div class="card-icon"><i class="fas fa-bug"></i></div>
+            <h2>Bug Fixes</h2>
+            <ul>
+                <li>Fixed a fatal error during API destruction</li>
+            </ul>
+        </div>
+    </div>
+</div>
+<div class="changelog-divider"></div>
+<div id="changelog-version-11" class="changelog-version">
+    <div class="changelog-version-header">
+        <div class="version-badge-row">
+            <span class="version-badge">2.0.4</span>
+        </div>
+        <h1>Version 2.0.4</h1>
+        <p class="changelog-version-subtitle">27 May 2026, 02:45 UTC</p>
+    </div>
+    <div class="changelog-grid">
+        <div class="card">
+            <div class="card-icon"><i class="fas fa-bug"></i></div>
+            <h2>Bug Fixes</h2>
+            <ul>
+                <li>Corrected a mismatch in version numbering</li>
+            </ul>
+        </div>
+    </div>
+</div>
+<div class="changelog-divider"></div>
+<div id="changelog-version-10" class="changelog-version">
+    <div class="changelog-version-header">
+        <div class="version-badge-row">
+            <span class="version-badge">2.0.3</span>
+        </div>
+        <h1>Version 2.0.3</h1>
+        <p class="changelog-version-subtitle">27 May 2026, 02:30 UTC</p>
+    </div>
+    <div class="changelog-grid">
+        <div class="card">
+            <div class="card-icon"><i class="fas fa-bug"></i></div>
+            <h2>Bug Fixes</h2>
+            <ul>
+                <li>Fixed a bug related to UI positioning of the pending changes buttons</li>
+                <li>Improve auto-update handling to prevent errors when updating</li>
+                <li>Corrected typo</li>
+            </ul>
+        </div>
+    </div>
+</div>
+<div class="changelog-divider"></div>
+<div id="changelog-version-9" class="changelog-version">
+    <div class="changelog-version-header">
+        <div class="version-badge-row">
+            <span class="version-badge">2.0.2</span>
+        </div>
+        <h1>Version 2.0.2</h1>
+        <p class="changelog-version-subtitle">26 May 2026, 04:00 UTC</p>
+    </div>
+    <div class="changelog-grid">
+        <div class="card">
+            <div class="card-icon"><i class="fas fa-bug"></i></div>
+            <h2>Bug Fixes</h2>
+            <ul>
+                <li>Corrected a mismatch in version numbering</li>
+            </ul>
+        </div>
+    </div>
+</div>
+<div class="changelog-divider"></div>
+<div id="changelog-version-8" class="changelog-version">
+    <div class="changelog-version-header">
+        <div class="version-badge-row">
+            <span class="version-badge">2.0.1</span>
+        </div>
+        <h1>Version 2.0.1</h1>
+        <p class="changelog-version-subtitle">26 May 2026, 03:30 UTC</p>
+    </div>
+    <div class="changelog-grid">
+        <div class="card">
+            <div class="card-icon"><i class="fas fa-bug"></i></div>
+            <h2>Bug Fixes</h2>
+            <ul>
+                <li>Fixed an error due to audio playback without user interaction</li>
+            </ul>
+        </div>
+    </div>
+</div>
+<div class="changelog-divider"></div>
 <div id="changelog-version-7" class="changelog-version">
     <div class="changelog-version-header">
         <div class="version-badge-row">
             <span class="version-badge">2.0.0</span>
-            <span class="version-tag latest">Latest</span>
         </div>
         <h1>Version 2.0.0</h1>
-        <p class="changelog-version-subtitle">26 May 2026, 03:00 PM UTC</p>
+        <p class="changelog-version-subtitle">26 May 2026, 03:00 UTC</p>
     </div>
     <div class="changelog-grid">
         <div class="card featured">

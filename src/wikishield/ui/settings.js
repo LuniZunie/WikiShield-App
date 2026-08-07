@@ -2270,7 +2270,39 @@ export class Settings {
 
 		const $changelog = document.querySelector("#settings-container > .settings > .settings-right > .changelog > div > .changelog-content");
 		$changelog.innerHTML = "<em class='animate-loading-dots'>Loading changelog</em>";
-		WikiShield.config.changelog.HTML.then(html => $changelog.innerHTML = html);
+		WikiShield.config.changelog.HTML.then(html => {
+			$changelog.innerHTML = html;
+
+			const $scrollContainer = document.querySelector("#settings-container > .settings > .settings-right");
+			const $navItems = [ ...$changelog.querySelectorAll(".changelog-nav-item[href^='#']") ];
+
+			if (!$scrollContainer || !$navItems.length)
+				return;
+
+			const setActiveNavItem = $active => {
+				$navItems.forEach($item => $item.classList.toggle("active", $item === $active));
+			};
+
+			for (const $item of $navItems)
+				$item.addEventListener("click", e => {
+					e.preventDefault();
+
+					const id = $item.getAttribute("href")?.slice(1);
+					if (!id)
+						return;
+
+					const $target = document.getElementById(id);
+					if (!$target)
+						return;
+
+					setActiveNavItem($item);
+
+					$scrollContainer.scrollTo({
+						top: Math.max(0, $target.offsetTop - 8),
+						behavior: "smooth"
+					});
+				});
+		});
 	}
 
 	about() {

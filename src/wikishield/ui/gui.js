@@ -54,6 +54,9 @@ export class GUI {
 			const $settings = document.querySelector("#settings-icon");
 			$app.appendChild($settings);
 
+			const $copy = document.querySelector("#copy-link");
+			$app.appendChild($copy);
+
 			const $mobileBottomToolCollapse = document.querySelector("#mobile-bottom-tool-collapse");
 			$mobileBottomToolCollapse.addEventListener("click", event => {
 				$bottomTools.classList.toggle("collapsed");
@@ -876,9 +879,14 @@ export class GUI {
 		}
 
 		const version = WikiShield.config.changelog.version;
-		if (version.endsWith("!") || version !== this.ws.store.changelog) {
+		if (versiob.endsWith("-"))
+			this.ws.store.changelog = version.replace(/-$/, "");
+		else if (version.endsWith("!") || version !== this.ws.store.changelog) {
 			this.ws.store.changelog = version.replace(/!$/, "");
-			electron.open?.("changelog");
+			this.settings.open();
+			this.settings.changelog();
+			if (this.ws.mobile)
+				document.querySelector("#settings-container > .settings").classList.add("mobile-detail");
 		}
 
 		this.addTooltipListener(document.querySelector("#settings-icon"));
@@ -956,8 +964,9 @@ export class GUI {
 
 			document.querySelector("#diff-container").addEventListener("scroll", () => {
 				const hide = document.querySelector("#diff-container").scrollTop > 0;
-				document.querySelector("#queue-tabs").classList.toggle("hidden", hide);
-				document.querySelector("#settings-icon").classList.toggle("hidden", hide);
+				document.querySelector("#settings-icon").classList.toggle("scrolled-away", hide);
+				document.querySelector("#queue-tabs").classList.toggle("scrolled-away", hide);
+				document.querySelector("#copy-link").classList.toggle("scrolled-away", hide);
 			});
 		}
 	}
