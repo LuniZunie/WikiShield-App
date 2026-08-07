@@ -2042,9 +2042,17 @@ export const events = {
             return { valid: true };
         },
         script: (ws, item, params) => {
-            if (item.group === "edit")
-                navigator.clipboard.writeText(ws.page(`?diff=${item.id}`, true));
-            else if (item.group === "logevent")
+            if (item.group === "edit") {
+                if (item.showingConsecutive) {
+                    if (item.pending)
+                        navigator.clipboard.writeText(ws.page(`?diff=${item.pending.revid}&oldid=${item.pending.stable_revid}`, true));
+                    else {
+                        const newest = item.consecutive.edits[0], oldest = item.consecutive.edits[item.consecutive.edits.length - 1];
+                        navigator.clipboard.writeText(ws.page(`?diff=${newest.revid}&oldid=${oldest.parentid}`, true));
+                    }
+                } else
+                    navigator.clipboard.writeText(ws.page(`?diff=${item.id}`, true));
+            } else if (item.group === "logevent")
                 navigator.clipboard.writeText(ws.page(`?title=Special:Log&logid=${item.id}`, true));
             else if (item.group === "abuselog") {
                 if (item.revid)

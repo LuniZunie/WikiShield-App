@@ -2798,14 +2798,17 @@ export class GUI {
 		document.querySelectorAll("#right-top > .tabs > .tab.selected").forEach($tab => $tab.classList.remove("selected"));
 		this.generateEditDetails(item, consecutive);
 
+		item.showingConsecutive = false;
 		switch (Queue.groups[item.type]) {
 			case "edit": {
 				const pending = this.ws.queue.pending.get(item.id);
-				if (pending)
+				if (pending) {
+					item.showingConsecutive = true;
 					$diff.innerHTML = `<table>${item.diff ?? "<em>No diff available</em>"}</table>`;
-				else if (consecutive && item.consecutive?.count > 1) {
-					document.querySelector("#consecutive-edits-tab").classList.add("selected");
+				} else if (consecutive && item.consecutive?.count > 1) {
+					item.showingConsecutive = true;
 
+					document.querySelector("#consecutive-edits-tab").classList.add("selected");
 					if (item.consecutive.diff ?? true)
 						$diff.innerHTML = `<table>${item.consecutive.diff ?? "<em>No diff available</em>"}</table>`;
 					else
