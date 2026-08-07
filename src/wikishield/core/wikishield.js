@@ -348,7 +348,7 @@ export class WikiShield {
 
 				// Create a copy of params to avoid mutating the original action object
 				const params = { ...action.params };
-				for (const param of this.gui.events.events[action.name]?.parameters?.(this, item) || [])
+				for (const param of this.gui.events.events[action.name]?.parameters?.(this, item) || [ ])
 					if (param.id && !(param.id in params) && "default" in param)
 						params[param.id] = param.default;
 

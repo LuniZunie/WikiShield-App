@@ -37,7 +37,7 @@ export class Notifications {
                 notfilter: "!read",
                 notsections: type,
                 notformat: "model"
-            })).responses.flatMap(response => response.query?.notifications?.list || []);
+            })).responses.flatMap(response => response.query?.notifications?.list || [ ]);
             await Promise.all(response.map(async n =>
                 this.ws.api.parse(n["*"].body, void(0), void(0), true).then(parsed => { return void(n["*"].parsed = parsed) ?? n; })
             ));

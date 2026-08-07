@@ -43,7 +43,7 @@ if (window.isElectron) {
                 serversWithPendingChanges.add(pcServer);
         }
 
-        build(opts = {}) {
+        build(opts = { }) {
             return {
                 "assertuser": this.#account,
                 "discussiontoolsautosubscribe": "no",
@@ -80,9 +80,9 @@ if (window.isElectron) {
         async continuous(params, cancel, bypass, serverOverride) {
             try {
                 let continueObject = null;
-                const responses = [];
+                const responses = [ ];
                 do {
-                    const data = await this.post({ ...params, ...(continueObject || {}) }, bypass, serverOverride);
+                    const data = await this.post({ ...params, ...(continueObject || { }) }, bypass, serverOverride);
                     responses.push(data);
 
                     continueObject = data.continue || null;
@@ -96,7 +96,7 @@ if (window.isElectron) {
                 return { stopped: continueObject !== null, responses: responses };
             } catch (error) {
                 console.error("Continuous error:", error);
-                return { stopped: true, responses: [] };
+                return { stopped: true, responses: [ ] };
             }
         }
 

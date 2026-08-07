@@ -83,7 +83,7 @@ if (window.electron === undefined) {
 
         disable: (title, message) => {
             alert(`${title}\n\n${message}`);
-            location.reload();
+            window.location.reload();
         }
     };
 } else {

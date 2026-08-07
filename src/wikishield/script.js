@@ -77,7 +77,7 @@ export function run() {
                         if (electron.isElectron)
                             window.close();
                         else
-                            location.reload();
+                            window.location.reload();
                     }
                 }
 
@@ -93,14 +93,14 @@ export function run() {
                     if (electron.isElectron)
                         window.close();
                     else
-                        location.reload();
+                        window.location.reload();
                 });
                 killswitch.on("force-update", () => {
                     alert("The current version of WikiShield is no longer supported. Please update to the latest version to continue using WikiShield.");
                     if (electron.isElectron)
                         window.close();
                     else
-                        location.reload();
+                        window.location.reload();
                 });
                 killswitch.on("update", () => {
                     electron.sendNotification({
@@ -114,11 +114,11 @@ export function run() {
                     if (electron.isElectron)
                         window.close();
                     else
-                        location.reload();
+                        window.location.reload();
                 });
                 killswitch.on("okay", async () => {
-                    addEventListener("keydown", event => ws.controller(event));
-                    addEventListener("keyup", event => ws.controller(event));
+                    window.addEventListener("keydown", event => ws.controller(event));
+                    window.addEventListener("keyup", event => ws.controller(event));
                     await ws.init();
                 }, { once: true });
 
@@ -129,7 +129,7 @@ export function run() {
             if (electron.isElectron)
                 window.close();
             else
-                location.reload();
+                window.location.reload();
         }
     });
     electron.mwapiLoader().catch(err => {
@@ -137,7 +137,7 @@ export function run() {
         if (electron.isElectron)
             window.close();
         else
-            location.reload();
+            window.location.reload();
     });
 }
 

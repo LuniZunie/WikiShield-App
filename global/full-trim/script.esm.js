@@ -5,22 +5,21 @@ const fullTrim = str => {
 	let start = true,
 		indent = Infinity;
 
-	let temp = [],
-		parsed = [];
+	let temp = [ ],
+		parsed = [ ];
 	for (let i = 0; i < length; i++) {
 		const line = lines[i];
 		if (line.trim() === "") {
-			if (start) {
+			if (start)
 				continue;
-			} else {
+			else
 				temp.push("");
-			}
 		} else {
-			if (start) {
+			if (start)
 				start = false;
-			} else {
+			else {
 				parsed = parsed.concat(temp);
-				temp = [];
+				temp = [ ];
 			}
 
 			const leadingSpaces = line.match(/^(\s*)/)[0].length;
@@ -31,18 +30,16 @@ const fullTrim = str => {
 	}
 
 	const parsedLength = parsed.length;
-	if (parsedLength === 0) {
+	if (parsedLength === 0)
 		return "";
-	}
 
-	const result = [];
+	const result = [ ];
 	for (let i = 0; i < parsedLength; i++) {
 		const line = parsed[i].trimEnd();
-		if (line === "") {
+		if (line === "")
 			result.push("");
-		} else {
+		else
 			result.push(line.slice(indent));
-		}
 	}
 
 	return result.join("\n");

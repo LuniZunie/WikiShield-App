@@ -456,7 +456,7 @@ export class Zengine {
 		const envSounds = this.getEnvironmentSounds(this.currentEnvironment);
 		const activeEvents = Array.from(this.activeSounds.values()).filter(s => s.role !== "ambient").length;
 
-		if (activeEvents < this.activityLevel && envSounds.events.length > 0 && Math.random() < 0.5) {
+		if (activeEvents < this.activityLevel && envSounds.events.length > 0 && Math.random() < .5) {
 			const sound = envSounds.events[Math.floor(Math.random() * envSounds.events.length)];
 			await this.playSound(sound, "event", .12 + Math.random() * .08);
 		}

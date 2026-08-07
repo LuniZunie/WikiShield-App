@@ -926,7 +926,7 @@ class Browser {
             padding: 40px;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background: linear-gradient(135deg, rgba(15, 12, 41, 1), rgba(25, 22, 50, 1), rgba(36, 36, 62, 1));
-            color: rgba(255, 255, 255, 0.9);
+            color: rgba(255, 255, 255, .9);
         }
 
         .container {
@@ -937,28 +937,28 @@ class Browser {
         #icon {
             margin-bottom: 20px;
             font-size: 64px;
-            color: rgba(240, 147, 251, 0.7);
+            color: rgba(240, 147, 251, .7);
         }
 
         #title {
             margin-bottom: 10px;
             font-size: 32px;
             font-weight: 600;
-            color: rgba(255, 255, 255, 0.95);
+            color: rgba(255, 255, 255, .95);
         }
 
         #code {
             margin-bottom: 24px;
             font-size: 18px;
             font-weight: 500;
-            color: rgba(102, 126, 234, 0.9);
+            color: rgba(102, 126, 234, .9);
         }
 
         #description {
             margin-bottom: 16px;
             font-size: 16px;
             line-height: 1.5;
-            color: rgba(255, 255, 255, 0.8);
+            color: rgba(255, 255, 255, .8);
         }
 
         #url {
@@ -967,15 +967,15 @@ class Browser {
             font-family: monospace;
             font-size: 14px;
             word-break: break-all;
-            background: rgba(255, 255, 255, 0.03);
-            color: rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, .03);
+            color: rgba(255, 255, 255, .6);
         }
 
         .suggestions {
             margin: 32px 0;
             padding: 24px;
             border-radius: 12px;
-            border: 1px solid rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(102, 126, 234, .1);
             text-align: left;
         }
 
@@ -983,7 +983,7 @@ class Browser {
             margin-bottom: 16px;
             font-size: 16px;
             font-weight: 600;
-            color: rgba(255, 255, 255, 0.9);
+            color: rgba(255, 255, 255, .9);
         }
 
         .suggestions ul {
@@ -994,7 +994,7 @@ class Browser {
             position: relative;
             padding: 8px 0 8px 24px;
             line-height: 1.5;
-            color: rgba(255, 255, 255, 0.8);
+            color: rgba(255, 255, 255, .8);
         }
 
         .suggestions li::before {
@@ -1004,7 +1004,7 @@ class Browser {
             top: 50%;
             transform: translateY(-50%);
             font-size: 18px;
-            color: rgba(102, 126, 234, 0.7);
+            color: rgba(102, 126, 234, .7);
         }
 
         .actions {
@@ -1024,7 +1024,7 @@ class Browser {
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
-            transition: background 0.2s, color 0.2s, transform 0.1s;
+            transition: background .2s, color .2s, transform .1s;
         }
 
         .actions button:active {
@@ -1032,8 +1032,8 @@ class Browser {
         }
 
         .actions .primary {
-            background: rgba(102, 126, 234, 0.9);
-            color: rgba(255, 255, 255, 0.95);
+            background: rgba(102, 126, 234, .9);
+            color: rgba(255, 255, 255, .95);
         }
 
         .actions .primary:hover {
@@ -1041,12 +1041,12 @@ class Browser {
         }
 
         .actions .secondary {
-            background: rgba(255, 255, 255, 0.05);
-            color: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, .05);
+            color: rgba(255, 255, 255, .8);
         }
 
         .actions .secondary:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, .1);
         }
     </style>
 </head>

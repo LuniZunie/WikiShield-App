@@ -1,6 +1,6 @@
 export class Logger {
     constructor() {
-        this.logs = [];
+        this.logs = [ ];
     }
 
     getLogs() {

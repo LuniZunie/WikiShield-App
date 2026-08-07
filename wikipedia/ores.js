@@ -1,5 +1,5 @@
 class ORES {
-    static extract(data, bias = 0.5) {
+    static extract(data, bias = .5) {
         const models = [ {
             key: "goodfaith",
             field: "false",

@@ -48,29 +48,29 @@ import { build } from "./build.js";
                     return;
 
                 event.preventDefault();
-                history.pushState({ page: "WikiShield" }, "", location.href);
+                window.history.pushState({ page: "WikiShield" }, "", window.location.href);
 
                 start();
             });
     }
 
-    addEventListener("popstate", event => {
+    window.addEventListener("popstate", event => {
         if (event.state?.page === "WikiShield")
             start();
     });
 
-    switch (history.state?.page) {
+    switch (window.history.state?.page) {
         case "WikiShield": {
-            history.replaceState(null, "", location.href);
+            window.history.replaceState(null, "", window.location.href);
         } break;
         case "WikiShield-reload": {
-            history.replaceState({ page: "WikiShield" }, "", location.href);
+            window.history.replaceState({ page: "WikiShield" }, "", window.location.href);
             start();
         } break;
     }
 
     if (mw.config.get("wgRelevantPageName") === "Wikipedia:WikiShield/run" && mw.config.get("wgAction") === "view") {
-        history.pushState({ page: "WikiShield" }, "", location.href);
+        window.history.pushState({ page: "WikiShield" }, "", window.location.href);
         start();
     }
 }

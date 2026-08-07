@@ -15,7 +15,7 @@ Version.v0 = class V0 extends Version {
                 minimumORESScore: 0,
 
                 enableSoundAlerts: true,
-                soundAlertORESScore: 0.95,
+                soundAlertORESScore: .95,
 
                 enableUsernameHighlighting: true,
                 enableWelcomeLatin: false,
@@ -68,22 +68,22 @@ Version.v0 = class V0 extends Version {
 
                 enableCloudStorage: true,
 
-                masterVolume: 0.5,
+                masterVolume: .5,
                 volumes: {
-                    click: 0.5,
-                    notification: 0.5,
-                    watchlist: 0.5,
-                    alert: 0.5,
-                    whoosh: 0.5,
-                    warn: 0.5,
-                    rollback: 0.5,
-                    report: 0.5,
-                    thank: 0.5,
-                    protection: 0.5,
-                    block: 0.5,
-                    sparkle: 0.5,
-                    success: 0.5,
-                    error: 0.5
+                    click: .5,
+                    notification: .5,
+                    watchlist: .5,
+                    alert: .5,
+                    whoosh: .5,
+                    warn: .5,
+                    rollback: .5,
+                    report: .5,
+                    thank: .5,
+                    protection: .5,
+                    block: .5,
+                    sparkle: .5,
+                    success: .5,
+                    error: .5
                 },
                 soundMappings: {
                     click: 'click',

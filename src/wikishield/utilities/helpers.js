@@ -224,7 +224,7 @@ export class Utility {
 
 	getPageSections(content) { // split into [ { title, level, content }, ... ]
 		const lines = content.split("\n");
-		const sections = [];
+		const sections = [ ];
 		let currentSection = { title: "", heading: "", level: 0, content: "" };
 		for (const line of lines) {
 			const match = /^(=+)\s*(.*?)\s*\1\s*$/.exec(line);

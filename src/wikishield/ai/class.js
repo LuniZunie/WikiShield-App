@@ -116,7 +116,7 @@ export class AI {
         const container = document.createElement("div");
         container.innerHTML = diffHtml;
 
-        const lines = [];
+        const lines = [ ];
         for (const row of container.querySelectorAll("tr")) {
             const deleted = row.querySelector(".diff-deletedline");
             const added = row.querySelector(".diff-addedline");
@@ -130,7 +130,6 @@ export class AI {
         if (lines.length > 0)
             return lines.join("\n");
 
-        // Fallback: strip HTML tags and return plain text
         return container.textContent?.trim() || "";
     }
 
@@ -313,8 +312,8 @@ export class Ollama extends AI {
 				prompt: await prompt,
 				stream: false,
 				options: {
-					temperature: 0.1,
-					top_p: 0.9,
+					temperature: .1,
+					top_p: .9,
 					num_predict: 1024,
 				},
 				format: type === "edit" ? EDIT_RESPONSE_FORMAT : USERNAME_RESPONSE_FORMAT,

@@ -27,7 +27,7 @@ class Stack {
 	}
 
 	clear() {
-		this.items = [];
+		this.items = [ ];
 	}
 
 	get length() {

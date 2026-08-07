@@ -86,8 +86,8 @@ class Server {
             });
 
             const primaryDisplay = screen.getPrimaryDisplay();
-            const windowWidth = Math.floor(primaryDisplay.workAreaSize.width * 0.8);
-            const windowHeight = Math.floor(primaryDisplay.workAreaSize.height * 0.8);
+            const windowWidth = Math.floor(primaryDisplay.workAreaSize.width * .8);
+            const windowHeight = Math.floor(primaryDisplay.workAreaSize.height * .8);
             const parentBounds = glob.windows.authorize.getBounds();
 
             authWindow = new BrowserWindow({

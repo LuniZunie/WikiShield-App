@@ -12,6 +12,6 @@ contextBridge.exposeInMainWorld("electron", {
 });
 
 ipcRenderer.on("get-tab-urls", () => {
-    const urls = _getTabUrlsCallback ? _getTabUrlsCallback() : [];
+    const urls = _getTabUrlsCallback ? _getTabUrlsCallback() : [ ];
     ipcRenderer.send("tab-urls-reply", urls);
 });

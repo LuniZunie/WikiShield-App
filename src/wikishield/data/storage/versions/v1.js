@@ -26,7 +26,7 @@ Version.v1 = class V1 extends Version {
                 queue: {
                     max_size: 100,
                     max_edits: 50,
-                    min_ores: 0.0,
+                    min_ores: .0,
 
                     recent: {
                         enabled: true,
@@ -112,7 +112,7 @@ Version.v1 = class V1 extends Version {
                 audio: {
                     ores_alert: {
                         enabled: true,
-                        threshold: 0.95
+                        threshold: .95
                     },
 
                     volume: {
@@ -123,20 +123,20 @@ Version.v1 = class V1 extends Version {
                         "master.music.zen_mode": 1,
 
                         "master.ui": 1,
-                        "master.ui.click": 0.05,
+                        "master.ui.click": .05,
 
                         "master.queue": 1,
                         "master.queue.ores": 1,
                         "master.queue.mention": 1,
 
                         "master.notification": 1,
-                        "master.notification.alert": 0.7,
-                        "master.notification.notice": 0.5,
-                        "master.notification.toast": 0.5,
+                        "master.notification.alert": .7,
+                        "master.notification.notice": .5,
+                        "master.notification.toast": .5,
 
                         "master.action": 1,
-                        "master.action.default": 0.6,
-                        "master.action.failed": 0.85,
+                        "master.action.default": .6,
+                        "master.action.failed": .85,
                         "master.action.report": 1,
                         "master.action.block": 1,
                         "master.action.protect": 1,
@@ -818,7 +818,7 @@ Version.v1 = class V1 extends Version {
 
                 { // root.settings.queue.min_ores
                     const value = root.settings.queue.min_ores;
-                    if (!(typeof value === "number" && value >= 0.0 && value <= 1.0))
+                    if (!(typeof value === "number" && value >= .0 && value <= 1.0))
                         this.reset("settings", "queue", "min_ores");
                 }
 
@@ -1036,7 +1036,7 @@ Version.v1 = class V1 extends Version {
 
                     { // root.settings.audio.ores_alert.threshold
                         const value = root.settings.audio.ores_alert.threshold;
-                        if (!(typeof value === "number" && value >= 0.0 && value <= 1.0))
+                        if (!(typeof value === "number" && value >= .0 && value <= 1.0))
                             this.reset("settings", "audio", "ores_alert", "threshold");
                     }
                 }

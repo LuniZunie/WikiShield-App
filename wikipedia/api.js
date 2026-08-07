@@ -620,7 +620,7 @@ class MediaWikiAPI {
             return ORES.extract(ores, bias);
         } catch (err) { return void(Logger.error("Error fetching ORES scores:", err)) ?? { }; }
     }
-    async extractORES(ores, bias = 0.5) {
+    async extractORES(ores, bias = .5) {
         return ORES.extract(ores, bias);
     }
 

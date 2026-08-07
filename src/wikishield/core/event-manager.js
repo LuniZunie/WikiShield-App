@@ -19,7 +19,7 @@ export class EventManager {
 			const item = ws.queue.current.item;
 
 			const params = { };
-			for (const param of (ws.gui.events.events[event].parameters?.(ws, item) || []))
+			for (const param of (ws.gui.events.events[event].parameters?.(ws, item) || [ ]))
 				if (param.id === "external")
 					params[param.id] = e?.altKey || false;
 
@@ -43,7 +43,7 @@ export class EventManager {
 		const id = `${current.type}:${current.item?.id}`;
 		const cachedParams = { };
 		if ($el.dataset.eventId === id)
-			for (const param of event.parameters?.(this.ws, this.ws.queue.current.item) || []) {
+			for (const param of event.parameters?.(this.ws, this.ws.queue.current.item) || [ ]) {
 				const $input = $el.querySelector(`[data-paramid="${param.id}"]`);
 				cachedParams[param.id] = $input.type === "checkbox" ? $input.checked : $input.value;
 			}
@@ -60,7 +60,7 @@ export class EventManager {
 		const dependencyMap = new Map();
 
 		const actions = { };
-		const parameters = sortDependencies(event.parameters?.(this.ws, this.ws.queue.current.item) || []);
+		const parameters = sortDependencies(event.parameters?.(this.ws, this.ws.queue.current.item) || [ ]);
 		for (const param of parameters) {
 			const $param = document.createElement("div");
 			$param.classList.add("bottom-subcontent-input-title");
@@ -68,7 +68,7 @@ export class EventManager {
 			$el.appendChild($param);
 
 			const dependencies = { };
-			for (const dependent of param.dependencies ?? [])
+			for (const dependent of param.dependencies ?? [ ])
 				dependencies[dependent] = actions[dependent];
 
 			const _default = typeof param.default === "function" ? param.default(dependencies) : param.default;
@@ -81,7 +81,7 @@ export class EventManager {
 					$el.appendChild($input);
 
 					const options = typeof param.options === "function" ? param.options(dependencies) : param.options;
-					for (const option of options ?? []) {
+					for (const option of options ?? [ ]) {
 						const $option = document.createElement("option");
 						$option.value = option;
 						$option.textContent = option;
@@ -98,14 +98,14 @@ export class EventManager {
 
 					callback = () => {
 						const dependencies = { };
-						for (const dependent of param.dependencies ?? [])
+						for (const dependent of param.dependencies ?? [ ])
 							dependencies[dependent] = actions[dependent];
 
 						const value = $input.value;
 
 						const options = typeof param.options === "function" ? param.options(dependencies) : param.options;
 						$input.innerHTML = "";
-						for (const option of options ?? []) {
+						for (const option of options ?? [ ]) {
 							const $option = document.createElement("option");
 							$option.value = option;
 							$option.textContent = option;
@@ -123,7 +123,7 @@ export class EventManager {
 
 					$input.addEventListener("change", () => {
 						actions[param.id] = $input.value;
-						for (const cb of dependencyMap.get(param.id) || [])
+						for (const cb of dependencyMap.get(param.id) || [ ])
 							cb();
 					});
 				} break;
@@ -143,7 +143,7 @@ export class EventManager {
 
 					$input.addEventListener("change", () => {
 						actions[param.id] = $input.value;
-						for (const cb of dependencyMap.get(param.id) || [])
+						for (const cb of dependencyMap.get(param.id) || [ ])
 							cb();
 					});
 				} break;
@@ -163,7 +163,7 @@ export class EventManager {
 
 					$input.addEventListener("change", () => {
 						actions[param.id] = $input.checked;
-						for (const cb of dependencyMap.get(param.id) || [])
+						for (const cb of dependencyMap.get(param.id) || [ ])
 							cb();
 					});
 				} break;
@@ -182,14 +182,14 @@ export class EventManager {
 
 					$input.addEventListener("change", () => {
 						actions[param.id] = $input.value;
-						for (const cb of dependencyMap.get(param.id) || [])
+						for (const cb of dependencyMap.get(param.id) || [ ])
 							cb();
 					});
 				} break;
 			}
 
 			if (typeof callback === "function")
-				for (const dependent of param.dependencies ?? []) {
+				for (const dependent of param.dependencies ?? [ ]) {
 					if (!dependencyMap.has(dependent))
 						dependencyMap.set(dependent, [ ]);
 					dependencyMap.get(dependent).push(callback);

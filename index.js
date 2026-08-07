@@ -274,7 +274,6 @@ async function enableDiscordRPC() {
     } catch (err) {
         if (RPC === client)
             RPC = null;
-
         throw err;
     }
 }
@@ -596,7 +595,7 @@ function UpdateMenu(options = { }) {
                 ...(__dev__ ? [
                     { role: "toggleDevTools" },
                     { type: "separator" }
-                ] : []),
+                ] : [ ]),
                 { type: "separator" },
                 { role: "about" },
             ]
@@ -655,7 +654,7 @@ function ShowUpdateSplashScreen() {
         }
     });
 
-    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{margin:0;padding:0;display:flex;justify-content:center;align-items:center;height:100vh;background:linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#ffffff;}.container{text-align:center;padding:40px;}.spinner{width:50px;height:50px;border:4px solid rgba(255, 255, 255, 0.2);border-top:4px solid #5a9fd4;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 20px;}@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}h1{margin:0 0 10px 0;font-size:24px;font-weight:600;}p{margin:0;font-size:14px;color:#b0b0b0;line-height:1.5;}</style></head><body><div class="container"><div class="spinner"></div><h1>Updating WikiShield</h1><p>Please wait while we install the latest version...<br/>This won't take long.</p></div></body></html>`;
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{margin:0;padding:0;display:flex;justify-content:center;align-items:center;height:100vh;background:linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#ffffff;}.container{text-align:center;padding:40px;}.spinner{width:50px;height:50px;border:4px solid rgba(255, 255, 255, .2);border-top:4px solid #5a9fd4;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 20px;}@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}h1{margin:0 0 10px 0;font-size:24px;font-weight:600;}p{margin:0;font-size:14px;color:#b0b0b0;line-height:1.5;}</style></head><body><div class="container"><div class="spinner"></div><h1>Updating WikiShield</h1><p>Please wait while we install the latest version...<br/>This won't take long.</p></div></body></html>`;
 
     glob.windows.updateSplash.loadURL("data:text/html;charset=utf-8," + encodeURIComponent(html));
 
@@ -851,8 +850,8 @@ class BuildWindow {
         glob.windows.signin = new BrowserWindow({
             modal: true,
             show: false,
-            width: Math.floor(vmin * 0.9),
-            height: Math.floor(vmin * 0.7),
+            width: Math.floor(vmin * .9),
+            height: Math.floor(vmin * .7),
             frame: false,
             resizable: false,
             maximizable: false,
@@ -1030,7 +1029,7 @@ class BuildWindow {
 
 class Popup {
     static windows = new Map();
-    static lastTabs = [];
+    static lastTabs = [ ];
 
     static closeAll() {
         for (const popup of Popup.windows.values())
@@ -1039,14 +1038,14 @@ class Popup {
         Popup.windows.clear();
     }
 
-    static create(url, { isPopup = false } = {}) {
+    static create(url, { isPopup = false } = { }) {
         const id = generateRandomUUID();
         const { width, height } = screen.getPrimaryDisplay().workAreaSize;
 
         const popup = new BrowserWindow({
             parent: glob.windows.main,
-            width: Math.floor(width * (isPopup ? 0.6 : 0.8)),
-            height: Math.floor(height * (isPopup ? 0.6 : 0.8)),
+            width: Math.floor(width * (isPopup ? .6 : .8)),
+            height: Math.floor(height * (isPopup ? .6 : .8)),
             frame: isPopup ? true : false,
             autoHideMenuBar: isPopup,
             resizable: isPopup ? true : false,
@@ -1087,7 +1086,7 @@ class Popup {
                             const img = nativeImage.createFromBuffer(buffer);
                             if (!img.isEmpty() && !popup.isDestroyed())
                                 popup.setIcon(img);
-                        } catch {}
+                        } catch { }
                     }
                 });
             }
@@ -1097,7 +1096,7 @@ class Popup {
                     try {
                         params.linkURL = new URL(params.selectionText).href;
                         params.linkText = params.selectionText;
-                    } catch (e) { }
+                    } catch { }
 
                 const contextMenu = Menu.buildFromTemplate([
                     ...(params.editFlags.canCopy ? [ { role: "copy" } ] : [ ]),
@@ -1200,7 +1199,7 @@ class Popup {
         });
 
         const browser = path.join(__dirname, "src", "browser", "index.html");
-        popup.loadFile(browser, { query: { url: url, host: glob.server, ...(isPopup ? { popup: "true" } : {}) } });
+        popup.loadFile(browser, { query: { url: url, host: glob.server, ...(isPopup ? { popup: "true" } : { }) } });
 
         const attached = new Set();
         popup.webContents.on("did-attach-webview", (event, webContents) => {

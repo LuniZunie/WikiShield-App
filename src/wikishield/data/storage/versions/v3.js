@@ -30,9 +30,9 @@ Version.v3 = class V3 extends Version {
                 queue: {
                     max_size: 100,
                     max_edits: 50,
-                    min_ores: 0.0,
+                    min_ores: .0,
 
-                    ores_bias: 0.5,
+                    ores_bias: .5,
 
                     recent: {
                         enabled: true,
@@ -130,7 +130,7 @@ Version.v3 = class V3 extends Version {
                 audio: {
                     ores_alert: {
                         enabled: true,
-                        threshold: 0.95
+                        threshold: .95
                     },
 
                     volume: {
@@ -141,20 +141,20 @@ Version.v3 = class V3 extends Version {
                         "master.music.zen_mode": 1,
 
                         "master.ui": 1,
-                        "master.ui.click": 0.05,
+                        "master.ui.click": .05,
 
                         "master.queue": 1,
                         "master.queue.ores": 1,
                         "master.queue.mention": 1,
 
                         "master.notification": 1,
-                        "master.notification.alert": 0.7,
-                        "master.notification.message": 0.5,
-                        "master.notification.toast": 0.5,
+                        "master.notification.alert": .7,
+                        "master.notification.message": .5,
+                        "master.notification.toast": .5,
 
                         "master.action": 1,
-                        "master.action.default": 0.6,
-                        "master.action.failed": 0.85,
+                        "master.action.default": .6,
+                        "master.action.failed": .85,
                         "master.action.report": 1,
                         "master.action.block": 1,
                         "master.action.protect": 1,
@@ -1006,13 +1006,13 @@ Version.v3 = class V3 extends Version {
 
                 { // root.settings.queue.min_ores
                     const value = root.settings.queue.min_ores;
-                    if (!(typeof value === "number" && value >= 0.0 && value <= 1.0))
+                    if (!(typeof value === "number" && value >= .0 && value <= 1.0))
                         this.reset("settings", "queue", "min_ores");
                 }
 
                 { // root.settings.queue.ores_bias
                     const value = root.settings.queue.ores_bias;
-                    if (!(typeof value === "number" && value >= 0.0 && value <= 1.0))
+                    if (!(typeof value === "number" && value >= .0 && value <= 1.0))
                         this.reset("settings", "queue", "ores_bias");
                 }
 
@@ -1239,7 +1239,7 @@ Version.v3 = class V3 extends Version {
 
                     { // root.settings.audio.ores_alert.threshold
                         const value = root.settings.audio.ores_alert.threshold;
-                        if (!(typeof value === "number" && value >= 0.0 && value <= 1.0))
+                        if (!(typeof value === "number" && value >= .0 && value <= 1.0))
                             this.reset("settings", "audio", "ores_alert", "threshold");
                     }
                 }
@@ -1468,7 +1468,7 @@ Version.v3 = class V3 extends Version {
                         const validIds = new Set();
                         for (const reference of references) {
                             const dependencies = { };
-                            for (const dependent of reference.dependencies ?? [])
+                            for (const dependent of reference.dependencies ?? [ ])
                                 dependencies[dependent] = condition.params[dependent];
 
                             const _default = typeof reference.default === "function" ? reference.default(dependencies) : reference.default;
@@ -1534,7 +1534,7 @@ Version.v3 = class V3 extends Version {
                         const validIds = new Set();
                         for (const reference of references) {
                             const dependencies = { };
-                            for (const dependent of reference.dependencies ?? [])
+                            for (const dependent of reference.dependencies ?? [ ])
                                 dependencies[dependent] = action.params[dependent];
 
                             const _default = typeof reference.default === "function" ? reference.default(dependencies) : reference.default;

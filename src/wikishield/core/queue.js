@@ -1262,7 +1262,7 @@ export class Queue {
 			const confirmed = await this.ws.gui.dialog.confirm(
 				"Auto-Welcome User",
 				`Would you like to welcome <span class="confirmation-modal-username">${this.ws.util.escape(item.user.name)}</span>?<br><br>
-					<span style="font-size: 0.9em; color: #888;">Editing: <strong>${this.ws.util.escape(item.page.title)}</strong></span>`,
+					<span style="font-size: .9em; color: #888;">Editing: <strong>${this.ws.util.escape(item.page.title)}</strong></span>`,
 				{ username: item.user.name, hideUAA: false }
 			);
 
@@ -1282,7 +1282,7 @@ export class Queue {
 	}
 	#uaaQueue = Promise.resolve();
 	promptUAA(item, analysis) {
-		this.#uaaQueue = this.#uaaQueue.then(() => this.#promptUAAInternal(item, analysis)).catch(() => {});
+		this.#uaaQueue = this.#uaaQueue.then(() => this.#promptUAAInternal(item, analysis)).catch(() => { });
 		return this.#uaaQueue;
 	}
 	async #promptUAAInternal(item, analysis) {

@@ -65,7 +65,8 @@ export class GUI {
 		} else
 			document.querySelector("#mobile-bottom-tool-collapse").remove();
 
-		this.updateDEFCON();
+		if (!this.ws.mobile)
+			this.updateDEFCON();
 
 		document.documentElement.style.colorScheme = { light: "only light", auto: "light dark", dark: "only dark" }[this.ws.store.UI.theme.app] || "light dark";
 
@@ -86,7 +87,7 @@ export class GUI {
 			}
 		};
 
-		addEventListener("keydown", shhhhh.function);
+		window.addEventListener("keydown", shhhhh.function);
 
 		this.updateAccessibility();
 
@@ -125,12 +126,12 @@ export class GUI {
 					this.x = Math.random() * paper.width;
 					this.y = Math.random() * paper.height;
 
-					this.vx = (Math.random() - 0.5) * 0.5;
-					this.vy = (Math.random() - 0.5) * 0.5;
+					this.vx = (Math.random() - .5) * .5;
+					this.vy = (Math.random() - .5) * .5;
 
 					this.color = Dot.colors[Math.random() * Dot.colors.length | 0];
-					this.fill = `rgba(${this.color}, 0.8)`;
-					this.shadow = `rgba(${this.color}, 0.8)`;
+					this.fill = `rgba(${this.color}, .8)`;
+					this.shadow = `rgba(${this.color}, .8)`;
 				}
 
 				update() {
@@ -194,7 +195,7 @@ export class GUI {
 				});
 			};
 			resizeCanvas();
-			addEventListener("resize", resizeCanvas);
+			window.addEventListener("resize", resizeCanvas);
 
 			const GRID_SIZE = 160;
 
@@ -238,7 +239,7 @@ export class GUI {
 							lowFPSStart = null;
 
 						if (FPS < 45 && Dot.dots.length > 60) {
-							Dot.dots.length = Math.max(60, Math.floor(Dot.dots.length * 0.9));
+							Dot.dots.length = Math.max(60, Math.floor(Dot.dots.length * .9));
 							Dot.target = Dot.dots.length;
 						}
 					}
@@ -330,7 +331,7 @@ export class GUI {
 										const dist2 = dx * dx + dy * dy;
 										if (dist2 < linkRange * linkRange) {
 											const distance = Math.sqrt(dist2);
-											const opacity = (1 - distance / linkRange) * 0.4;
+											const opacity = (1 - distance / linkRange) * .4;
 
 											const aSplit = a.color.split(',');
 											const bSplit = b.color.split(',');
@@ -390,8 +391,8 @@ export class GUI {
 
 			const $href = event.target.closest("[href]");
 			if ($href) {
-				const url = new URL($href.href, location.href);
-				if (url.origin === location.origin && url.pathname === location.pathname)
+				const url = new URL($href.href, window.location.href);
+				if (url.origin === window.location.origin && url.pathname === window.location.pathname)
 					return;
 
 				if ($href.dataset.multipleHrefs) {
@@ -579,10 +580,12 @@ export class GUI {
 	}
 
 	async start() {
-		this.intervals.DEFCON = setInterval(this.updateDEFCON.bind(this), 6e4);
-		document.querySelector("#DEFCON").addEventListener("click", event => {
-			this.ws.open("https://en.wikipedia.org/w/index.php?tagfilter=mw-manual-revert%7Cmw-rollback%7Cmw-undo&title=Special%3ARecentChanges&urlversion=2", event.altKey);
-		});
+		if (!this.ws.mobile) {
+			this.intervals.DEFCON = setInterval(this.updateDEFCON.bind(this), 6e4);
+			document.querySelector("#DEFCON").addEventListener("click", event => {
+				this.ws.open("https://en.wikipedia.org/w/index.php?tagfilter=mw-manual-revert%7Cmw-rollback%7Cmw-undo&title=Special%3ARecentChanges&urlversion=2", event.altKey);
+			});
+		}
 
 		this.settings.start();
 
@@ -836,7 +839,7 @@ export class GUI {
 			const $detailsHandle = document.querySelector("#details-width-adjust");
 			$detailsHandle.addEventListener("pointerdown", e => startResize($detailsHandle, $details, e));
 
-			addEventListener("pointerup", () => {
+			window.addEventListener("pointerup", () => {
 				if (resize.active === $queueHandle)
 					this.ws.store.UI.queue.width = $queue.style.width;
 				else if (resize.active === $detailsHandle)
@@ -846,7 +849,7 @@ export class GUI {
 				resize.section = null;
 			});
 
-			addEventListener("pointermove", e => {
+			window.addEventListener("pointermove", e => {
 				if (!resize.active)
 					return;
 
@@ -858,8 +861,8 @@ export class GUI {
 				else if (resize.active === $detailsHandle)
 					newWidth = resize.width - dx;
 
-				const min = resize.windowWidth * 0.1; // 10vw
-				const max = resize.windowWidth * 0.3; // 30vw
+				const min = resize.windowWidth * .1; // 10vw
+				const max = resize.windowWidth * .3; // 30vw
 				newWidth = Math.max(min, Math.min(max, newWidth));
 
 				const vw = (newWidth / resize.windowWidth) * 100;
@@ -2449,7 +2452,7 @@ export class GUI {
 						timestamp: item.timestamp,
 						sizediff: 0,
 						ores: NaN,
-						tags: item.tags || [],
+						tags: item.tags || [ ],
 						type: "edit",
 					});
 					$contributions.appendChild($item);
@@ -2624,7 +2627,7 @@ export class GUI {
 						timestamp: item.timestamp,
 						sizediff: 0,
 						ores: NaN,
-						tags: item.tags || [],
+						tags: item.tags || [ ],
 						type: "edit",
 					});
 					$history.appendChild($item);
@@ -3210,7 +3213,7 @@ export class GUI {
 			const $issues = $analysis.querySelector(":scope > .issues");
 			$issues.innerHTML = "";
 
-			for (const issue of analysis.issues || []) {
+			for (const issue of analysis.issues || [ ]) {
 				const $issue = document.createElement("div");
 				$issue.classList.add("issue", issue.severity.toLowerCase().replace(/\s+/g, "-"));
 				$issue.textContent = issue.policy;
@@ -4068,7 +4071,7 @@ export class GUI {
 	}
 
 	createWarnMenu(type, $container, item) {
-		removeEventListener("keydown", this.warningMenuKeyListener);
+		window.removeEventListener("keydown", this.warningMenuKeyListener);
 
 		document.querySelectorAll(".levels-menu").forEach($menu => $menu.remove());
 		document.querySelectorAll(".warning-submenu").forEach($submenu => $submenu.remove());
@@ -4125,7 +4128,7 @@ export class GUI {
 						name: "highlight-user",
 						params: { }
 					},
-				].concat(autoReporting.enabled && warning.reportable && autoReporting.for.has(warningTitle) ? [ reportObject ] : [])
+				].concat(autoReporting.enabled && warning.reportable && autoReporting.for.has(warningTitle) ? [ reportObject ] : [ ])
 			});
 		};
 
@@ -4186,7 +4189,7 @@ export class GUI {
 		let allMade = 0;
 		for (const [ , category ] of Object.entries(warnings)) {
 			let categoryMade = 0;
-			const categoryWarnings = [];
+			const categoryWarnings = [ ];
 
 			for (const warning of category.warnings) {
 				if (typeof warning.show === "function" && !warning.show(item))
@@ -4260,7 +4263,7 @@ export class GUI {
 			$menu.appendChild($noWarnings);
 		}
 
-		addEventListener("keydown", this.warningMenuKeyListener);
+		window.addEventListener("keydown", this.warningMenuKeyListener);
 	}
 
 	warningMenuKeyListener(event) {

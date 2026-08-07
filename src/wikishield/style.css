@@ -80,7 +80,7 @@
 	}
 	50% {
 		transform: translate(-50%, -50%) scale(1);
-		opacity: 0.8;
+		opacity: .8;
 	}
 	100% {
 		transform: translate(-50%, -50%) scale(1.5);
@@ -341,8 +341,8 @@ body {
     }
 
     &.reduce-motion * {
-        animation-duration: 0.001s !important;
-        transition-duration: 0.001s !important;
+        animation-duration: .001s !important;
+        transition-duration: .001s !important;
     }
 
     & a {
@@ -351,7 +351,7 @@ body {
         transition: color .2s ease;
 
         /* Theme dependent */
-        color: rgba(143, 163, 255, 0.9);
+        color: rgba(143, 163, 255, .9);
 
         &:hover {
             /* Theme dependent */
@@ -417,7 +417,7 @@ body {
 
             animation: logo-loader 2s ease-in-out infinite;
 
-            transition: width .5s cubic-bezier(0.6, -0.28, 0.735, 0.045);
+            transition: width .5s cubic-bezier(0.6, -0.28, .735, .045);
         }
     }
 
@@ -462,15 +462,15 @@ body {
                 }
 
                 & > h1 {
-                    animation: title-fade-in 0.8s ease-out 0.5s both;
+                    animation: title-fade-in .8s ease-out .5s both;
                 }
 
                 & > .about-links {
-                    animation: link-slide-in 0.8s ease-out 0.7s both;
+                    animation: link-slide-in .8s ease-out .7s both;
                 }
 
                 & > #rollback-needed {
-                    animation: warning-fade-in 1s ease-out 0.7s both;
+                    animation: warning-fade-in 1s ease-out .7s both;
                 }
 
                 & > button {
@@ -551,11 +551,11 @@ body {
                     border-color: rgba(102, 126, 234, .3);
 
                     &:nth-child(2) {
-                        animation-delay: 0.4s;
+                        animation-delay: .4s;
                         border-color: rgba(118, 75, 162, .25);
                     }
                     &:nth-child(3) {
-                        animation-delay: 0.8s;
+                        animation-delay: .8s;
                         border-color: rgba(143, 163, 255, .2);
                     }
                 }
@@ -584,7 +584,7 @@ body {
                         top: 25%;
                         left: 18%;
 
-                        animation-delay: 0.4s;
+                        animation-delay: .4s;
 
                         /* Theme dependent */
                         background: rgba(102, 126, 234, .6);
@@ -594,7 +594,7 @@ body {
                         bottom: 20%;
 	                    left: 30%;
 
-                        animation-delay: 0.8s;
+                        animation-delay: .8s;
 
                         /* Theme dependent */
                         background: rgba(118, 75, 162, .5);
@@ -648,11 +648,11 @@ body {
             & > .subtitle {
                 margin: 0 0 24px 0;
 
-                font-size: 0.95em;
+                font-size: .95em;
                 font-weight: 400;
 
                 /* Theme dependent */
-                color: rgba(160, 170, 200, 0.8);
+                color: rgba(160, 170, 200, .8);
             }
 
             & > .about-links {
@@ -666,14 +666,14 @@ body {
                 & > .about-link {
                     display: inline-flex;
                     align-items: center;
-                    gap: 6px;
+                    gap: .5ex;
 
                     padding: 8px 14px;
 
                     border: 1px solid;
                     border-radius: 8px;
 
-                    font-size: 0.85em;
+                    font-size: .85em;
                     font-weight: 500;
                     text-decoration: none;
 
@@ -684,7 +684,7 @@ body {
 
                     /* Theme dependent */
                     border-color: rgba(102, 126, 234, .2);
-                    color: rgba(143, 163, 255, 0.9);
+                    color: rgba(143, 163, 255, .9);
                     background: rgba(102, 126, 234, .1);
 
                     &:hover {
@@ -724,10 +724,10 @@ body {
                     margin: 6px 0;
 
                     font-weight: 400;
-                    font-size: 0.9em;
+                    font-size: .9em;
 
                     /* Theme dependent */
-                    color: rgba(247, 76, 60, 0.95);
+                    color: rgba(247, 76, 60, .95);
                 }
                 & a {
                     font-weight: 600;
@@ -756,7 +756,7 @@ body {
                 font-size: 1em;
                 font-weight: 700;
                 color: rgba(143, 163, 255, 1);
-                letter-spacing: 0.5px;
+                letter-spacing: .5px;
 
                 overflow: hidden;
 
@@ -767,7 +767,7 @@ body {
                 /* Theme dependent */
                 background:
                     linear-gradient(rgba(20, 20, 30, 1), rgba(20, 20, 30, 1)) padding-box,
-                    linear-gradient(135deg, rgba(102, 126, 234, 0.8), rgba(118, 75, 162, 0.8)) border-box;
+                    linear-gradient(135deg, rgba(102, 126, 234, .8), rgba(118, 75, 162, .8)) border-box;
                 box-shadow:
                     0 0 10px rgba(102, 126, 234, .6),
                     0 0 20px rgba(118, 75, 162, .3),
@@ -797,7 +797,7 @@ body {
                     /* Theme dependent */
                     background:
                         linear-gradient(rgba(20, 20, 30, 1), rgba(20, 20, 30, 1)) padding-box,
-                        linear-gradient(135deg, rgba(102, 126, 234, 0.7), rgba(118, 75, 162, 0.7)) border-box;
+                        linear-gradient(135deg, rgba(102, 126, 234, .7), rgba(118, 75, 162, .7)) border-box;
                     box-shadow:
                         0 0 8px rgba(102, 126, 234, .5),
                         0 0 16px rgba(118, 75, 162, .3),
@@ -826,7 +826,7 @@ body {
                 & > i {
                     margin-right: 6px;
                     font-size: 14px;
-                    transition: transform 0.3s ease;
+                    transition: transform .3s ease;
                 }
 
                 &:hover > i {
@@ -2970,7 +2970,7 @@ body {
                             font-size: .85em;
                             font-weight: 600;
                             text-transform: uppercase;
-                            letter-spacing: 0.5px;
+                            letter-spacing: .5px;
 
                             /* Theme dependent */
                             color: rgba(255, 193, 7, .9);
@@ -3170,7 +3170,7 @@ body {
                 }
 
                 &.dragging {
-                    opacity: 0.5;
+                    opacity: .5;
                     transform: scale(0.95);
                 }
             }
@@ -3221,7 +3221,7 @@ body {
                 }
 
                 &.spin {
-                    animation: star-spin 0.5s cubic-bezier(.4, 0, .2, 1);
+                    animation: star-spin .5s cubic-bezier(.4, 0, .2, 1);
                 }
             }
 
@@ -3461,7 +3461,7 @@ body {
                 &:hover, &:focus-within {
                     /* Theme dependent */
                     border-color: rgba(255, 255, 255, .15);
-                    box-shadow: 0 4px 12px oklch(0 0 0 / 0.3);
+                    box-shadow: 0 4px 12px oklch(0 0 0 / .3);
 
                     background: rgba(40, 43, 52, .6);
                 }
@@ -4234,7 +4234,7 @@ body {
 
                 font-size: 1.12em;
                 font-weight: 700;
-                letter-spacing: 0.3px;
+                letter-spacing: .3px;
 
                 /* Theme dependent */
                 border-bottom-color: rgba(255, 255, 255, .08);
@@ -4249,9 +4249,9 @@ body {
                 & > .mark-all-read {
                     cursor: pointer;
 
-                    font-size: 0.78em;
+                    font-size: .78em;
                     font-weight: 500;
-                    letter-spacing: 0.2px;
+                    letter-spacing: .2px;
 
                     padding: 6px 12px;
                     border-radius: 6px;
@@ -4287,7 +4287,7 @@ body {
 
                     text-align: center;
 
-                    font-size: 0.95em;
+                    font-size: .95em;
 
                     /* Theme dependent */
                     color: rgba(120, 125, 145, 1);
@@ -4386,7 +4386,7 @@ body {
 
                             font-size: .95rem;
                             font-weight: 600;
-                            letter-spacing: 0.2px;
+                            letter-spacing: .2px;
 
                             /* Theme dependent */
                             color: rgba(235, 240, 255, 1);
@@ -6276,8 +6276,8 @@ body {
                                 border-color: rgba(102, 126, 234, .35);
 
                                 background: linear-gradient(135deg,
-                                    rgba(102, 126, 234, 0.15),
-                                    rgba(118, 75, 162, 0.15)
+                                    rgba(102, 126, 234, .15),
+                                    rgba(118, 75, 162, .15)
                                 );
 
                                 & > input[type="text"] {
@@ -6341,10 +6341,10 @@ body {
 
                                         transform-style: preserve-3d;
 
-                                        transition: transform 0.8s linear(
-                                            0, 0.005, 0.02 2.2%, 0.046 4.5%, 0.182 11.5%,
-                                            0.318 16.3%, 0.459 20.6%, 0.601 24.6%, 0.738 28.6%,
-                                            0.863 32.7%, 0.954 37%, 1.015 41.8%, 1.049 47.4%,
+                                        transition: transform .8s linear(
+                                            0, .005, .02 2.2%, .046 4.5%, .182 11.5%,
+                                            .318 16.3%, .459 20.6%, .601 24.6%, .738 28.6%,
+                                            .863 32.7%, .954 37%, 1.015 41.8%, 1.049 47.4%,
                                             1.059, 1.047 57.3%, 1.03 63.5%, 1.012 70.9%,
                                             1.002 79.5%, 1
                                         );
@@ -9209,11 +9209,11 @@ body {
         }
 
         #progress-bar-container {
-            right: 58px !important;
+            right: calc(2.25rem + 12px) !important;
             bottom: 73px !important;
 
             & > .progress-bar {
-                max-width: calc(100vw - 70px) !important;
+                max-width: calc(100vw - calc(2.25rem + 12px) * 2) !important;
                 height: 2.25rem !important;
             }
         }
@@ -9804,13 +9804,13 @@ body {
 
                 overflow: hidden !important;
 
-                transform-origin: 33px 33px;
+                transform-origin: 33px 33px !important;
                 transform: scale(.05) !important;
 
                 opacity: 0;
 
                 transition: transform .35s cubic-bezier(.34, 1.56, .64, 1),
-                            opacity .2s ease;
+                            opacity .2s ease !important;
 
                 & > div {
                     width: 100% !important;

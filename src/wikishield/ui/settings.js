@@ -440,8 +440,8 @@ export class Settings {
 
 			document.querySelector("#settings-new-control-script").addEventListener("click", async () => {
 				this.ws.store.control_scripts.unshift({
-					keys: [],
-					actions: [],
+					keys: [ ],
+					actions: [ ],
 				});
 				this.controls();
 			});
@@ -971,7 +971,7 @@ export class Settings {
 						else
 							acc[1].push(log);
 						return acc;
-					}, [ [], [] ]);
+					}, [ [ ], [ ] ]);
 
 					$status.classList.remove("hidden", "error", "info");
 					$status.classList.add("success");
@@ -1242,13 +1242,13 @@ export class Settings {
 					});
 
 					const dependencyMap = new Map();
-					for (const param of sortDependencies(conditions[condition.name].parameters?.() || [])) {
+					for (const param of sortDependencies(conditions[condition.name].parameters?.() || [ ])) {
 						const $param = document.createElement("div");
 						$param.className = "condition-parameter";
 						$item.querySelector(".params").appendChild($param);
 
 						const dependencies = { };
-						for (const dependent of param.dependencies ?? [])
+						for (const dependent of param.dependencies ?? [ ])
 							dependencies[dependent] = condition.params[dependent];
 
 						const _default = typeof param.default === "function" ? param.default(dependencies) : param.default;
@@ -1261,7 +1261,7 @@ export class Settings {
 								$param.appendChild($select);
 
 								const options = typeof param.options === "function" ? param.options(dependencies) : param.options;
-								for (const option of options ?? []) {
+								for (const option of options ?? [ ]) {
 									const $option = document.createElement("option");
 									$option.value = option;
 									$option.textContent = option;
@@ -1270,7 +1270,7 @@ export class Settings {
 
 								if (condition.params[param.id] !== undefined) {
 									$select.value = condition.params[param.id];
-									for (const cb of dependencyMap.get(param.id) || [])
+									for (const cb of dependencyMap.get(param.id) || [ ])
 										cb();
 								} else if ("default" in param) {
 									$select.value = _default;
@@ -1279,14 +1279,14 @@ export class Settings {
 
 								callback = () => {
 									const dependencies = { };
-									for (const dependent of param.dependencies ?? [])
+									for (const dependent of param.dependencies ?? [ ])
 										dependencies[dependent] = condition.params[dependent];
 
 									const value = $select.value;
 
 									const options = typeof param.options === "function" ? param.options(dependencies) : param.options;
 									$select.innerHTML = "";
-									for (const option of options ?? []) {
+									for (const option of options ?? [ ]) {
 										const $option = document.createElement("option");
 										$option.value = option;
 										$option.textContent = option;
@@ -1304,7 +1304,7 @@ export class Settings {
 
 								$select.addEventListener("change", () => {
 									condition.params[param.id] = $select.value;
-									for (const cb of dependencyMap.get(param.id) || [])
+									for (const cb of dependencyMap.get(param.id) || [ ])
 										cb();
 								});
 							} break;
@@ -1316,7 +1316,7 @@ export class Settings {
 
 								if (condition.params[param.id] !== undefined) {
 									$input.value = condition.params[param.id];
-									for (const cb of dependencyMap.get(param.id) || [])
+									for (const cb of dependencyMap.get(param.id) || [ ])
 										cb();
 								} else if ("default" in param) {
 									$input.value = _default;
@@ -1325,7 +1325,7 @@ export class Settings {
 
 								$input.addEventListener("change", () => {
 									condition.params[param.id] = $input.value;
-									for (const cb of dependencyMap.get(param.id) || [])
+									for (const cb of dependencyMap.get(param.id) || [ ])
 										cb();
 								});
 							} break;
@@ -1337,7 +1337,7 @@ export class Settings {
 
 								if (condition.params[param.id] !== undefined) {
 									$input.checked = condition.params[param.id];
-									for (const cb of dependencyMap.get(param.id) || [])
+									for (const cb of dependencyMap.get(param.id) || [ ])
 										cb();
 								} else if ("default" in param) {
 									$input.checked = _default;
@@ -1346,7 +1346,7 @@ export class Settings {
 
 								$input.addEventListener("change", () => {
 									condition.params[param.id] = $input.checked;
-									for (const cb of dependencyMap.get(param.id) || [])
+									for (const cb of dependencyMap.get(param.id) || [ ])
 										cb();
 								});
 							} break;
@@ -1360,7 +1360,7 @@ export class Settings {
 
 								if (condition.params[param.id] !== undefined) {
 									$input.value = condition.params[param.id];
-									for (const cb of dependencyMap.get(param.id) || [])
+									for (const cb of dependencyMap.get(param.id) || [ ])
 										cb();
 								} else if ("default" in param) {
 									$input.value = _default;
@@ -1368,14 +1368,14 @@ export class Settings {
 								}
 								$input.addEventListener("change", () => {
 									condition.params[param.id] = parseFloat($input.value);
-									for (const cb of dependencyMap.get(param.id) || [])
+									for (const cb of dependencyMap.get(param.id) || [ ])
 										cb();
 								});
 							} break;
 						}
 
 						if (typeof callback === "function")
-							for (const dependent of param.dependencies ?? []) {
+							for (const dependent of param.dependencies ?? [ ]) {
 								if (!dependencyMap.has(dependent))
 									dependencyMap.set(dependent, [ ]);
 								dependencyMap.get(dependent).push(callback);
@@ -1401,14 +1401,14 @@ export class Settings {
 					`;
 
 					const dependencyMap = new Map();
-					for (const param of sortDependencies(event.parameters?.() || [])) {
+					for (const param of sortDependencies(event.parameters?.() || [ ])) {
 						const $param = document.createElement("div");
 						$param.className = "action-parameter";
 						$param.innerHTML = `<div class="parameter-title">${param.title}</div>`;
 						$item.appendChild($param);
 
 						const dependencies = { };
-						for (const dependent of param.dependencies ?? [])
+						for (const dependent of param.dependencies ?? [ ])
 							dependencies[dependent] = action.params[dependent];
 
 						const _default = typeof param.default === "function" ? param.default(dependencies) : param.default;
@@ -1421,7 +1421,7 @@ export class Settings {
 								$param.appendChild($select);
 
 								const options = typeof param.options === "function" ? param.options(dependencies) : param.options;
-								for (const option of options ?? []) {
+								for (const option of options ?? [ ]) {
 									const $option = document.createElement("option");
 									$option.value = option;
 									$option.textContent = option;
@@ -1430,7 +1430,7 @@ export class Settings {
 
 								if (action.params[param.id] !== undefined) {
 									$select.value = action.params[param.id];
-									for (const cb of dependencyMap.get(param.id) || [])
+									for (const cb of dependencyMap.get(param.id) || [ ])
 										cb();
 								} else if ("default" in param) {
 									$select.value = _default;
@@ -1439,14 +1439,14 @@ export class Settings {
 
 								callback = () => {
 									const dependencies = { };
-									for (const dependent of param.dependencies ?? [])
+									for (const dependent of param.dependencies ?? [ ])
 										dependencies[dependent] = action.params[dependent];
 
 									const value = $select.value;
 
 									const options = typeof param.options === "function" ? param.options(dependencies) : param.options;
 									$select.innerHTML = "";
-									for (const option of options ?? []) {
+									for (const option of options ?? [ ]) {
 										const $option = document.createElement("option");
 										$option.value = option;
 										$option.textContent = option;
@@ -1464,7 +1464,7 @@ export class Settings {
 
 								$select.addEventListener("change", () => {
 									action.params[param.id] = $select.value;
-									for (const cb of dependencyMap.get(param.id) || [])
+									for (const cb of dependencyMap.get(param.id) || [ ])
 										cb();
 								});
 							} break;
@@ -1476,7 +1476,7 @@ export class Settings {
 
 								if (action.params[param.id] !== undefined) {
 									$input.value = action.params[param.id];
-									for (const cb of dependencyMap.get(param.id) || [])
+									for (const cb of dependencyMap.get(param.id) || [ ])
 										cb();
 								} else if ("default" in param) {
 									$input.value = _default;
@@ -1485,7 +1485,7 @@ export class Settings {
 
 								$input.addEventListener("change", () => {
 									action.params[param.id] = $input.value;
-									for (const cb of dependencyMap.get(param.id) || [])
+									for (const cb of dependencyMap.get(param.id) || [ ])
 										cb();
 								});
 							} break;
@@ -1497,7 +1497,7 @@ export class Settings {
 
 								if (action.params[param.id] !== undefined) {
 									$input.checked = action.params[param.id];
-									for (const cb of dependencyMap.get(param.id) || [])
+									for (const cb of dependencyMap.get(param.id) || [ ])
 										cb();
 								} else if ("default" in param) {
 									$input.checked = _default;
@@ -1506,7 +1506,7 @@ export class Settings {
 
 								$input.addEventListener("change", () => {
 									action.params[param.id] = $input.checked;
-									for (const cb of dependencyMap.get(param.id) || [])
+									for (const cb of dependencyMap.get(param.id) || [ ])
 										cb();
 								});
 							} break;
@@ -1517,7 +1517,7 @@ export class Settings {
 
 								if (action.params[param.id] !== undefined) {
 									$input.value = action.params[param.id];
-									for (const cb of dependencyMap.get(param.id) || [])
+									for (const cb of dependencyMap.get(param.id) || [ ])
 										cb();
 								} else if ("default" in param) {
 									$input.value = _default;
@@ -1526,14 +1526,14 @@ export class Settings {
 
 								$input.addEventListener("change", () => {
 									action.params[param.id] = $input.value;
-									for (const cb of dependencyMap.get(param.id) || [])
+									for (const cb of dependencyMap.get(param.id) || [ ])
 										cb();
 								});
 							} break;
 						}
 
 						if (typeof callback === "function")
-							for (const dependent of param.dependencies ?? []) {
+							for (const dependent of param.dependencies ?? [ ]) {
 								if (!dependencyMap.has(dependent))
 									dependencyMap.set(dependent, [ ]);
 								dependencyMap.get(dependent).push(callback);
@@ -1754,7 +1754,7 @@ export class Settings {
 								const action = { name: $select.value, params: { } };
 								if ($select.value === "if" || $select.value === "if not") {
 									action.condition = { name: Object.keys(conditions)[0] };
-									action.actions = [];
+									action.actions = [ ];
 								}
 
 								script.actions.push(action);

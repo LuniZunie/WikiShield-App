@@ -48,131 +48,131 @@ class Profanity {
         {
             name: "URL",
             regex: /(?:https?:\/\/(?:www\.)?[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*(?:\/[^\s]*)?|(?:www\.)[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+(?:\/[^\s]*)?|[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.(?:com|org|net|edu|gov|mil|int|co|io|ai|app|dev|info|biz|name|pro|museum|aero|coop|jobs|mobi|travel|xxx|ac|ad|ae|af|ag|al|am|ao|aq|ar|as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|cr|cu|cv|cw|cx|cy|cz|de|dj|dk|dm|do|dz|ec|ee|eg|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kp|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|me|mg|mh|mk|ml|mm|mn|mo|mp|mq|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|om|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ro|rs|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|sk|sl|sm|sn|so|sr|ss|st|su|sv|sx|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tr|tt|tv|tw|tz|ua|ug|uk|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|za|zm|zw)(?:\/[^\s]*)?)/i,
-            severity: 0.1,
+            severity: .1,
             note: "URLs in usernames may indicate spam or advertising."
         },
         {
             name: "Phone number",
             regex: /(\+?\d{1,3}[-.\s]?|\(\+?\d{1,3}\)\s?)?(\d{3}[-.\s]?\d{3}[-.\s]?\d{4}|\d{4}[-.\s]?\d{3}[-.\s]?\d{3})/,
-            severity: 0.3,
+            severity: .3,
             note: "The pattern of numbers in this username resemble a phone number. Usernames containing personal information may be considered disruptive."
         },
         {
             name: "Email address",
             regex: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/,
-            severity: 0.3,
+            severity: .3,
             note: "Email addresses in usernames can indicate spam or contact sharing."
         },
         {
             term: "base64",
-            severity: 0.2,
+            severity: .2,
             note: "Base64 encoding may be used to obfuscate content to bypass filters."
         },
         {
             term: "fromhex",
-            severity: 0.2,
+            severity: .2,
             note: "Hex encoding may be used to obfuscate content to bypass filters."
         },
         {
             term: "1488",
-            severity: 0.5,
+            severity: .5,
             note: "Well-known Neo-Nazi symbol, however the number itself can appear in innocent contexts."
         },
         { term: "nazi", severity: 1.0 },
         {
             term: "swastika",
-            severity: 0.8,
+            severity: .8,
             note: "Symbol often associated with Nazism, however it has historical significance in other cultures."
         },
         {
             term: "卍",
-            severity: 0.8,
+            severity: .8,
             note: "Symbol often associated with Nazism, however it has historical significance in other cultures."
         },
         {
             term: "卐",
-            severity: 0.8,
+            severity: .8,
             note: "Symbol often associated with Nazism, however it has historical significance in other cultures."
         },
         {
             term: "࿕",
-            severity: 0.8,
+            severity: .8,
             note: "Symbol often associated with Nazism, however it has historical significance in other cultures."
         },
         {
             term: "࿖",
-            severity: 0.8,
+            severity: .8,
             note: "Symbol often associated with Nazism, however it has historical significance in other cultures."
         },
         {
             term: "࿗",
-            severity: 0.8,
+            severity: .8,
             note: "Symbol often associated with Nazism, however it has historical significance in other cultures."
         },
         {
             term: "࿘",
-            severity: 0.8,
+            severity: .8,
             note: "Symbol often associated with Nazism, however it has historical significance in other cultures."
         },
         {
             term: "aryan",
-            severity: 0.7,
+            severity: .7,
             note: "Associated with white supremacist ideology, though it can also be in reference to the self-designation of Indo-Iranian peoples."
         },
-        { term: "fascism", severity: 0.5 },
-        { term: "fascist", severity: 0.5 },
-        { term: "facist", severity: 0.5 },
+        { term: "fascism", severity: .5 },
+        { term: "fascist", severity: .5 },
+        { term: "facist", severity: .5 },
         {
             term: "☭",
-            severity: 0.5,
+            severity: .5,
             note: "Hammer and sickle symbol, politically charged but context-dependent."
         },
         {
             term: "✡",
-            severity: 0.4,
+            severity: .4,
             note: "Star of David, can be used respectfully or in antisemitic contexts."
         },
         {
             term: "44",
-            severity: 0.1,
+            severity: .1,
             note: "Obfuscated symbol of the Nazi SS division. If appears as 'ᛋᛋ' or similar, indicates intent to reference the SS."
         },
         {
             term: "imbo wales",
-            severity: 0.2,
+            severity: .2,
             multiWord: true,
             note: "Play on 'Jimbo Wales' name, may indicate mockery or impersonation."
         },
         {
             term: "sock",
-            severity: 0.3,
+            severity: .3,
             note: "May reference sockpuppet accounts but has innocent meanings."
         },
         {
             term: "puppet",
-            severity: 0.3,
+            severity: .3,
             note: "May reference sockpuppet accounts but has innocent meanings."
         },
         {
             term: "sock puppet",
-            severity: 0.6,
+            severity: .6,
             multiWord: true,
             note: "Often used in usernames by sockpuppeteers."
         },
         {
             term: "return",
-            severity: 0.2,
+            severity: .2,
             note: "Often used in usernames by sockpuppeteers."
         },
         {
             term: "is back",
-            severity: 0.6,
+            severity: .6,
             multiWord: true,
             note: "Often used in usernames by sockpuppeteers."
         },
         {
             term: "are back",
-            severity: 0.6,
+            severity: .6,
             multiWord: true,
             note: "Often used in usernames by sockpuppeteers."
         },
@@ -183,7 +183,7 @@ class Profanity {
         },
         {
             term: "my little",
-            severity: 0.8,
+            severity: .8,
             multiWord: true,
             note: "If related to 'my little pony', indicates sockpuppeteer."
         },
@@ -199,361 +199,361 @@ class Profanity {
             multiWord: true,
             note: "Well-known sockpuppeteer on Wikipedia."
         },
-        { term: "anal", severity: 0.7 },
-        { term: "anus", severity: 0.5 },
-        { term: "sex", severity: 0.3 },
+        { term: "anal", severity: .7 },
+        { term: "anus", severity: .5 },
+        { term: "sex", severity: .3 },
         {
             term: "secs",
-            severity: 0.05,
+            severity: .05,
             note: "Obfuscated form of 'sex'."
         },
         {
             term: "seggs",
-            severity: 0.2,
+            severity: .2,
             note: "Obfuscated form of 'sex'."
         },
         {
             term: "willy",
-            severity: 0.2,
+            severity: .2,
             note: "Slang for penis."
         },
         {
             term: "wank",
-            severity: 0.6,
+            severity: .6,
             note: "British sexual slang for masturbation."
         },
-        { term: "barf", severity: 0.3 },
-        { term: "bastard", severity: 0.5 },
+        { term: "barf", severity: .3 },
+        { term: "bastard", severity: .5 },
         {
             term: "batty boy",
-            severity: 0.7,
+            severity: .7,
             multiWord: true,
             note: "Homophobic slur in British/Caribbean English."
         },
         {
             name: "bitch",
             regex: new RegExp(`${b+i}(${o}|${a})?${t}?${c+h}`),
-            severity: 0.7
+            severity: .7
         },
         {
             term: "blow job",
-            severity: 0.8,
+            severity: .8,
             multiWord: true
         },
         {
             term: "blowing",
-            severity: 0.2,
+            severity: .2,
             note: "Sexual innuendo but common verb."
         },
-        { term: "boner", severity: 0.4 },
-        { term: "boob", severity: 0.4 },
-        { term: "booty", severity: 0.3 },
+        { term: "boner", severity: .4 },
+        { term: "boob", severity: .4 },
+        { term: "booty", severity: .3 },
         {
             term: "breast",
-            severity: 0.4,
+            severity: .4,
             note: "Anatomical term, but can be used inappropriately."
         },
-        { term: "butt", severity: 0.2 },
+        { term: "butt", severity: .2 },
         {
             term: "bite me",
-            severity: 0.5,
+            severity: .5,
             multiWord: true,
             note: "Often has defiant or provocative connotation."
         },
         {
             term: "butt plug",
-            severity: 0.7,
+            severity: .7,
             multiWord: true
         },
         {
             term: "bollock",
-            severity: 0.5,
+            severity: .5,
             note: "British slang for testicles."
         },
         {
             term: "bollox",
-            severity: 0.5,
+            severity: .5,
             note: "Variant spelling of 'bollocks'."
         },
         {
             term: "bollix",
-            severity: 0.5,
+            severity: .5,
             note: "Variant spelling of 'bollocks'."
         },
-        { term: "clit", severity: 0.3 },
-        { term: "cock", severity: 0.3 },
+        { term: "clit", severity: .3 },
+        { term: "cock", severity: .3 },
         {
             term: "brain dead",
-            severity: 0.5,
+            severity: .5,
             multiWord: true,
             note: "Derogatory medical reference."
         },
-        { term: "bukake", severity: 0.7 },
+        { term: "bukake", severity: .7 },
         {
             term: "bully",
-            severity: 0.5,
+            severity: .5,
             note: "Indicates harassment behavior."
         },
         {
             term: "bullies",
-            severity: 0.5,
+            severity: .5,
             note: "Indicates harassment behavior."
         },
         {
             term: "bullied",
-            severity: 0.3,
+            severity: .3,
             note: "May indicate victimhood or boasting."
         },
         {
             term: "versus",
-            severity: 0.4,
+            severity: .4,
             note: "Combat/conflict framing, but legitimate word."
         },
         {
             term: "bumming",
-            severity: 0.5,
+            severity: .5,
             note: "British slang for anal sex or begging."
         },
-        { term: "bunghole", severity: 0.5 },
+        { term: "bunghole", severity: .5 },
         {
             term: "cesspool",
-            severity: 0.3,
+            severity: .3,
             note: "Derogatory term for filthy place."
         },
         {
             term: "cesspit",
-            severity: 0.3,
+            severity: .3,
             note: "Variant of cesspool."
         },
-        { term: "dick", severity: 0.7 },
-        { term: "prick", severity: 0.7 },
-        { term: "dildo", severity: 0.7 },
+        { term: "dick", severity: .7 },
+        { term: "prick", severity: .7 },
+        { term: "dildo", severity: .7 },
         {
             term: "censor",
-            severity: 0.1,
+            severity: .1,
             note: "May indicate anti-censorship stance."
         },
         {
             term: "ching",
-            severity: 0.8,
+            severity: .8,
             note: "Part of racial slur against Asians."
         },
         {
             term: "ching chong",
-            severity: 0.9,
+            severity: .9,
             multiWord: true,
             note: "Racist mockery of Asian languages."
         },
         {
             term: "ching chang",
-            severity: 0.9,
+            severity: .9,
             multiWord: true,
             note: "Racist mockery of Asian languages."
         },
         {
             term: "wing wong",
-            severity: 0.9,
+            severity: .9,
             multiWord: true,
             note: "Racist mockery of Asian languages."
         },
         {
             term: "bot",
-            severity: 0.4,
+            severity: .4,
             note: "May indicate automated account claim."
         },
         {
             term: "ox long",
-            severity: 0.5,
+            severity: .5,
             multiWord: true,
             note: "Phonetic sexual innuendo for 'cock's long'."
         },
-        { term: "douche", severity: 0.5 },
-        { term: "cunt", severity: 0.7 },
+        { term: "douche", severity: .5 },
+        { term: "cunt", severity: .7 },
         {
             term: "cuck",
-            severity: 0.4,
+            severity: .4,
             note: "Derogatory term from manosphere."
         },
         {
             term: "curry munch",
-            severity: 0.9,
+            severity: .9,
             multiWord: true,
             note: "Racist slur against South Asians."
         },
         {
             term: "crime",
-            severity: 0.3,
+            severity: .3,
             note: "Negative connotation but legitimate word."
         },
-        { term: "pussy", severity: 0.7 },
+        { term: "pussy", severity: .7 },
         {
             term: "deeznuts",
-            severity: 0.3,
+            severity: .3,
             note: "Crude joke phrase."
         },
         {
             term: "destroy",
-            severity: 0.3,
+            severity: .3,
             note: "Aggressive language."
         },
         {
             term: "destruction",
-            severity: 0.3,
+            severity: .3,
             note: "Aggressive language."
         },
         {
             term: "diaper",
-            severity: 0.3,
+            severity: .3,
             note: "Infantilization or fetish reference."
         },
-        { term: "diarrhea", severity: 0.3 },
+        { term: "diarrhea", severity: .3 },
         {
             term: "throbbing",
-            severity: 0.5,
+            severity: .5,
             note: "Sexual innuendo term."
         },
-        { term: "dimwit", severity: 0.3 },
+        { term: "dimwit", severity: .3 },
         {
             term: "doo doo",
-            severity: 0.3,
+            severity: .3,
             multiWord: true
         },
-        { term: "dookie", severity: 0.3 },
-        { term: "fart", severity: 0.3 },
-        { term: "ejaculat", severity: 0.7 },
+        { term: "dookie", severity: .3 },
+        { term: "fart", severity: .3 },
+        { term: "ejaculat", severity: .7 },
         {
             term: "erect",
-            severity: 0.5,
+            severity: .5,
             note: "Sexual context or legitimate word."
         },
-        { term: "erotic", severity: 0.5 },
-        { term: "fuck", severity: 0.8 },
+        { term: "erotic", severity: .5 },
+        { term: "fuck", severity: .8 },
         {
             term: "phuck",
-            severity: 0.8,
+            severity: .8,
             note: "Alternative spelling of \"fuck\" to bypass detection."
         },
-        { term: "orgasm", severity: 0.7 },
+        { term: "orgasm", severity: .7 },
         { term: "rape", severity: 1.0 },
         {
             term: "lawsuit",
-            severity: 0.3,
+            severity: .3,
             note: "Legal threat implication."
         },
         {
             term: "fraud",
-            severity: 0.5,
+            severity: .5,
             note: "Accusation of criminal behavior."
         },
         {
             term: "tard",
-            severity: 0.5,
+            severity: .5,
             note: "Ableist slur suffix."
         },
         {
             term: "terror",
-            severity: 0.7,
+            severity: .7,
             note: "Violence/terrorism reference."
         },
         {
             term: "mike hunt",
-            severity: 0.5,
+            severity: .5,
             multiWord: true,
             note: "Phonetic sexual innuendo for 'my cunt'."
         },
         {
             term: "mike ox",
-            severity: 0.5,
+            severity: .5,
             multiWord: true,
             note: "Phonetic sexual innuendo for 'my cock's'."
         },
-        { term: "masturbat", severity: 0.7 },
-        { term: "nutsack", severity: 0.5 },
+        { term: "masturbat", severity: .7 },
+        { term: "nutsack", severity: .5 },
         {
             term: "ophile",
             severity: 1.0,
             note: "Suffix for sexual predator terms like pedophile."
         },
-        { term: "pedo", severity: 0.6 },
-        { term: "peeing", severity: 0.3 },
+        { term: "pedo", severity: .6 },
+        { term: "peeing", severity: .3 },
         {
             term: "peanus",
-            severity: 0.5,
+            severity: .5,
             note: "Intentional misspelling of 'penis'."
         },
         {
             term: "penis",
-            severity: 0.5,
+            severity: .5,
             note: "Anatomical term, inappropriate in usernames."
         },
-        { term: "porn", severity: 0.7 },
-        { term: "piss", severity: 0.5 },
-        { term: "poop", severity: 0.3 },
+        { term: "porn", severity: .7 },
+        { term: "piss", severity: .5 },
+        { term: "poop", severity: .3 },
         {
             term: "prison",
-            severity: 0.3,
+            severity: .3,
             note: "Criminal context, but legitimate word."
         },
         {
             term: "prostitute",
-            severity: 0.5,
+            severity: .5,
             note: "Sexual work reference or insult."
         },
         {
             term: "queer",
-            severity: 0.5,
+            severity: .5,
             note: "Can be slur or reclaimed identity."
         },
         {
             term: "rectum",
-            severity: 0.3,
+            severity: .3,
             note: "Anatomical term."
         },
         {
             term: "report me",
-            severity: 0.3,
+            severity: .3,
             multiWord: true,
             note: "Defiant/trolling phrase."
         },
-        { term: "rimming", severity: 0.7 },
+        { term: "rimming", severity: .7 },
         {
             term: "scrotum",
-            severity: 0.5,
+            severity: .5,
             note: "Anatomical term, inappropriate in usernames."
         },
-        { term: "semen", severity: 0.7 },
-        { term: "slut", severity: 0.7 },
+        { term: "semen", severity: .7 },
+        { term: "slut", severity: .7 },
         {
             term: "sucks",
-            severity: 0.3,
+            severity: .3,
             note: "Mild profanity or legitimate verb."
         },
         {
             term: "sux",
-            severity: 0.3,
+            severity: .3,
             note: "Intentional misspelling of 'sucks'."
         },
         {
             term: "vagina",
-            severity: 0.5,
+            severity: .5,
             note: "Anatomical term, inappropriate in usernames."
         },
         {
             term: "vadge",
-            severity: 0.5,
+            severity: .5,
             note: "Slang for vagina."
         },
-        { term: "vomit", severity: 0.3 },
+        { term: "vomit", severity: .3 },
         {
             term: "vulva",
-            severity: 0.5,
+            severity: .5,
             note: "Anatomical term, inappropriate in usernames."
         },
-        { term: "whore", severity: 0.7 },
+        { term: "whore", severity: .7 },
         { term: "chink", severity: 1.0 },
         {
             term: "jew",
-            severity: 0.3,
+            severity: .3,
             note: "Legitimate religious/ethnic term but tracked for antisemitic usage patterns."
         },
         { term: "nigger", severity: 1.0 },
@@ -566,12 +566,12 @@ class Profanity {
         { term: "niglet", severity: 1.0 },
         {
             term: "pajeet",
-            severity: 0.7,
+            severity: .7,
             note: "Derogatory term for South Asians."
         },
         {
             term: "slave",
-            severity: 0.6,
+            severity: .6,
             note: "Dehumanizing term with historical trauma, but legitimate historical uses."
         },
         {
@@ -591,84 +591,84 @@ class Profanity {
             multiWord: true,
             note: "White supremacist ideology."
         },
-        { term: "racist", severity: 0.8 },
-        { term: "racism", severity: 0.7 },
+        { term: "racist", severity: .8 },
+        { term: "racism", severity: .7 },
         {
             term: "racial",
-            severity: 0.3,
+            severity: .3,
             note: "Neutral term but tracked for context in discriminatory language."
         },
-        { term: "bigot", severity: 0.7 },
-        { term: "fag", severity: 0.7 },
+        { term: "bigot", severity: .7 },
+        { term: "fag", severity: .7 },
         {
             term: "taliban",
-            severity: 0.7,
+            severity: .7,
             note: "Terrorist organization reference."
         },
         { term: "antisemit", severity: 1.0 },
         {
             term: "bleed",
-            severity: 0.3,
+            severity: .3,
             note: "Can indicate violence or be medical."
         },
         {
             term: "bloody",
-            severity: 0.3,
+            severity: .3,
             note: "British profanity or literal blood reference."
         },
         {
             term: "hell",
-            severity: 0.5,
+            severity: .5,
             note: "Religious reference used as mild profanity, but legitimate uses."
         },
-        { term: "damn", severity: 0.3 },
-        { term: "crap", severity: 0.3 },
+        { term: "damn", severity: .3 },
+        { term: "crap", severity: .3 },
         {
             term: "darn",
-            severity: 0.1,
+            severity: .1,
             note: "Mild euphemism for 'damn'."
         },
         {
             term: "shutup",
-            severity: 0.3,
+            severity: .3,
             note: "Rude command indicating hostility."
         },
         {
             term: "spastic",
-            severity: 0.5,
+            severity: .5,
             note: "Ableist slur in British English, medical term in US."
         },
         {
             term: "disabled",
-            severity: 0.1,
+            severity: .1,
             note: "Legitimate disability term but tracked for ableist patterns."
         },
-        { term: "loser", severity: 0.3 },
+        { term: "loser", severity: .3 },
         {
             term: "abuse",
-            severity: 0.5,
+            severity: .5,
             note: "Indicates harmful behavior or accusations."
         },
         {
             term: "spam",
-            severity: 0.3,
+            severity: .3,
             note: "Indicates unwanted content or disruption."
         },
         {
             term: "abusi",
-            severity: 0.5,
+            severity: .5,
             note: "Variant of 'abuse/abusive'."
         },
         { term: "hitler", severity: 1.0 },
         {
             term: "adolf",
-            severity: 0.4,
+            severity: .4,
             note: "Common name but often used in Hitler references."
         },
         { term: "gestapo", severity: 1.0 },
         {
             term: "heil",
-            severity: 0.8,
+            severity: .8,
             note: "Nazi salute reference."
         },
         {
@@ -695,23 +695,23 @@ class Profanity {
         },
         {
             term: "holocaust",
-            severity: 0.5,
+            severity: .5,
             note: "Historical tragedy reference, legitimate historical use."
         },
         {
             term: "zionis",
-            severity: 0.5,
+            severity: .5,
             note: "Political term stem, can be antisemitic depending on context."
         },
         { term: "fuhrer", severity: 1.0 },
         {
             term: "reich",
-            severity: 0.7,
+            severity: .7,
             note: "Nazi Germany reference, though legitimate German word."
         },
-        { term: "massacre", severity: 0.7 },
-        { term: "slaughter", severity: 0.7 },
-        { term: "torture", severity: 0.7 },
+        { term: "massacre", severity: .7 },
+        { term: "slaughter", severity: .7 },
+        { term: "torture", severity: .7 },
         {
             term: "lynch",
             severity: 1.0,
@@ -719,118 +719,118 @@ class Profanity {
         },
         {
             term: "killer",
-            severity: 0.5,
+            severity: .5,
         },
         {
             term: "mobster",
-            severity: 0.5,
+            severity: .5,
             note: "Organized crime reference."
         },
         {
             term: "gangster",
-            severity: 0.3,
+            severity: .3,
             note: "Criminal reference or slang."
         },
         {
             term: "druglord",
-            severity: 0.5,
+            severity: .5,
             note: "Drug trafficking reference."
         },
         {
             term: "drugs",
-            severity: 0.3,
+            severity: .3,
             note: "General term that can be legitimate or problematic."
         },
         {
             term: "meth",
-            severity: 0.5,
+            severity: .5,
             note: "Reference to illegal drug, though also shorthand for 'method'."
         },
-        { term: "cocaine", severity: 0.5 },
-        { term: "heroin", severity: 0.5 },
+        { term: "cocaine", severity: .5 },
+        { term: "heroin", severity: .5 },
         {
             term: "weed",
-            severity: 0.3,
+            severity: .3,
             note: "Marijuana reference with varying legal status, also refers to plants."
         },
         {
             term: "marijuana",
-            severity: 0.3,
+            severity: .3,
             note: "Cannabis reference with complex legal status."
         },
         {
             term: "crack",
-            severity: 0.5,
+            severity: .5,
             note: "Drug reference or legitimate verb."
         },
-        { term: "amphetamine", severity: 0.5 },
+        { term: "amphetamine", severity: .5 },
         {
             term: "benzo",
-            severity: 0.3,
+            severity: .3,
             note: "Drug abbreviation or name prefix."
         },
-        { term: "benzodiazepine", severity: 0.5 },
+        { term: "benzodiazepine", severity: .5 },
         {
             term: "opioid",
-            severity: 0.3,
+            severity: .3,
             note: "Drug class, medical term."
         },
         {
             term: "opiate",
-            severity: 0.3,
+            severity: .3,
             note: "Drug class, medical term."
         },
         {
             term: "ketamine",
-            severity: 0.5,
+            severity: .5,
             note: "Drug reference or medical use."
         },
         {
             term: "rohypnol",
-            severity: 0.7,
+            severity: .7,
             note: "Date rape drug reference."
         },
         {
             term: "i like",
-            severity: 0.2,
+            severity: .2,
             multiWord: true,
             note: "Flagged to detect inappropriate statements when combined with other terms."
         },
         {
             term: "i love",
-            severity: 0.3,
+            severity: .3,
             multiWord: true,
             note: "Flagged to detect inappropriate statements when combined with other terms."
         },
         {
             term: "i hate",
-            severity: 0.5,
+            severity: .5,
             multiWord: true,
             note: "Flagged to detect inappropriate statements when combined with other terms."
         },
         {
             term: "young",
-            severity: 0.2,
+            severity: .2,
             note: "Age reference with legitimate uses but flagged in combination."
         },
         {
             term: "underage",
-            severity: 0.8,
+            severity: .8,
             note: "Age reference with concerning implications in certain contexts."
         },
         {
             term: "teen",
-            severity: 0.3,
+            severity: .3,
             note: "Age reference, concerning in some contexts."
         },
         {
             term: "adolescent",
-            severity: 0.2,
+            severity: .2,
             note: "Age term, concerning in some contexts."
         },
         {
             term: "preteen",
-            severity: 0.4,
+            severity: .4,
             note: "Age reference with concerning implications in certain contexts."
         },
         { term: "rapist", severity: 1.0 },
@@ -838,19 +838,19 @@ class Profanity {
         { term: "incest", severity: 1.0 },
         {
             term: "cult",
-            severity: 0.3,
+            severity: .3,
             note: "Religious/social group term with negative connotation."
         },
         {
             term: "sekt",
-            severity: 0.3,
+            severity: .3,
             note: "German for 'sect', cult reference."
         },
         { term: "disembowel", severity: 1.0 },
         { term: "behead", severity: 1.0 },
         {
             term: "traitor",
-            severity: 0.5,
+            severity: .5,
             note: "Accusatory term."
         },
         { term: "genocide", severity: 1.0 },
@@ -865,256 +865,256 @@ class Profanity {
         { term: "kkk", severity: 1.0 },
         {
             term: "kill",
-            severity: 0.5,
+            severity: .5,
             note: "Violent language, but common word."
         },
         {
             term: "organi",
-            severity: 0.1,
+            severity: .1,
             note: "Word stem for organization."
         },
         {
             term: "blog",
-            severity: 0.1,
+            severity: .1,
             note: "External site reference."
         },
         {
             term: "group",
-            severity: 0.1,
+            severity: .1,
             note: "Organizational term."
         },
         {
             term: "compan",
-            severity: 0.1,
+            severity: .1,
             note: "Company stem, spam indicator."
         },
         {
             term: "associat",
-            severity: 0.1,
+            severity: .1,
             note: "Association stem."
         },
         {
             term: "industr",
-            severity: 0.1,
+            severity: .1,
             note: "Industry stem, spam indicator."
         },
         {
             term: "corporate",
-            severity: 0.1,
+            severity: .1,
             note: "Business term, spam indicator."
         },
         {
             term: "famil",
-            severity: 0.1,
+            severity: .1,
             note: "Family stem, group indicator."
         },
         {
             term: "task",
-            severity: 0.1,
+            severity: .1,
             note: "Organizational term."
         },
         {
             term: "alliance",
-            severity: 0.1,
+            severity: .1,
             note: "Group term."
         },
         {
             term: "entertain",
-            severity: 0.1,
+            severity: .1,
             note: "Entertainment stem, promotional."
         },
         {
             term: "public",
-            severity: 0.1,
+            severity: .1,
             note: "Common term, promotional context."
         },
         {
             term: "private",
-            severity: 0.1,
+            severity: .1,
             note: "Common term, organizational."
         },
         {
             term: "troll",
-            severity: 0.3,
+            severity: .3,
             note: "Disruptive behavior indicator."
         },
         {
             term: "trolol",
-            severity: 0.3,
+            severity: .3,
             note: "Trolling variant/meme."
         },
         {
             term: "grief",
-            severity: 0.3,
+            severity: .3,
             note: "Gaming term for harassment."
         },
         {
             term: "password",
-            severity: 0.3,
+            severity: .3,
             note: "Security term, suspicious in username."
         },
         {
             term: "admin",
-            severity: 0.7,
+            severity: .7,
             note: "Role impersonation."
         },
         {
             term: "sysop",
-            severity: 0.4,
+            severity: .4,
             note: "Wikipedia role impersonation."
         },
         {
             term: "bureaucrat",
-            severity: 0.5,
+            severity: .5,
             note: "Wikipedia role impersonation."
         },
         {
             term: "moderator",
-            severity: 0.5,
+            severity: .5,
             note: "Role impersonation."
         },
         {
             term: "staff",
-            severity: 0.5,
+            severity: .5,
             note: "Role impersonation."
         },
         {
             term: "developer",
-            severity: 0.5,
+            severity: .5,
             note: "Role impersonation."
         },
         {
             term: "owner",
-            severity: 0.4,
+            severity: .4,
             note: "Role impersonation."
         },
         {
             term: "founder",
-            severity: 0.3,
+            severity: .3,
             note: "Role impersonation."
         },
         {
             term: "wmf",
-            severity: 0.2,
+            severity: .2,
             note: "Wikimedia Foundation impersonation."
         },
         {
             term: "foundation",
-            severity: 0.3,
+            severity: .3,
             note: "Organizational impersonation."
         },
         {
             term: "unblock",
-            severity: 0.1,
+            severity: .1,
             note: "Suggests blocked user."
         },
         {
             term: "4chan",
-            severity: 0.5,
+            severity: .5,
             note: "Imageboard site, trolling association."
         },
         {
             term: "8chan",
-            severity: 0.3,
+            severity: .3,
             note: "Controversial imageboard."
         },
         {
             term: "reddit",
-            severity: 0.3,
+            severity: .3,
             note: "External site reference."
         },
         {
             term: "plague",
-            severity: 0.3,
+            severity: .3,
             note: "Disease/attack term."
         },
         {
             term: "skibidi",
-            severity: 0.1,
+            severity: .1,
             note: "Internet meme reference."
         },
-        { term: "milf", severity: 0.5 },
-        { term: "dilf", severity: 0.5 },
+        { term: "milf", severity: .5 },
+        { term: "dilf", severity: .5 },
         {
             term: "sext",
-            severity: 0.5,
+            severity: .5,
             note: "Sending sexual messages."
         },
         {
             term: "thot",
-            severity: 0.3,
+            severity: .3,
             note: "Derogatory sexual slang."
         },
         {
             term: "rizz",
-            severity: 0.1,
+            severity: .1,
             note: "Gen Z slang for charisma."
         },
         {
             term: "gyatt",
-            severity: 0.1,
+            severity: .1,
             note: "Sexualized Gen Z slang."
         },
-        { term: "noob", severity: 0.1 },
+        { term: "noob", severity: .1 },
         {
             term: "lyric",
-            severity: 0.1,
+            severity: .1,
             note: "Possible lyrics website spammer."
         },
         {
             term: "propaganda",
-            severity: 0.5,
+            severity: .5,
             note: "Misinformation term."
         },
-        { term: "asshole", severity: 0.7 },
-        { term: "fucktard", severity: 0.7 },
-        { term: "retard", severity: 0.7 },
-        { term: "imbecile", severity: 0.5 },
-        { term: "moron", severity: 0.5 },
+        { term: "asshole", severity: .7 },
+        { term: "fucktard", severity: .7 },
+        { term: "retard", severity: .7 },
+        { term: "imbecile", severity: .5 },
+        { term: "moron", severity: .5 },
         { term: "chigga", severity: 1.0 },
         { term: "chigger", severity: 1.0 },
         { term: "wigga", severity: 1.0 },
         { term: "wigger", severity: 1.0 },
         {
             term: "igga",
-            severity: 0.7,
+            severity: .7,
             note: "Potential variant of racial slur.",
             ignore: [ "1994", "ig94" ]
         },
         {
             term: "igger",
-            severity: 0.7,
+            severity: .7,
             note: "Potential variant of racial slur."
         },
         {
             term: "mother fuck",
-            severity: 0.7,
+            severity: .7,
             multiWord: true
         },
         {
             term: "bull shit",
-            severity: 0.6,
+            severity: .6,
             multiWord: true
         },
         {
             term: "dumb ass",
-            severity: 0.5,
+            severity: .5,
             multiWord: true
         },
         {
             term: "dumb fuck",
-            severity: 0.7,
+            severity: .7,
             multiWord: true
         },
         {
             term: "goon",
-            severity: 0.2,
+            severity: .2,
             multiWord: false
         },
     ];
 
-    constructor(lookalikes = {}) {
-        this.conversion = {};
+    constructor(lookalikes = { }) {
+        this.conversion = { };
         for (const [key, variants] of Object.entries(lookalikes))
             for (const variant of variants) {
                 if (this.conversion[variant])
@@ -1173,21 +1173,21 @@ class Profanity {
         const caseChanges = this.countCaseChanges(segment);
         if (caseChanges > 0) {
             const irregularCaseRatio = caseChanges / Math.max(1, segment.length - 1);
-            if (irregularCaseRatio > 0.3) {
-                obfuscation += 0.3;
+            if (irregularCaseRatio > .3) {
+                obfuscation += .3;
                 indicators++;
             }
         }
 
         const hasInternalSeparators = /[._,;:|]/.test(segment);
         if (hasInternalSeparators) {
-            const separatorCount = (segment.match(/[._,;:|]/g) || []).length;
-            const letterCount = (segment.match(/[a-zA-Z0-9]/g) || []).length;
+            const separatorCount = (segment.match(/[._,;:|]/g) || [ ]).length;
+            const letterCount = (segment.match(/[a-zA-Z0-9]/g) || [ ]).length;
 
             if (letterCount > 0) {
                 const separatorRatio = separatorCount / letterCount;
-                if (separatorRatio > 0.3) {
-                    obfuscation += Math.min(0.5, separatorRatio * 0.7);
+                if (separatorRatio > .3) {
+                    obfuscation += Math.min(0.5, separatorRatio * .7);
                     indicators++;
                 }
             }
@@ -1209,10 +1209,10 @@ class Profanity {
             if (!isStandalone) {
                 const isCamelCaseBoundary = this.isCamelCaseBoundary(originalText, matchStart, matchEnd);
                 if (isCamelCaseBoundary) {
-                    obfuscation += 0.2;
+                    obfuscation += .2;
                     indicators++;
                 } else {
-                    obfuscation -= 0.2;
+                    obfuscation -= .2;
                     indicators++;
                 }
             }
@@ -1302,7 +1302,7 @@ class Profanity {
 
             const paddingScore = this.analyzePaddingLikelihood(beforeText, afterText, matchedWord);
 
-            if (paddingScore >= 0.4)
+            if (paddingScore >= .4)
                 return 0;
             if (fullContext.length > 15 && fullContext === fullContext.toLowerCase() && !/\s/.test(fullContext))
                 return 0;
@@ -1314,7 +1314,7 @@ class Profanity {
             const afterText = text.substring(end, Math.min(text.length, end + 8)).toLowerCase();
             const paddingScore = this.analyzePaddingLikelihood(beforeText, afterText, matchedWord);
 
-            if (paddingScore >= 0.4)
+            if (paddingScore >= .4)
                 return 0;
             return 0;
         }
@@ -1332,7 +1332,7 @@ class Profanity {
 
         const consonantCluster = /[bcdfghjklmnpqrstvwxyz]{3,}/i;
         if (consonantCluster.test(beforeText) || consonantCluster.test(afterText)) {
-            paddingScore += 0.4;
+            paddingScore += .4;
             indicators++;
         }
 
@@ -1343,38 +1343,38 @@ class Profanity {
             if (repeatPos >= afterText.length - 3) {
                 const commonDoubles = /\b(ll|ss|tt|nn|mm|pp|dd|bb|gg|ff)$/i;
                 if (!commonDoubles.test(afterRepeats[0]) || afterText.length <= 3) {
-                    paddingScore += 0.35;
+                    paddingScore += .35;
                     indicators++;
                 }
             }
         }
 
         if (beforeText.length <= 2 && beforeText.length > 0) {
-            paddingScore += 0.25;
+            paddingScore += .25;
             indicators++;
         }
 
         if (afterText.length <= 3 && afterText.length > 0) {
             const commonSuffixes = /^(er|ed|ing|ion|ly|al|ful|less|ness|ment|s)$/i;
             if (!commonSuffixes.test(afterText)) {
-                paddingScore += 0.2;
+                paddingScore += .2;
                 indicators++;
             }
         }
 
         const uncommonPatterns = /([qx][^u]|[jqxz]{2}|[bcdfghjklmnpqrstvwxz]{4,})/i;
         if (uncommonPatterns.test(beforeText + afterText)) {
-            paddingScore += 0.3;
+            paddingScore += .3;
             indicators++;
         }
 
         const combined = beforeText + afterText;
         if (combined.length > 0) {
-            const vowels = (combined.match(/[aeiou]/gi) || []).length;
+            const vowels = (combined.match(/[aeiou]/gi) || [ ]).length;
             const ratio = vowels / combined.length;
 
-            if (ratio < 0.2) {
-                paddingScore += 0.3;
+            if (ratio < .2) {
+                paddingScore += .3;
                 indicators++;
             }
         }
@@ -1394,7 +1394,7 @@ class Profanity {
                 subCount++;
 
         const subRatio = subCount / segment.length;
-        return Math.min(0.3, subRatio * 0.6);
+        return Math.min(0.3, subRatio * .6);
     }
 
     isStandaloneWord(text, start, end) {
@@ -1456,12 +1456,12 @@ class Profanity {
 
     match(raw) {
         const str = this.parseString(raw);
-        const found = [];
+        const found = [ ];
 
         for (const hit of Profanity.hits) {
             if (hit.term) {
                 const term = hit.term;
-                const severity = hit.severity || 0.5;
+                const severity = hit.severity || .5;
                 const note = hit.note || null;
                 const isMultiWord = hit.multiWord || false;
 
@@ -1505,10 +1505,10 @@ class Profanity {
                         matchConfidence *= Math.max(0.01, 1 + obfuscation * 4);
                     else if (obfuscation < -0.2)
                         matchConfidence *= Math.max(0.05, 1 + obfuscation * 2.5);
-                    else if (obfuscation > 0.5)
-                        matchConfidence = Math.min(1, matchConfidence + obfuscation * 0.08);
+                    else if (obfuscation > .5)
+                        matchConfidence = Math.min(1, matchConfidence + obfuscation * .08);
 
-                    const threshold = Math.max(0.05, 0.2 - (term.length * 0.015));
+                    const threshold = Math.max(0.05, .2 - (term.length * .015));
 
                     if (matchConfidence >= threshold) {
                         const originalSegment = raw.substring(originalStart, originalEnd);
@@ -1535,8 +1535,8 @@ class Profanity {
                             name: hit.name,
                             match: match,
                             confidence: 1.0,
-                            obfuscation: 0.5,
-                            severity: hit.severity || 0.5,
+                            obfuscation: .5,
+                            severity: hit.severity || .5,
                             note: hit.note || "Pattern-based detection with high confidence. Obfuscation is moderate for formatted data.",
                             originalSegment: match
                         });
@@ -1546,8 +1546,8 @@ class Profanity {
                         name: hit.name,
                         match: raw,
                         confidence: 1.0,
-                        obfuscation: 0.5,
-                        severity: hit.severity || 0.5,
+                        obfuscation: .5,
+                        severity: hit.severity || .5,
                         note: hit.note || "Test-based detection with high confidence.",
                         originalSegment: raw
                     });
@@ -1557,7 +1557,7 @@ class Profanity {
     }
 
     buildPositionMap(original, preserveSpaces = false) {
-        const map = {};
+        const map = { };
         let parsedIndex = 0;
 
         for (let i = 0; i < original.length; i++) {
@@ -1624,15 +1624,15 @@ class Profanity {
         const genuineRatio = genuineChars / totalChars;
 
         // Hard cutoffs: matches dominated by wildcard/filler chars are noise
-        if (genuineRatio < 0.3) return 0;
-        if (genuineRatio < 0.5) return genuineRatio * 0.1;
+        if (genuineRatio < .3) return 0;
+        if (genuineRatio < .5) return genuineRatio * .1;
 
         // Consecutive filler clusters — runs of wildcards indicate noise
         const clusterPenalty = maxConsecutiveFillers > 1 ?
-            Math.max(0.2, 1 - maxConsecutiveFillers * 0.2) : 1;
+            Math.max(0.2, 1 - maxConsecutiveFillers * .2) : 1;
 
         // Character repetition in genuine chars
-        const charCounts = {};
+        const charCounts = { };
         for (const char of matchedString)
             if (!fillerPattern.test(char))
                 charCounts[char] = (charCounts[char] || 0) + 1;
@@ -1640,12 +1640,12 @@ class Profanity {
         let repetitionPenalty = 1;
         for (const count of Object.values(charCounts))
             if (count > 2)
-                repetitionPenalty *= Math.max(0.4, 1 - (count - 2) * 0.15);
+                repetitionPenalty *= Math.max(0.4, 1 - (count - 2) * .15);
 
         // Length inflation — match significantly longer than the term is suspicious
         const lengthRatio = totalChars / originalWord.length;
         const lengthPenalty = lengthRatio > 1.5 ?
-            Math.max(0.2, 1 - (lengthRatio - 1) * 0.4) : 1;
+            Math.max(0.2, 1 - (lengthRatio - 1) * .4) : 1;
 
         // Genuine ratio is the dominant confidence signal
         return Math.max(0, Math.min(1, genuineRatio * clusterPenalty * repetitionPenalty * lengthPenalty));
@@ -1669,7 +1669,7 @@ class Profanity {
             return {
                 finalScore: 0,
                 risk: "No",
-                matches: [],
+                matches: [ ],
                 details: {
                     baseScore: 0,
                     weightedScore: 0,
@@ -1698,7 +1698,7 @@ class Profanity {
         const uniqueMatches = new Set();
 
         for (const match of matches) {
-            const severity = match.severity || 0.5;
+            const severity = match.severity || .5;
             const conf = match.confidence;
 
             // Use confidence^1.5 so low-confidence matches contribute very little
@@ -1709,9 +1709,9 @@ class Profanity {
             totalObfuscation += match.obfuscation || 0;
             uniqueMatches.add(match.name);
 
-            if (conf >= 0.7)
+            if (conf >= .7)
                 highConfidenceMatches++;
-            else if (conf >= 0.4)
+            else if (conf >= .4)
                 mediumConfidenceMatches++;
             else
                 lowConfidenceMatches++;
@@ -1724,16 +1724,16 @@ class Profanity {
         // Base score: tier weights emphasize high-confidence matches
         const baseScore =
               (highConfidenceMatches * 1.0) +
-              (mediumConfidenceMatches * 0.35) +
-              (lowConfidenceMatches * 0.08);
+              (mediumConfidenceMatches * .35) +
+              (lowConfidenceMatches * .08);
 
         // Text density penalty
         const textLength = str.length;
         const matchDensity = matches.length / Math.max(textLength / 5, 1);
-        const densityPenalty = Math.tanh(matchDensity * 0.3) * 0.6;
+        const densityPenalty = Math.tanh(matchDensity * .3) * .6;
 
         // Character repetition penalty
-        const charFrequency = {};
+        const charFrequency = { };
         for (const char of str)
             if (/[a-z0-9]/.test(char))
                 charFrequency[char] = (charFrequency[char] || 0) + 1;
@@ -1748,8 +1748,8 @@ class Profanity {
 
         // Diversity bonus — more unique terms is more concerning
         const uniqueMatchRatio = uniqueMatches.size / matches.length;
-        const diversityBonus = uniqueMatchRatio > 0.6 ?
-              (uniqueMatchRatio - 0.6) * 1.0 : 0;
+        const diversityBonus = uniqueMatchRatio > .6 ?
+              (uniqueMatchRatio - .6) * 1.0 : 0;
 
         // Length modifier
         const lengthModifier = Math.max(0.5, Math.min(1.5,
@@ -1757,32 +1757,32 @@ class Profanity {
         ));
 
         // Obfuscation penalty — high obfuscation means less certainty, not more
-        const obfuscationPenalty = averageObfuscation > 0.4 ?
-              (averageObfuscation - 0.4) * 0.5 :
+        const obfuscationPenalty = averageObfuscation > .4 ?
+              (averageObfuscation - .4) * .5 :
               averageObfuscation < -0.2 ?
-              Math.abs(averageObfuscation) * 0.4 : 0;
+              Math.abs(averageObfuscation) * .4 : 0;
 
         // Critical patterns only count if backed by decent confidence
         const criticalPatterns = matches.filter(
-            m => (m.severity >= 1.0 && m.confidence >= 0.5) || m.confidence >= 0.9
+            m => (m.severity >= 1.0 && m.confidence >= .5) || m.confidence >= .9
         ).length;
-        const criticalBonus = criticalPatterns * 0.8;
+        const criticalBonus = criticalPatterns * .8;
 
         // Compose final score
         const weightedBase = baseScore * averageSeverity * lengthModifier;
         const penalties = densityPenalty + repetitionPenalty + obfuscationPenalty;
 
-        let finalScore = weightedBase + (weightedSeverity * 0.5) + diversityBonus + criticalBonus - penalties;
+        let finalScore = weightedBase + (weightedSeverity * .5) + diversityBonus + criticalBonus - penalties;
 
         // Confidence gate: if average confidence is low, scale everything down
-        if (averageConfidence < 0.5)
+        if (averageConfidence < .5)
             finalScore *= Math.max(0.1, averageConfidence * 1.5);
 
         // Soft cap
         if (finalScore > 3)
             finalScore = 3 + Math.log10(finalScore - 2) * 1.5;
         else if (finalScore > 1.5)
-            finalScore = 1.5 + Math.sqrt(finalScore - 1.5) * 0.8;
+            finalScore = 1.5 + Math.sqrt(finalScore - 1.5) * .8;
 
         finalScore = Math.max(0, finalScore);
 
@@ -1793,7 +1793,7 @@ class Profanity {
             risk = "High";
         else if (finalScore >= 1.5)
             risk = "Medium";
-        else if (finalScore >= 0.5)
+        else if (finalScore >= .5)
             risk = "Low";
 
         return {

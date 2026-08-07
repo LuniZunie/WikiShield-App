@@ -28,7 +28,7 @@ async function CreateBadgeIcon(frame, count) {
                     bgGradient.addColorStop(1, "rgba(236, 72, 153, 1)");
 
                     // drop shadow
-                    pen.shadowColor = "rgba(0, 0, 0, 0.4)";
+                    pen.shadowColor = "rgba(0, 0, 0, .4)";
                     pen.shadowBlur = 3;
                     pen.shadowOffsetY = 1.5;
                     pen.fillStyle = bgGradient;
@@ -41,7 +41,7 @@ async function CreateBadgeIcon(frame, count) {
                     // outer rim highlight
                     pen.shadowColor = "transparent";
                     pen.shadowBlur = 0;
-                    pen.strokeStyle = "rgba(255, 255, 255, 0.35)";
+                    pen.strokeStyle = "rgba(255, 255, 255, .35)";
                     pen.lineWidth = 1;
                     pen.beginPath();
                     pen.arc(${size} / 2, ${size} / 2, ${size} / 2 - 1.5, 0, 2 * Math.PI);
@@ -49,8 +49,8 @@ async function CreateBadgeIcon(frame, count) {
 
                     // inner light gradient for shine
                     const shine = pen.createRadialGradient(${size} / 2 - 2, ${size} / 2 - 2, 0, ${size} / 2, ${size} / 2, ${size} / 2);
-                    shine.addColorStop(0, "rgba(255, 255, 255, 0.5)");
-                    shine.addColorStop(0.4, "rgba(255, 255, 255, 0.1)");
+                    shine.addColorStop(0, "rgba(255, 255, 255, .5)");
+                    shine.addColorStop(0.4, "rgba(255, 255, 255, .1)");
                     shine.addColorStop(1, "rgba(255, 255, 255, 0)");
                     pen.fillStyle = shine;
 
@@ -59,9 +59,9 @@ async function CreateBadgeIcon(frame, count) {
                     pen.fill();
 
                     // text rendering
-                    pen.shadowColor = "rgba(0, 0, 0, 0.5)";
+                    pen.shadowColor = "rgba(0, 0, 0, .5)";
                     pen.shadowBlur = 1.5;
-                    pen.shadowOffsetY = 0.5;
+                    pen.shadowOffsetY = .5;
                     pen.fillStyle = "rgba(255, 255, 255, 1)";
                     pen.font = "bold ${text.length > 2 ? 8 : 10}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
                     pen.textAlign = "center";

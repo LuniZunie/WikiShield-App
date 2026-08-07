@@ -142,7 +142,7 @@ export const events = {
                 }
             };
 
-            const users = Object.entries(pending.users || {}).map(user => [ ws.api.user(user[0]), user[1] ]);
+            const users = Object.entries(pending.users || { }).map(user => [ ws.api.user(user[0]), user[1] ]);
             users.sort((a, b) => b[1] - a[1]); // sort by number of edits
             const overflow = Math.max(users.reduce((sum, user) => {
                 const len = user[0].length;
@@ -214,7 +214,7 @@ export const events = {
                 }
             };
 
-            const users = Object.entries(pending.users || {}).map(user => [ ws.api.user(user[0]), user[1] ]);
+            const users = Object.entries(pending.users || { }).map(user => [ ws.api.user(user[0]), user[1] ]);
             users.sort((a, b) => b[1] - a[1]); // sort by number of edits
             const overflow = Math.max(users.reduce((sum, user) => {
                 const len = user[0].length;
@@ -1231,7 +1231,7 @@ export const events = {
 
                 type: "choice",
                 options: [
-                    ...(ws.api.hasPendingChanges ? [ "Pending changes protection", ] : []),
+                    ...(ws.api.hasPendingChanges ? [ "Pending changes protection", ] : [ ]),
                     "Semi-protection",
                     "Extended-confirmed protection",
                     "Full protection",

@@ -7,7 +7,7 @@ class VolumeControl extends HTMLElement {
 		super();
 		this._title = '';
 		this._description = '';
-		this._value = 0.5;
+		this._value = .5;
 		this._sound = '';
 		this._preview = null;
 	}

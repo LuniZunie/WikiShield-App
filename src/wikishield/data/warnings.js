@@ -859,7 +859,7 @@ export const warnings = {
 	}
 };
 
-const lookup = {};
+const lookup = { };
 for (const [ type, category ] of Object.entries(warnings)) {
 	const len = category.warnings.length;
 	for (let i = 0; i < len; i++) {

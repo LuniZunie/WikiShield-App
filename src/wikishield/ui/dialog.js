@@ -11,7 +11,7 @@ export class Dialog {
 
         this.popups = [ ];
 
-        addEventListener("focus", () => {
+        window.addEventListener("focus", () => {
             if (this.popups.length > 0) {
                 this.popups.forEach(popupId => electron.closePopup(popupId));
                 this.popups = [ ];
