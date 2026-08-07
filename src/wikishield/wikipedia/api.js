@@ -1,3 +1,6 @@
+import { wikishield } from "../global.js";
+
+
 const serversWithPendingChanges = new Set([ ]);
 
 import { truncate } from "../../../global/truncate/script.esm.js";
@@ -6,7 +9,7 @@ import { MediaWikiAPI } from "../web-port/api.js";
 import { MediaWikiOAuth2 } from "../web-port/oauth2.js";
 
 let API;
-if (window.isElectron) {
+if (wikishield.isElectron) {
     API = class API {
         static chunk(array, size = 50) {
             const chunks = [ ];

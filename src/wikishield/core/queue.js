@@ -1128,7 +1128,7 @@ export class Queue {
 				this.ws.api.markWatchlistSeen(leaving.page.title, leaving.id);
 
 			const id = leaving.type === "abuselog" ? leaving.revid : leaving.id;
-			[ "recent", "watchlist", "abuselog" ].filter(t => t !== leaving.type).forEach(t => { // FIX not working on watchlist
+			[ "recent", "watchlist", "abuselog" ].filter(t => t !== leaving.type).forEach(t => {
 				if (t === "abuselog")
 					this.queues[t].queue = this.queues[t].queue.filter(item => {
 						if (item.revid === id) {

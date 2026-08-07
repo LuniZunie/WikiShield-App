@@ -1,3 +1,6 @@
+import { wikishield } from "../global.js";
+
+
 import { AI } from "../ai/class.js";
 import { conditions } from "../config/conditions.js";
 import { buildShortcut, controls, validateShortcut } from "../config/control-keys.js";
@@ -221,7 +224,7 @@ export class Settings {
 		document.querySelector("#settings-about-button").addEventListener("click", this.about.bind(this));
 
 		{
-			if (!window.isElectron) {
+			if (!wikishield.isElectron) {
 				const $launch = document.querySelector("#settings-launch-behavior");
 
 				document.querySelectorAll("#settings-launch-behavior .selected").forEach($el => $el.classList.remove("selected"));
@@ -901,7 +904,7 @@ export class Settings {
 			$popups.addEventListener("change", e => {
 				this.ws.store.settings.wikipedia_popups.enabled = $popups.value;
 			});
-			if (window.arePopupsBlocked)
+			if (wikishield.arePopupsBlocked)
 				document.querySelector("#wikipedia-popups-toggle").classList.add("disabled");
 
 			const $talkPageThanksForTemporaryUsersToggle = document.querySelector("#talk-page-thanks-for-temporary-users-toggle");

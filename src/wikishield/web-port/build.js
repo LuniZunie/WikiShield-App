@@ -1,3 +1,6 @@
+import { wikishield } from "../global.js";
+
+
 import WS_HTML from "../index.html";
 
 import COMMON_CSS from "../../common/style.css";
@@ -32,9 +35,9 @@ export async function build() {
     await new Promise(requestAnimationFrame); // wait for next frame to ensure everything is rendered
 
     document.querySelectorAll("[data-electron]").forEach($el => {
-        if ($el.dataset.electron === "false" && window.isElectron)
+        if ($el.dataset.electron === "false" && wikishield.isElectron)
             $el.style.display = "none";
-        else if ($el.dataset.electron === "true" && !window.isElectron)
+        else if ($el.dataset.electron === "true" && !wikishield.isElectron)
             $el.style.display = "none";
     });
 }

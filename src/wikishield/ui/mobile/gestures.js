@@ -1,3 +1,7 @@
+const userProvedWorthiness = () => {
+    window.localStorage.setItem("seen-mobile-tutorial", new Date().getTime().toString()); // user has proved they know how to use gestures
+};
+
 let preventStopScrolling = false;
 const stopScrolling = event => {
     if (!preventStopScrolling && event.cancelable)
@@ -52,16 +56,22 @@ export function SetupGestures(ws) {
 
             $editDetails.style.height = "";
 
-            if (delta < 30)
+            if (delta < 30) {
+                userProvedWorthiness();
                 return $editDetails.classList.toggle("expanded");
+            }
 
             const maxHeight = window.innerHeight * .4;
             if ($editDetails.classList.contains("expanded")) {
-                if (deltaY > maxHeight / 2)
+                if (deltaY > maxHeight / 2) {
+                    userProvedWorthiness();
                     $editDetails.classList.remove("expanded");
+                }
             } else {
-                if (deltaY < -maxHeight / 2)
+                if (deltaY < -maxHeight / 2) {
+                    userProvedWorthiness();
                     $editDetails.classList.add("expanded");
+                }
             }
         };
 
@@ -141,6 +151,8 @@ export function SetupGestures(ws) {
                         },
                     ]
                 });
+
+            userProvedWorthiness();
         };
         const eventEnd = (x, y) => {
             if (!start.dragging)

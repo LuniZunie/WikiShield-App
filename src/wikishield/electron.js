@@ -1,7 +1,10 @@
+import { wikishield } from "./global.js";
+
+
 import { MediaWikiAPI } from "./web-port/api.js";
 
 if (window.electron === undefined) {
-    window.isElectron = false;
+    wikishield.isElectron = false;
 
     window.electron = {
         mwapiLoader: async () => {
@@ -87,12 +90,12 @@ if (window.electron === undefined) {
         }
     };
 } else {
-    window.isElectron = true;
+    wikishield.isElectron = true;
 
     document.querySelectorAll("[data-electron]").forEach($el => {
-        if ($el.dataset.electron === "false" && window.isElectron)
+        if ($el.dataset.electron === "false" && wikishield.isElectron)
             $el.style.display = "none";
-        else if ($el.dataset.electron === "true" && !window.isElectron)
+        else if ($el.dataset.electron === "true" && !wikishield.isElectron)
             $el.style.display = "none";
     });
 }

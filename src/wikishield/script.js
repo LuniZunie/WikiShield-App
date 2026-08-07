@@ -1,3 +1,6 @@
+import { wikishield } from "./global.js";
+
+
 import "./electron.js";
 
 import "./elements/manager.js";
@@ -9,14 +12,14 @@ import { StorageManager } from "./data/storage/manager.js";
 
 import { Killswitch } from "./wikipedia/killswitch.js";
 
-window.isMobile = isMobileUserAgent(window.navigator.userAgent || window.navigator.vendor || window.opera);
-window.arePopupsBlocked = false;
+wikishield.isMobile = isMobileUserAgent(window.navigator.userAgent || window.navigator.vendor || window.opera);
+wikishield.arePopupsBlocked = false;
 
 export function run() {
-    if (window.isMobile)
-        window.arePopupsBlocked = true;
+    if (wikishield.isMobile)
+        wikishield.arePopupsBlocked = true;
     else
-        window.arePopupsBlocked = (() => {
+        wikishield.arePopupsBlocked = (() => {
             let popup;
             try {
                 popup = window.open("about:blank", "_blank", "width=100,height=100,left=-100,top=-100");
@@ -30,7 +33,7 @@ export function run() {
             }
         })();
 
-    window.addEventListener("click", () => window.ineractedWithPage = true, { once: true });
+    window.addEventListener("click", () => wikishield.interactedWithPage = true, { once: true });
 
     window.addEventListener("wheel", event => {
         if (event.target.closest(".no-scroll"))
@@ -52,8 +55,8 @@ export function run() {
                 .then(data => Object.values(data.entities.Q7765871.sitelinks).find(sitelink => sitelink.url.startsWith(`https://${server}/wiki/`))?.url || null)
                 .catch(() => null) ?? "https://www.wikidata.org/wiki/Q7765871";
 
-            const ws = new WikiShield(window.isMobile, server, username, pendingChangesServers, dev);
-            document.body.classList.toggle("mobile", window.isMobile);
+            const ws = new WikiShield(wikishield.isMobile, server, username, pendingChangesServers, dev);
+            document.body.classList.toggle("mobile", wikishield.isMobile);
 
             electron.onOpenBrowser(() => ws.open(null, false));
             electron.onOpenUrl(url => ws.open(url, false));
@@ -141,5 +144,5 @@ export function run() {
     });
 }
 
-if (window.isElectron)
+if (wikishield.isElectron)
     run();

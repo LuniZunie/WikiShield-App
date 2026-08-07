@@ -1,5 +1,9 @@
-import { generateRandomUUID } from '../../../global/UUID/script.esm.js';
+import { wikishield } from "../global.js";
+
+
 import { Zengine } from './zengine.js';
+
+import { generateRandomUUID } from '../../../global/UUID/script.esm.js';
 
 const audio = {
     startup: {
@@ -252,7 +256,7 @@ export class AudioManager {
             }
         });
 
-        if (window.ineractedWithPage)
+        if (wikishield.interactedWithPage)
             await audio.play();
         else
             callback?.();
@@ -279,7 +283,7 @@ export class AudioManager {
         audio.onended = cleanup;
         audio.onerror = cleanup;
 
-        if (window.ineractedWithPage)
+        if (wikishield.interactedWithPage)
             await audio.play();
     }
 

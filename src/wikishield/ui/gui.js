@@ -1,3 +1,6 @@
+import { wikishield } from "../global.js";
+
+
 import { generateRandomUUID } from "../../../global/UUID/script.esm.js";
 import { CreateDOMElement } from "../../../global/create-dom-element/script.esm.js";
 
@@ -881,8 +884,8 @@ export class GUI {
 		const version = WikiShield.config.changelog.version;
 		if (version.endsWith("-"))
 			this.ws.store.changelog = version.replace(/-$/, "");
-		else if (version.endsWith("!") || version !== this.ws.store.changelog) {
-			this.ws.store.changelog = version.replace(/!$/, "");
+		else if (version.endsWith("+") || version !== this.ws.store.changelog) {
+			this.ws.store.changelog = version.replace(/\+$/, "");
 			this.settings.open();
 			this.settings.changelog();
 			if (this.ws.mobile)
@@ -968,6 +971,26 @@ export class GUI {
 				document.querySelector("#queue-tabs").classList.toggle("scrolled-away", hide);
 				document.querySelector("#copy-link").classList.toggle("scrolled-away", hide);
 			});
+
+			const seenMobileTutorial = window.localStorage.getItem("seen-mobile-tutorial");
+			if (seenMobileTutorial) {
+				const time = new Date(parseInt(seenMobileTutorial));
+				if (new Date() - time > 1000 * 60 * 60 * 24 * 30) // 30 days
+					window.localStorage.removeItem("seen-mobile-tutorial");
+			}
+
+			if (window.localStorage.getItem("seen-mobile-tutorial") === null) {
+				window.localStorage.setItem("seen-mobile-tutorial", new Date().getTime().toString());
+				this.dialog.show("Mobile Tutorial", `<div style="display: flex; flex-direction: column; gap: 12px;">
+					<div style="font-size: 14px;">
+						Welcome to the mobile version of WikiShield! Here are some tips to get you started:
+					</div>
+					<ul style="font-size: 14px; padding-left: 20px;">
+						<li>Swipe left or right on the diff area to navigate between queue items.</li>
+						<li>Tap on the edit details at the bottom to view more information about the edit</li>
+					</ul>
+				</div>`);
+			}
 		}
 	}
 
@@ -3459,7 +3482,7 @@ export class GUI {
 			this.ws.notifications.count();
 
 		const zen = this.ws.store.settings.zen_mode;
-		if (zen.enabled && zen.music.enabled && window.isElectron)
+		if (zen.enabled && zen.music.enabled && wikishield.isElectron)
 			this.ws.audio.zengine.start();
 		else
 			this.ws.audio.zengine.stop();

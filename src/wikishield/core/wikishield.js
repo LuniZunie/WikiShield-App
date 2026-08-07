@@ -1,3 +1,6 @@
+import { wikishield } from "../global.js";
+
+
 import { VERSION } from "../data/version.js";
 
 import { Utility } from "../utilities/helpers.js";
@@ -14,12 +17,32 @@ import { AI } from "../ai/class.js";
 import { StorageManager } from "../data/storage/manager.js";
 import { buildShortcut } from "../config/control-keys.js";
 
+const FormatChangelogVersion = (dev, version) =>
+	(suffix => {
+		if ((suffix ?? true) === true) {
+			if (dev) // if dev, always show changelog
+				return `${version}+`;
+			else if (version.endsWith("0")) // either a minor or major release, show changelog
+				return version;
+			else // patch release, don't show changelog
+				return `${version}-`;
+		} else if (typeof suffix === "number") {
+			if (number > 0)
+				return `${version}+`;
+			else if (number < 0)
+				return `${version}-`;
+		}
+
+		return version;
+	});
+
+
 export class WikiShield {
 	static config = {
 		version: VERSION,
 
 		changelog: {
-			version: "20", // suffixes: ! = force show, - = never show
+			version: undefined, // will be populated during construction
 			HTML: fetch("https://raw.githubusercontent.com/LuniZunie/WikiShield-App/refs/heads/main/data/CHANGELOG.html")
 				.then(res => res.text())
 				.catch(() => "<em>Could not fetch changelog.</em>")
@@ -48,6 +71,8 @@ export class WikiShield {
 	};
 
 	constructor(mobile, server, username, pendingChangesServers, dev) {
+		WikiShield.config.changelog.version = FormatChangelogVersion(dev, VERSION)(true);
+
 		this.mobile = mobile;
 
 		this.__DEV__ = dev;
@@ -490,7 +515,7 @@ export class WikiShield {
 	}
 
 	open(href, external) {
-		if (window.arePopupsBlocked)
+		if (wikishield.arePopupsBlocked)
 			external = true;
 		else if (external === "force")
 			external = false;

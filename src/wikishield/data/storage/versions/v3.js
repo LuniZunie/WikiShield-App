@@ -18,7 +18,7 @@ Version.v3 = class V3 extends Version {
         return {
             version: 3,
 
-            changelog: "20",
+            changelog: "2.1.0",
 
             settings: {
                 performance: {
