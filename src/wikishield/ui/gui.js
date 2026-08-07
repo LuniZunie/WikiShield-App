@@ -92,7 +92,7 @@ export class GUI {
 		this.updateAccessibility();
 
 		document.querySelector("#initial").classList.remove("hidden");
-		document.querySelectorAll(".VERSION").forEach(elem => elem.textContent = WikiShield.config.version);
+		document.querySelectorAll(".VERSION").forEach($el => $el.textContent = WikiShield.config.version);
 		if (Math.random() < .01)
 			document.querySelector("#wikishield-sikiwhield").textContent = "SikiWhield";
 
@@ -106,8 +106,8 @@ export class GUI {
 		let animationFrame;
 		const startupPerformance = this.ws.store.settings.performance.startup;
 		if (startupPerformance !== "always_off") {
-			const paper = document.getElementById("dots-canvas");
-			const pen = paper.getContext("2d");
+			const $paper = document.getElementById("dots-canvas");
+			const pen = $paper.getContext("2d");
 
 			const DPR = Math.min(devicePixelRatio || 1, 2);
 			class Dot {
@@ -123,8 +123,8 @@ export class GUI {
 
 				radius = 2;
 				constructor() {
-					this.x = Math.random() * paper.width;
-					this.y = Math.random() * paper.height;
+					this.x = Math.random() * $paper.width;
+					this.y = Math.random() * $paper.height;
 
 					this.vx = (Math.random() - .5) * .5;
 					this.vy = (Math.random() - .5) * .5;
@@ -139,13 +139,13 @@ export class GUI {
 					this.y += this.vy;
 
 					if (this.x < 0)
-						this.x = paper.width;
-					else if (this.x > paper.width)
+						this.x = $paper.width;
+					else if (this.x > $paper.width)
 						this.x = 0;
 
 					if (this.y < 0)
-						this.y = paper.height;
-					else if (this.y > paper.height)
+						this.y = $paper.height;
+					else if (this.y > $paper.height)
 						this.y = 0;
 				}
 
@@ -165,19 +165,19 @@ export class GUI {
 					return;
 				resizeRAF = requestAnimationFrame(() => {
 					resizeRAF = null;
-					const oldWidth = paper.width;
-					const oldHeight = paper.height;
+					const oldWidth = $paper.width;
+					const oldHeight = $paper.height;
 
-					paper.width = Math.floor(innerWidth * DPR);
-					paper.height = Math.floor(innerHeight * DPR);
-					paper.style.width = `${innerWidth}px`;
-					paper.style.height = `${innerHeight}px`;
+					$paper.width = Math.floor(innerWidth * DPR);
+					$paper.height = Math.floor(innerHeight * DPR);
+					$paper.style.width = `${innerWidth}px`;
+					$paper.style.height = `${innerHeight}px`;
 
 					pen.setTransform(1, 0, 0, 1, 0, 0);
 					pen.scale(DPR, DPR);
 
-					const scaleX = paper.width / (oldWidth || paper.width);
-					const scaleY = paper.height / (oldHeight || paper.height);
+					const scaleX = $paper.width / (oldWidth || $paper.width);
+					const scaleY = $paper.height / (oldHeight || $paper.height);
 
 					Dot.dots.forEach(dot => {
 						dot.x *= scaleX;
@@ -231,7 +231,7 @@ export class GUI {
 									cancelAnimationFrame(animationFrame);
 								animationFrame = null;
 
-								pen.clearRect(0, 0, paper.width, paper.height);
+								pen.clearRect(0, 0, $paper.width, $paper.height);
 
 								return;
 							}
@@ -245,7 +245,7 @@ export class GUI {
 					}
 				}
 
-				pen.clearRect(0, 0, paper.width, paper.height);
+				pen.clearRect(0, 0, $paper.width, $paper.height);
 
 				Dot.dots.forEach(dot => {
 					dot.update();
