@@ -9269,18 +9269,24 @@ body {
                             display: block;
 
                             margin-top: 1em;
+
+                            word-break: break-all;
                         }
 
                         & > .tags {
                             display: flex;
 
                             margin-top: 1em;
+
+                            word-break: break-all;
                         }
 
                         & > .filters {
                             display: flex;
 
                             margin-top: 1em;
+
+                            word-break: break-all;
                         }
                     }
                 }

@@ -151,7 +151,7 @@ export class MediaWikiAPI {
         try {
             return await this.post({ ...params, token: await this.getToken(type, bypass, serverOverride) }, bypass, serverOverride);
         } catch (err) {
-            if (err === "badtoken" && !attempted) {
+            if (err === "badtoken") {
                 delete this.tokens[`${serverOverride ?? this.server}:${type}`];
                 try {
                     return await this.postWithToken(params, type, bypass, serverOverride, true);

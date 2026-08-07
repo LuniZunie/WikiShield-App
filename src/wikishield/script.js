@@ -9,6 +9,7 @@ import { StorageManager } from "./data/storage/manager.js";
 
 import { Killswitch } from "./wikipedia/killswitch.js";
 
+window.isApp = (window.navigator.userAgent || window.navigator.vendor || window.opera).endsWith("WikipediaApp");
 window.isMobile = isMobileUserAgent(window.navigator.userAgent || window.navigator.vendor || window.opera);
 window.arePopupsBlocked = false;
 
