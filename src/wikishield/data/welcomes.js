@@ -22,8 +22,8 @@ export const welcomes = {
 
     "Vandalism fighter": {
         title: "Vandalism fighter",
-        template: "Welcome-vandalism fighter",
-        sign: false
+        template: "Welcome-vandalism-fighter",
+        sign: true
     },
 
     "Personal": {

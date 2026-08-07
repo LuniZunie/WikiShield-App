@@ -5,19 +5,27 @@ import { build } from "./build.js";
     "use strict";
 
     function start() {
-        build().then(() => {
-            run();
+        if ((window.navigator.userAgent || window.navigator.vendor || window.opera).endsWith("WikipediaApp"))
+            return (async title => {
+                const html = await new mw.Api().get({ action: "parse", page: title, prop: "text", formatversion: 2 });
+                document.querySelector("#mw-content-text").innerHTML = html.parse.text;
+            })("Wikipedia:WikiShield/run/app");
 
-            window.onpopstate = event => {
-                if (event.state?.page !== "WikiShield") {
-                    window.location.reload();
-                    window.onpopstate = null;
-                }
-            };
-        }).catch(error => {
-            console.error("[WikiShield] Error during build:", error);
-            alert("An error occurred while starting WikiShield. Please check the console for details.");
-        });
+        build()
+            .then(() => {
+                run();
+
+                window.onpopstate = event => {
+                    if (event.state?.page !== "WikiShield") {
+                        window.location.reload();
+                        window.onpopstate = null;
+                    }
+                };
+            })
+            .catch(error => {
+                console.error("[WikiShield] Error during build:", error);
+                alert("An error occurred while starting WikiShield. Please check the console for details.");
+            });
     }
 
     const $link = mw.util.addPortletLink(
