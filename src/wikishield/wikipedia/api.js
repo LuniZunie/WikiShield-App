@@ -52,7 +52,7 @@ if (window.isElectron) {
         }
 
         summary(base, custom) {
-            const watermark = " ([[:en:WP:WikiShield|WS]])";
+            const watermark = this.#ws.mobile ? " ([[:en:WP:WikiShield#Mobile|WS-Mobile]])" : " ([[:en:WP:WikiShield|WS]])"; // tehehe;
             const message = `${base}${custom ? `: ${custom}` : ""}`;
             return `${truncate(message, 500 - watermark.length)}${watermark}`;
         }

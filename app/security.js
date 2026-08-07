@@ -1,8 +1,16 @@
+const { exec } = require('child_process');
 const { shell } = require('electron/common');
 const { safeStorage } = require('electron/main');
 
 class Security {
-    static openExternal(url) {
+    static openExternal(url = "about:blank") {
+        if (url === "about:blank")
+            switch (process.platform) {
+                case "win32": return exec("start https://");
+                case "darwin": return exec("open https://");
+                default: return exec("xdg-open https://");
+            }
+
         const protocol = new URL(url).protocol;
         const protocols = [ "http:", "https:", "mailto:", "wikishield:", "tel", "file:" ]; // yes, we allow file: protocol because malware would already need to be downloaded to exploit that
         if (protocols.includes(protocol))

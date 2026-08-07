@@ -26,17 +26,6 @@ export class GUI {
 		grey: BuildPalette(1000, "#000000", "#ffffff"),
 	}
 
-	#cache = {
-		$pc: undefined,
-		$bottom: undefined,
-		$diff: undefined,
-
-		top: null,
-		left: null,
-
-		margin: null,
-	};
-
 	constructor(ws) {
 		this.ws = ws;
 
@@ -55,6 +44,27 @@ export class GUI {
 	}
 
 	async build() {
+		if (this.ws.mobile) {
+			const $app = document.querySelector("#app");
+			$app.appendChild(document.querySelector("#queue-tabs"));
+
+			const $bottomTools = document.querySelector("#bottom-tools");
+			[ ...$bottomTools.querySelectorAll(".bottom-tool-item") ].reverse().forEach($tool => $bottomTools.appendChild($tool));
+
+			const $settings = document.querySelector("#settings-icon");
+			$app.appendChild($settings);
+
+			const $mobileBottomToolCollapse = document.querySelector("#mobile-bottom-tool-collapse");
+			$mobileBottomToolCollapse.addEventListener("click", event => {
+				$bottomTools.classList.toggle("collapsed");
+				if ($bottomTools.classList.contains("collapsed"))
+					$mobileBottomToolCollapse.querySelector("i.fas").className = "fas fa-chevron-up";
+				else
+					$mobileBottomToolCollapse.querySelector("i.fas").className = "fas fa-chevron-down";
+			});
+		} else
+			document.querySelector("#mobile-bottom-tool-collapse").remove();
+
 		this.updateDEFCON();
 
 		document.documentElement.style.colorScheme = { light: "only light", auto: "light dark", dark: "only dark" }[this.ws.store.UI.theme.app] || "light dark";
@@ -367,6 +377,17 @@ export class GUI {
 				event.stopPropagation();
 			}
 
+			if (this.ws.mobile) {
+				const $editDetails = document.querySelector("#edit-details");
+				if ($editDetails.classList.contains("expanded") && !event.target.closest("#edit-details")) {
+					$editDetails.classList.remove("expanded");
+					event.preventDefault();
+					event.stopPropagation();
+
+					return;
+				}
+			}
+
 			const $href = event.target.closest("[href]");
 			if ($href) {
 				const url = new URL($href.href, location.href);
@@ -569,6 +590,9 @@ export class GUI {
 		document.querySelector("#initial").classList.add("hidden");
 
 		document.querySelectorAll(".bottom-tool-trigger").forEach($trigger => {
+			if ($trigger.closest("#mobile-bottom-tool-collapse"))
+				return;
+
 			$trigger.addEventListener("click", e => {
 				e.stopPropagation();
 
@@ -608,6 +632,9 @@ export class GUI {
 		document.querySelectorAll(".submenu-trigger").forEach($trigger => {
 			let exited = generateRandomUUID();
 			$trigger.addEventListener("mouseenter", () => {
+				if (this.ws.mobile)
+					return;
+
 				exited = null;
 
 				const $parentMenu = $trigger.closest(".bottom-tool-menu");
@@ -624,6 +651,9 @@ export class GUI {
 			});
 
 			$trigger.addEventListener("mouseleave", () => {
+				if (this.ws.mobile)
+					return;
+
 				const UUID = generateRandomUUID();
 				exited = UUID;
 
@@ -635,6 +665,30 @@ export class GUI {
 					if ($submenu)
 						$submenu.classList.remove("show");
 				}, 500);
+			});
+
+			$trigger.addEventListener("click", e => {
+				if (!this.ws.mobile)
+					return;
+
+				e.stopPropagation();
+
+				const $submenu = $trigger.querySelector(".submenu");
+				if (!$submenu)
+					return;
+
+				const wasShown = $submenu.classList.contains("show");
+
+				const $parentMenu = $trigger.closest(".bottom-tool-menu");
+				if ($parentMenu) {
+					$parentMenu.querySelectorAll(".submenu").forEach($s => $s.classList.remove("show"));
+				}
+
+				if (!wasShown) {
+					this.events.submenu($submenu, $submenu.dataset.eventName);
+					$submenu.classList.add("show");
+					this.positionSubmenu($submenu, $trigger);
+				}
 			});
 		});
 
@@ -656,11 +710,12 @@ export class GUI {
 				$icon.addEventListener("click", () => {
 					const $panel = document.querySelector(`#${type}s-panel`);
 					$panel.classList.toggle("show");
-					if ($panel.classList.contains("show"))
+					if (!this.ws.mobile && $panel.classList.contains("show"))
 						this.ws.notifications.seen(type);
 				});
 				document.querySelector(`#mark-all-${type}s-read`).addEventListener("click", e => {
-					this.ws.notifications.read(type);
+					if (!this.ws.mobile)
+						this.ws.notifications.read(type);
 				});
 			});
 			document.addEventListener("click", e => {
@@ -893,14 +948,30 @@ export class GUI {
 
 		electron.menuEnabler({ browser: true, settings: { preferences: true }, help: { changelog: true } });
 
-		if (this.ws.mobile)
+		if (this.ws.mobile) {
 			SetupGestures(this.ws);
+
+			document.querySelector("#diff-container").addEventListener("scroll", () => {
+				const hide = document.querySelector("#diff-container").scrollTop > 0;
+				document.querySelector("#queue-tabs").classList.toggle("hidden", hide);
+				document.querySelector("#settings-icon").classList.toggle("hidden", hide);
+			});
+		}
 	}
+
+	#cache = {
+		$pc: undefined,
+		$bottom: undefined,
+		$diff: undefined,
+	};
 
 	cache() {
 		this.#cache.$pc = document.querySelector("#pending-changes-container");
-		this.#cache.$bottom = this.ws.mobile ? document.querySelector("#edit-detials") : document.querySelector("#bottom-tools");
-		this.#cache.$diff = document.querySelector("#diff-container > table");
+		this.#cache.$bottom = this.ws.mobile ? document.querySelector("#edit-details") : document.querySelector("#bottom-tools");
+		this.#cache.$diff = document.querySelector("#diff-container > *");
+		this.#cache.$mobile = document.querySelector("#mobile-user-warning-level");
+		this.#cache.$diffScrollUp = document.querySelector("#diff-scroll-up");
+		this.#cache.$notices = document.querySelector("#mobile-notices");
 	}
 
 	animation() {
@@ -912,10 +983,25 @@ export class GUI {
 				cache.left = null;
 			}
 			if (!cache.$bottom?.isConnected) {
-				cache.$bottom = this.ws.mobile ? document.querySelector("#edit-detials") : document.querySelector("#bottom-tools");
+				cache.$bottom = this.ws.mobile ? document.querySelector("#edit-details") : document.querySelector("#bottom-tools");
 				cache.top = null;
 				cache.left = null;
 				cache.marginBottom = null;
+			}
+
+			if (this.ws.mobile) {
+				if (!cache.$mobile?.isConnected) {
+					cache.$mobile = document.querySelector("#mobile-user-warning-level");
+					cache.mobileTop = null;
+				}
+				if (!cache.$diffScrollUp?.isConnected) {
+					cache.$diffScrollUp = document.querySelector("#diff-scroll-up");
+					cache.mobileTop = null;
+				}
+				if (!cache.$notices?.isConnected) {
+					cache.$notices = document.querySelector("#mobile-notices");
+					cache.mobileTop = null;
+				}
 			}
 
 			if (cache.$pc && cache.$bottom) {
@@ -925,7 +1011,7 @@ export class GUI {
 				const left = (bottomRect.left + bottomRect.right) / 2;
 
 				if (cache.top !== top) {
-					cache.$pc.style.top = `${top}px`;
+					cache.$pc.style.top = `${top + 1}px`;
 					cache.top = top;
 				}
 				if (cache.left !== left) {
@@ -934,7 +1020,7 @@ export class GUI {
 				}
 
 				if (!cache.$diff?.isConnected) {
-					cache.$diff = document.querySelector("#diff-container > table");
+					cache.$diff = document.querySelector("#diff-container > *");
 					cache.marginBottom = null;
 				}
 				if (cache.$diff) {
@@ -942,6 +1028,17 @@ export class GUI {
 					if (cache.marginBottom !== marginBottom) {
 						cache.$diff.style.marginBottom = `${marginBottom}px`;
 						cache.marginBottom = marginBottom;
+					}
+
+					if (this.ws.mobile) {
+						const diffRect = cache.$diff.getBoundingClientRect();
+						const top = diffRect.top;
+						if (cache.mobileTop !== top) {
+							cache.$mobile.style.top = `${Math.max(8, top)}px`;
+							cache.$diffScrollUp.style.top = `${Math.max(8, top)}px`;
+							cache.$notices.style.top = `${Math.max(8, top)}px`;
+							cache.mobileTop = top;
+						}
 					}
 				}
 			}
@@ -1283,7 +1380,8 @@ export class GUI {
 
 		const pending = Queue.groups[item.type] === "edit" ? this.ws.queue.pending.get(item.id) : null;
 
-		$details.style.setProperty("--diff-color", "sizediff" in item ? this.ws.util.getChangeColor(item.sizediff) : undefined);
+		const sizediff = (consecutive ? item?.consecutive?.sizediff : undefined) ?? item.sizediff;
+		$details.style.setProperty("--diff-color", sizediff === undefined ? undefined : this.ws.util.getChangeColor(item.sizediff));
 		$details.innerHTML = "";
 
 		{
@@ -1570,10 +1668,10 @@ export class GUI {
 					$comment.appendChild(CreateDOMElement("div", {
 						class: "comments",
 						html: data.edits.map(edit => {
-							const $comment = CreateDOMElement("div", {
-								class: "comment",
-								html: edit.comment || "No edit summary"
-							});
+							const $comment = CreateDOMElement("div", { class: "comment" });
+
+							const $main = CreateDOMElement("div", { class: "main" });
+							$comment.appendChild($main);
 
 							const $time = CreateDOMElement("span", {
 								class: "time",
@@ -1584,42 +1682,93 @@ export class GUI {
 								}
 							});
 							this.addTooltipListener($time);
-							$comment.insertBefore($time, $comment.firstChild);
+							$main.appendChild($time);
+
+							const $parsed = CreateDOMElement("span", {
+								class: "parsed",
+								html: edit.parsedcomment || "No edit summary"
+							});
+							$main.appendChild($parsed);
+
+							if (edit.tags)
+								$comment.appendChild(CreateDOMElement("div", {
+									class: "tags",
+									html: edit.tags.map(tag => {
+										const $tag = CreateDOMElement("span", {
+											class: "tag",
+											content: `#${tag}`,
+										});
+										return $tag.outerHTML;
+									}).join("")
+								}));
 
 							return $comment.outerHTML;
 						}).join("<br>")
 					}));
-			} else if (item.has_comment) {
-				const $comment = CreateDOMElement("div", {
-					class: "item-comment",
-				});
-				$subheader.appendChild($comment);
-
-				const $icon = CreateDOMElement("i", {
-					class: "fas fa-comment",
-					style: {
-						"font-size": "11px"
-					}
-				});
-				$comment.appendChild($icon);
-
-				const $text = CreateDOMElement("span", {
-					class: "text",
-					html: item.comment,
-					dataset: {
-						tooltip: item.comment,
-						tooltipHtml: true,
-						tooltipDelay: 500
-					}
-				});
-				this.addTooltipListener($text);
-				$comment.appendChild($text);
 			} else {
-				const $noComment = CreateDOMElement("div", {
-					class: "item-comment none",
-					content: "No edit summary"
-				});
-				$subheader.appendChild($noComment);
+				let $comment;
+				if (item.has_comment) {
+					$comment = CreateDOMElement("div", {
+						class: "item-comment",
+					});
+					$subheader.appendChild($comment);
+
+					const $icon = CreateDOMElement("i", {
+						class: "fas fa-comment",
+						style: {
+							"font-size": "11px"
+						}
+					});
+					$comment.appendChild($icon);
+
+					const $text = CreateDOMElement("span", {
+						class: "text",
+						html: item.comment,
+						dataset: {
+							tooltip: item.comment,
+							tooltipHtml: true,
+							tooltipDelay: 500
+						}
+					});
+					this.addTooltipListener($text);
+					$comment.appendChild($text);
+				} else {
+					$comment = CreateDOMElement("div", { class: "item-comment none" });
+
+					const $text = CreateDOMElement("span", {
+						class: "text",
+						content: "No edit summary"
+					});
+					$comment.appendChild($text);
+
+					$subheader.appendChild($comment);
+				}
+
+				if (this.ws.mobile) {
+					if (item.tags)
+						$comment.appendChild(CreateDOMElement("div", {
+							class: "tags",
+							html: item.tags.map(tag => {
+								const $tag = CreateDOMElement("span", {
+									class: "tag",
+									content: `#${tag}`,
+								});
+								return $tag.outerHTML;
+							}).join("")
+						}));
+					if (item.filters)
+						$comment.appendChild(CreateDOMElement("div", {
+							class: "filters",
+							html: item.filters.map(filter => {
+								const $filter = CreateDOMElement("span", {
+									class: "chip filter-chip",
+									content: `${filter.filter} (${filter.id === "-1" ? "private" : filter.id})`,
+								});
+								this.addTooltipListener($filter);
+								return $filter.outerHTML;
+							}).join("")
+						}));
+				}
 			}
 
 			{
@@ -1628,73 +1777,45 @@ export class GUI {
 				});
 				$subheader.appendChild($meta);
 
-				if (consecutive) {
-					if ("sizediff" in item?.consecutive) {
-						$details.style.setProperty("--diff-color", "sizediff" in item ? this.ws.util.getChangeColor(item.consecutive.sizediff) : undefined);
-						const $diff = CreateDOMElement("span", {
-							class: "diff-chip",
-							content: Math.abs(item.consecutive.sizediff).toLocaleString(),
-							dataset: {
-								tooltip: "Size difference",
-								tooltipDelay: 500
-							}
-						});
-						this.addTooltipListener($diff);
-						$meta.appendChild($diff);
-
-						if (item.consecutive.sizediff !== 0) {
-							const $icon = CreateDOMElement("i", {
-								class: `fas fa-${item.consecutive.sizediff > 0 ? "plus" : "minus"}`,
-								style: {
-									"font-size": "1em"
-								}
-							});
-							$diff.prepend($icon);
+				if (!consecutive && item.minor) {
+					const $minor = CreateDOMElement("span", {
+						class: "chip minor-chip",
+						dataset: {
+							tooltip: "Minor edit",
+							tooltipDelay: 500
 						}
-					}
-				} else {
-					if (item.minor) {
-						const $minor = CreateDOMElement("span", {
-							class: "minor-chip",
-							dataset: {
-								tooltip: "Minor edit",
-								tooltipDelay: 500
-							}
-						});
-						this.addTooltipListener($minor);
-						$meta.appendChild($minor);
+					});
+					this.addTooltipListener($minor);
+					$meta.appendChild($minor);
 
-						const $icon = CreateDOMElement("i", {
-							class: "fas fa-m",
+					const $icon = CreateDOMElement("i", {
+						class: "fas fa-m",
+						style: {
+							"font-size": "11px"
+						}
+					});
+					$minor.appendChild($icon);
+				}
+
+				if (sizediff !== undefined) {
+					const $diff = CreateDOMElement("span", {
+						class: "chip diff-chip",
+						content: Math.abs(sizediff).toLocaleString(),
+						dataset: {
+							tooltip: "Size difference",
+							tooltipDelay: 500
+						}
+					});
+					this.addTooltipListener($diff);
+					$meta.appendChild($diff);
+
+					if (sizediff !== 0)
+						$diff.prepend(CreateDOMElement("i", {
+							class: `fas fa-${sizediff > 0 ? "plus" : "minus"}`,
 							style: {
-								"font-size": "11px"
+								"font-size": "1em"
 							}
-						});
-						$minor.appendChild($icon);
-					}
-
-					if ("sizediff" in item) {
-						const $diff = CreateDOMElement("span", {
-							class: "diff-chip",
-							content: Math.abs(item.sizediff).toLocaleString(),
-							dataset: {
-								tooltip: "Size difference",
-								tooltipDelay: 500
-							}
-						});
-						this.addTooltipListener($diff);
-						$meta.appendChild($diff);
-
-						if (item.sizediff !== 0) {
-							const $icon = CreateDOMElement("i", {
-								class: `fas fa-${item.sizediff > 0 ? "plus" : "minus"}`,
-								style: {
-									"font-size": "1em"
-								}
-							});
-							$diff.prepend($icon);
-						}
-					}
+						}));
 				}
 			}
 		}
@@ -1714,10 +1835,35 @@ export class GUI {
 				if ($diff)
 					$meta.appendChild($diff);
 
-				const $minor = $subheader.querySelector(".minor-chip");
-				if ($minor) {
-					$minor.innerHTML = "minor";
-					$meta.appendChild($minor);
+				if (item.type === "abuselog") {
+					{
+						const results = [ "disallow", "warn", "showcaptcha", "tag", "none" ];
+						const len = results.length;
+						let action = len - 1;
+						for (let i = 0; i < len; i++)
+							if (item.origin.result.has(results[i])) {
+								action = i;
+								break;
+							}
+
+						const $ores = CreateDOMElement("span", {
+							class: "chip ores-chip",
+							content: `Action: ${[ "Disallow", "Warn", "Show Captcha", "Tag", "None" ][action]}`,
+							style: {
+								"--ores-color": this.getORESColor(item.ores),
+							}
+						});
+						this.addTooltipListener($ores);
+						$meta.appendChild($ores);
+
+						const $icon = CreateDOMElement("i", {
+							class: `fas fa-${[ "ban", "exclamation-triangle", "robot", "tag", "check" ][action]}`,
+							style: {
+								"font-size": "11px"
+							}
+						});
+						$ores.prepend($icon);
+					}
 				}
 			}
 
@@ -1736,9 +1882,11 @@ export class GUI {
 		}
 	}
 
-	renderQueue(queue = null, current = null, type = null) {
-		document.querySelector("#previous-item-button").classList.toggle("disabled", !this.ws.queue.canGoPrevious());
-		document.querySelector("#next-item-button").classList.toggle("disabled", !this.ws.queue.canGoNext());
+	renderQueue(queue = null, current = null, type = null, direction = null) {
+		if (!this.ws.mobile) {
+			document.querySelector("#previous-item-button").classList.toggle("disabled", !this.ws.queue.canGoPrevious());
+			document.querySelector("#next-item-button").classList.toggle("disabled", !this.ws.queue.canGoNext());
+		}
 
 		queue ??= this.ws.queue.current.queue;
 		current ??= this.ws.queue.current.item;
@@ -1747,6 +1895,15 @@ export class GUI {
 		this.updateQueueTabs();
 		if (type !== this.ws.queue.current.type)
 			return;
+
+		if (this.ws.mobile) {
+			if (this.ws.queue.queues[type].previous?.id !== current?.id) {
+				this.ws.queue.queues[type].previous = current;
+				this.newCurrentItem(current, false, direction);
+			}
+
+			return;
+		}
 
 		const $queue = document.querySelector("#queue-items");
 		if (queue.length === 0) {
@@ -1862,6 +2019,9 @@ export class GUI {
 		}
 	}
 	removeQueueItem(type, id) {
+		if (this.ws.mobile)
+			return this.updateQueueTabs([ type ]);
+
 		const $el = document.querySelector(`.queue-item[data-type="${type}"][data-id="${id}"]`);
 		if ($el) {
 			$el.remove();
@@ -1899,16 +2059,20 @@ export class GUI {
 		});
 	}
 
-	async newCurrentItem(item = null, circular = false) {
+	async newCurrentItem(item = null, circular = false, direction = null) {
 		this.controllers.current?.abort();
 
 		const controller = new AbortController();
 		this.controllers.current = controller;
 
+		const slide = (this.ws.mobile && direction && !circular) ? this.startQueueSlide(direction) : null;
+
 		if (item !== null) {
 			this.updateDiffDisplay("loading");
+			slide?.finish();
 			await this.ws.queue.propagate(item, true);
-		}
+		} else
+			slide?.finish();
 
 		this.stopOutdatedCheck();
 		this.toggleEditWarNotice(item?.reverts >= 3, item?.reverts || 0);
@@ -1928,6 +2092,7 @@ export class GUI {
 
 		document.querySelector("#user-contributions > .header > .pills").innerHTML = "";
 		document.querySelector("#page-history > .header > .pills").innerHTML = "";
+		document.querySelector("#mobile-user-warning-level").innerHTML = "";
 
 		document.querySelector("#pending-changes-container").classList.toggle("hidden", !(this.ws.rights.review && this.ws.queue.pending.has(item?.id)));
 
@@ -1993,36 +2158,38 @@ export class GUI {
 		document.querySelector("#user-report-uaa").classList.toggle("hidden", item?.user.anon);
 		document.querySelector("#user-request-global-lock").classList.toggle("hidden", item?.user.anon);
 
-		if (this.ws.AI) {
-			const storage = this.ws.store;
-			if (item.AI.edit === null && storage.settings.AI.edit_analysis.enabled)
-				this.ws.AI.analyze.edit(item)
-					.then(analysis => {
-						item.AI.edit = analysis;
-					})
-					.catch(err => {
-						item.AI.edit = {
-							error: err.message
-						};
-					}).finally(() => {
-						if (item.id === this.ws.queue.current.item?.id)
-							this.updateAIAnalysisDisplay(item.AI.edit);
-					});
+		if (!this.ws.mobile) {
+			if (this.ws.AI) {
+				const storage = this.ws.store;
+				if (item.AI.edit === null && storage.settings.AI.edit_analysis.enabled)
+					this.ws.AI.analyze.edit(item)
+						.then(analysis => {
+							item.AI.edit = analysis;
+						})
+						.catch(err => {
+							item.AI.edit = {
+								error: err.message
+							};
+						}).finally(() => {
+							if (item.id === this.ws.queue.current.item?.id)
+								this.updateAIAnalysisDisplay(item.AI.edit);
+						});
 
-			if (item.AI.username === null && !item.user.anon && !storage.whitelist.users.has(item.user) && storage.settings.AI.username_analysis.enabled)
-				this.ws.AI.analyze.username(item)
-					.then(analysis => {
-						item.AI.username = analysis;
-						if (analysis.flag)
-							this.ws.queue.promptUAA(item, analysis);
-					})
-					.catch(err => {
-						item.AI.username = {
-							error: err.message
-						};
-					});
+				if (item.AI.username === null && !item.user.anon && !storage.whitelist.users.has(item.user) && storage.settings.AI.username_analysis.enabled)
+					this.ws.AI.analyze.username(item)
+						.then(analysis => {
+							item.AI.username = analysis;
+							if (analysis.flag)
+								this.ws.queue.promptUAA(item, analysis);
+						})
+						.catch(err => {
+							item.AI.username = {
+								error: err.message
+							};
+						});
+			}
+			this.updateAIAnalysisDisplay(item.AI.edit);
 		}
-		this.updateAIAnalysisDisplay(item.AI.edit);
 
 		if (!item.seen) {
 			item.seen = true;
@@ -2045,9 +2212,16 @@ export class GUI {
 					this.ws.store.statistics.abuselogs_reviewed.total++;
 				} break;
 			}
+
+			if (this.ws.mobile) {
+				if (type === "recent" && item.ores >= this.ws.store.settings.audio.ores_alert.threshold && this.ws.store.settings.audio.ores_alert.enabled)
+					this.ws.audio.playSound([ "queue", "ores" ]);
+				if (item.mentions.has && this.ws.store.settings.username_highlighting.enabled)
+					this.ws.audio.playSound([ "queue", "mention" ]);
+			}
 		}
 
-		{
+		if (!this.ws.mobile) {
 			const $editPill = CreateDOMElement("div", {
 				class: "pill",
 				content: `${item.user.edits.toLocaleString()} edit${item.user.edits === 1 ? "" : "s"}`,
@@ -2055,7 +2229,29 @@ export class GUI {
 			document.querySelector("#user-contributions > .header > .pills").appendChild($editPill);
 		}
 
-		if (item.user.warning !== "0") {
+		if (this.ws.mobile) {
+			const $warnings = CreateDOMElement("div", {
+				class: `pill uw-${item.user.warning}`,
+			});
+			document.querySelector("#mobile-user-warning-level").appendChild($warnings);
+
+			$warnings.textContent = `uw-${item.user.warning}`;
+
+			const warnings = item.user.warnings;
+			$warnings.addEventListener("click", () => {
+				if (warnings.length === 0)
+					this.dialog.show("User Warnings", "No warnings found");
+				else
+					this.dialog.show("User Warnings", warnings.map(warning => {
+						const date = warning.timestamp ? ` ${this.ws.util.formatNotificationTime(new Date(warning.timestamp))}` : "";
+						const user = warning.username ? `by User:${warning.username}` : "by Unknown";
+						return `<div style="display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; padding: 10px 12px; border-left: 3px solid ${this.ws.util.getWarningLevelColor(warning.level)}; border-radius: 4px; background: rgba(255, 255, 255, .04);">
+							<div style="font-weight: 700; font-size: 14px; color: rgba(255, 255, 255, .95);">${warning.template}${warning.level}</div>
+							<div style="font-size: 12px; color: rgba(187, 187, 187, .75);">${user}${date}</div>
+						</div>`;
+					}).join(""));
+			});
+		} else if (item.user.warning !== "0") {
 			const $warnings = CreateDOMElement("div", {
 				class: `pill uw-${item.user.warning}`,
 			});
@@ -2112,65 +2308,67 @@ export class GUI {
 			this.addTooltipListener($warnings);
 		}
 
-		const blocks = item.user.blocks;
-		if (blocks.length > 0) {
-			const $blocks = CreateDOMElement("div", {
-				class: "pill ub",
-			});
-			document.querySelector("#user-contributions > .header > .pills").appendChild($blocks);
+		if (!this.ws.mobile) {
+			const blocks = item.user.blocks;
+			if (blocks.length > 0) {
+				const $blocks = CreateDOMElement("div", {
+					class: "pill ub",
+				});
+				document.querySelector("#user-contributions > .header > .pills").appendChild($blocks);
 
-			const $tooltip = document.createElement("div");
+				const $tooltip = document.createElement("div");
 
-			const $title = document.createElement("div");
-			$title.classList.add("tooltip-title");
-			$title.textContent = `Blocks for ${item.user.name}`;
-			$tooltip.appendChild($title);
+				const $title = document.createElement("div");
+				$title.classList.add("tooltip-title");
+				$title.textContent = `Blocks for ${item.user.name}`;
+				$tooltip.appendChild($title);
 
-			for (const block of blocks) {
-				const $block = document.createElement("div");
-				$block.classList.add("tooltip-item", "user-blocks");
-				$tooltip.appendChild($block);
+				for (const block of blocks) {
+					const $block = document.createElement("div");
+					$block.classList.add("tooltip-item", "user-blocks");
+					$tooltip.appendChild($block);
 
-				const $level = document.createElement("span");
-				$level.classList.add("tooltip-item-level");
-				$level.innerHTML = block.parsedcomment || "No reason provided";
-				$block.appendChild($level);
+					const $level = document.createElement("span");
+					$level.classList.add("tooltip-item-level");
+					$level.innerHTML = block.parsedcomment || "No reason provided";
+					$block.appendChild($level);
 
-				const $details = document.createElement("div");
-				$details.classList.add("tooltip-item-details");
-				$block.appendChild($details);
+					const $details = document.createElement("div");
+					$details.classList.add("tooltip-item-details");
+					$block.appendChild($details);
 
-				const $user = document.createElement("span");
-				$user.classList.add("tooltip-item-user");
-				$user.textContent = block.user ? `by User:${block.user}` : "by Unknown";
-				$details.appendChild($user);
+					const $user = document.createElement("span");
+					$user.classList.add("tooltip-item-user");
+					$user.textContent = block.user ? `by User:${block.user}` : "by Unknown";
+					$details.appendChild($user);
 
-				$details.appendChild(document.createElement("br"));
+					$details.appendChild(document.createElement("br"));
 
-				const $date = document.createElement("span");
-				$date.classList.add("tooltip-item-time");
-				$details.appendChild($date);
+					const $date = document.createElement("span");
+					$date.classList.add("tooltip-item-time");
+					$details.appendChild($date);
 
-				const $timestamp = document.createElement("span");
-				if (block.timestamp) {
-					$timestamp.dataset.time = block.timestamp;
-					$timestamp.dataset.timeFormat = "notification";
-					$timestamp.textContent = this.ws.util.formatNotificationTime(new Date(block.timestamp));
-				} else
-					$timestamp.textContent = "Date unknown";
-				$date.appendChild($timestamp);
+					const $timestamp = document.createElement("span");
+					if (block.timestamp) {
+						$timestamp.dataset.time = block.timestamp;
+						$timestamp.dataset.timeFormat = "notification";
+						$timestamp.textContent = this.ws.util.formatNotificationTime(new Date(block.timestamp));
+					} else
+						$timestamp.textContent = "Date unknown";
+					$date.appendChild($timestamp);
 
-				const $duration = document.createElement("span");
-				$duration.textContent = `(for ${block.params?.duration || "an unknown duration"})`;
-				$date.appendChild($duration);
+					const $duration = document.createElement("span");
+					$duration.textContent = `(for ${block.params?.duration || "an unknown duration"})`;
+					$date.appendChild($duration);
+				}
+
+				$blocks.classList.remove("hidden");
+				$blocks.textContent = `${blocks.length} block${blocks.length === 1 ? "" : "s"}`;
+				$blocks.dataset.tooltip = $tooltip.innerHTML;
+				$blocks.dataset.tooltipHtml = true;
+
+				this.addTooltipListener($blocks);
 			}
-
-			$blocks.classList.remove("hidden");
-			$blocks.textContent = `${blocks.length} block${blocks.length === 1 ? "" : "s"}`;
-			$blocks.dataset.tooltip = $tooltip.innerHTML;
-			$blocks.dataset.tooltipHtml = true;
-
-			this.addTooltipListener($blocks);
 		}
 
 		{ // users whitelist & highlight buttons
@@ -2237,7 +2435,7 @@ export class GUI {
 			}
 		}
 
-		{ // contributions
+		if (!this.ws.mobile) { // contributions
 			const load = async signal => {
 				const contributions = item.user.contributions;
 				for (const item of contributions) {
@@ -2412,7 +2610,7 @@ export class GUI {
 			} break;
 		}
 
-		if (group === "edit" || group === "abuselog") { // history
+		if (!this.ws.mobile && (group === "edit" || group === "abuselog")) { // history
 			const load = async signal => {
 				const history = item.page.history;
 				for (const item of history) {
@@ -2473,6 +2671,63 @@ export class GUI {
 		}
 
 		this.updateDiffDisplay(item, false);
+	}
+
+	startQueueSlide(direction) {
+		document.querySelectorAll("#main-container > .queue-slide-clone").forEach($el => $el.remove());
+
+		const $mainContainer = document.querySelector("#main-container");
+		const containerRect = $mainContainer.getBoundingClientRect();
+
+		const outward = `${direction === "previous" ? containerRect.width : -containerRect.width}px`;
+		const inward = `${direction === "previous" ? -containerRect.width : containerRect.width}px`;
+
+		const $originals = [ ];
+		for (const selector of [ "#edit-details", "#mobile-user-warning-level", "#diff-container" ]) {
+			const $original = document.querySelector(selector);
+			if (!$original)
+				continue;
+
+			const rect = $original.getBoundingClientRect();
+
+			const $clone = $original.cloneNode(true);
+			$clone.classList.add("queue-slide-clone");
+			$clone.style.top = `${rect.top - containerRect.top}px`;
+			$clone.style.left = `${rect.left - containerRect.left}px`;
+			$clone.style.right = "auto";
+			$clone.style.bottom = "auto";
+			$clone.style.width = `${rect.width}px`;
+			$clone.style.height = `${rect.height}px`;
+			$clone.style.transition = "transform .3s ease";
+			$mainContainer.appendChild($clone);
+
+			requestAnimationFrame(() => $clone.style.transform = `translateX(${outward})`);
+			$clone.addEventListener("transitionend", () => $clone.remove(), { once: true });
+
+			$original.style.transition = "none";
+			$original.style.transform = `translateX(${inward})`;
+			$originals.push($original);
+		}
+
+		return {
+			finish: () => {
+				requestAnimationFrame(() => {
+					for (const $original of $originals)
+						$original.style.transition = "transform .3s ease";
+
+					requestAnimationFrame(() => {
+						for (const $original of $originals)
+							$original.style.transform = "";
+					});
+				});
+
+				for (const $original of $originals)
+					$original.addEventListener("transitionend", () => {
+						$original.style.transition = "";
+						$original.style.transform = "";
+					}, { once: true });
+			}
+		};
 	}
 
 	updateDiffDisplay(item, consecutive) {
@@ -2891,6 +3146,15 @@ export class GUI {
 			document.querySelector("#diff-scroll-up").classList.add("hidden");
 			document.querySelector("#diff-scroll-down").classList.add("hidden");
 		}
+
+		if (this.ws.mobile) {
+			const [ r, g, b ] = this.getORESColor(item.ores).match(/\d+/g);
+			document.querySelector("#diff-container > *").style.boxShadow = `
+				0 0 1vmin rgba(${r}, ${g}, ${b}, .5),
+				0 0 2.5vmin rgba(${r}, ${g}, ${b}, .25),
+				0 0 5vmin rgba(${r}, ${g}, ${b}, .12)
+			`;
+		}
 	}
 	#sanitizeInlineHtml(html) {
 		const allowed = new Set(["B", "I", "EM", "STRONG", "CODE", "SPAN", "BR"]);
@@ -3021,11 +3285,15 @@ export class GUI {
 
 			const $text = document.createElement("span");
 			$text.classList.add("text");
-			$text.innerHTML = `<b>3RR:</b> You have made ${count} reverts on this page in the last 24 hours.`;
+			$text.innerHTML = this.ws.mobile ? `<b>(3RR)</b> Revert count: ${count}` : `You have made ${count} reverts on this page in the last 24 hours.`;
 			$notice.appendChild($text);
 
-			const $diff = document.querySelector("#diff-container");
-			$diff.parentElement.insertBefore($notice, $diff);
+			if (this.ws.mobile)
+				document.querySelector("#mobile-notices").appendChild($notice);
+			else {
+				const $diff = document.querySelector("#diff-container");
+				$diff.parentElement.insertBefore($notice, $diff);
+			}
 		} else {
 			const $notice = document.querySelector("#edit-war-notice");
 			if ($notice)
@@ -3057,50 +3325,65 @@ export class GUI {
 
 			const $text = document.createElement("span");
 			$text.classList.add("text");
-			$text.textContent = "Newer revision available on this page.";
+			$text.textContent = this.ws.mobile ? "Newer revision available" : "Newer revision available on this page.";
 			$notice.appendChild($text);
 
-			const $restore = document.createElement("span");
-			$restore.classList.add("button");
-			$restore.innerHTML = "<i class='fas fa-redo restore'></i> Restore this revision";
-			$restore.addEventListener("click", async e => {
-				e.preventDefault();
+			if (this.ws.mobile)
+				$notice.addEventListener("click", e => {
+					e.preventDefault();
 
-				const message = await this.dialog.input(
-					"Restore Edit",
-					"Are you sure you want to restore this revision? This will create a new edit that reverts the page to this revision.",
-					"Edit summary (optional)",
-					""
-				);
-				if (message !== null)
-					this.ws.execute({
-						actions: [
-							{
-								name: "restore-edit",
-								params: {
-									summary: message,
+					const page = $notice.dataset.page;
+					const id = +$notice.dataset.id;
+					if (page && id)
+						this.ws.queue.loadFromRevision(page, id);
+				});
+			else {
+				const $restore = document.createElement("span");
+				$restore.classList.add("button");
+				$restore.innerHTML = "<i class='fas fa-redo restore'></i> Restore this revision";
+				$restore.addEventListener("click", async e => {
+					e.preventDefault();
+
+					const message = await this.dialog.input(
+						"Restore Edit",
+						"Are you sure you want to restore this revision? This will create a new edit that reverts the page to this revision.",
+						"Edit summary (optional)",
+						""
+					);
+					if (message !== null)
+						this.ws.execute({
+							actions: [
+								{
+									name: "restore-edit",
+									params: {
+										summary: message,
+									}
 								}
-							}
-						]
-					});
-			});
-			$notice.appendChild($restore);
+							]
+						});
+				});
+				$notice.appendChild($restore);
 
-			const $latest = document.createElement("span");
-			$latest.classList.add("button");
-			$latest.innerHTML = "View latest <i class='fas fa-arrow-right'></i>";
-			$latest.addEventListener("click", e => {
-				e.preventDefault();
+				const $latest = document.createElement("span");
+				$latest.classList.add("button");
+				$latest.innerHTML = "View latest <i class='fas fa-arrow-right'></i>";
+				$latest.addEventListener("click", e => {
+					e.preventDefault();
 
-				const page = $notice.dataset.page;
-				const id = +$notice.dataset.id;
-				if (page && id)
-					this.ws.queue.loadFromRevision(page, id);
-			});
-			$notice.appendChild($latest);
+					const page = $notice.dataset.page;
+					const id = +$notice.dataset.id;
+					if (page && id)
+						this.ws.queue.loadFromRevision(page, id);
+				});
+				$notice.appendChild($latest);
+			}
 
-			const $diff = document.querySelector("#diff-container");
-			$diff.parentElement.insertBefore($notice, $diff);
+			if (this.ws.mobile)
+				document.querySelector("#mobile-notices").appendChild($notice);
+			else {
+				const $diff = document.querySelector("#diff-container");
+				$diff.parentElement.insertBefore($notice, $diff);
+			}
 		} else {
 			const $notice = document.querySelector("#outdated-notice");
 			if ($notice)
@@ -3124,13 +3407,19 @@ export class GUI {
 
 			const $text = document.createElement("span");
 			$text.classList.add("text");
-			$text.textContent = pending ?
-				"This revision cannot be reviewed because it is outdated" :
-				"This revision cannot be reviewed because it is not pending review";
+			$text.textContent = this.ws.mobile ? (
+				pending ? "Outdated revision" : "Not pending review"
+			) : (
+				pending ? "This revision cannot be reviewed because it is outdated" : "This revision cannot be reviewed because it is not pending review"
+			);
 			$notice.appendChild($text);
 
-			const $diff = document.querySelector("#diff-container");
-			$diff.parentElement.insertBefore($notice, $diff);
+			if (this.ws.mobile)
+				document.querySelector("#mobile-notices").appendChild($notice);
+			else {
+				const $diff = document.querySelector("#diff-container");
+				$diff.parentElement.insertBefore($notice, $diff);
+			}
 		} else {
 			const $notice = document.querySelector("#pending-notice");
 			if ($notice)
@@ -3154,7 +3443,8 @@ export class GUI {
 	}
 
 	updateZenMode() {
-		this.ws.notifications.count();
+		if (!this.ws.mobile)
+			this.ws.notifications.count();
 
 		const zen = this.ws.store.settings.zen_mode;
 		if (zen.enabled && zen.music.enabled && window.isElectron)
@@ -3330,6 +3620,9 @@ export class GUI {
 	}
 
 	positionBottomMenu($button, $menu) {
+		if (this.ws.mobile)
+			return;
+
 		// Reset positioning
 		$menu.style.left = '';
 		$menu.style.right = '';
@@ -3371,6 +3664,9 @@ export class GUI {
 	}
 
 	positionSubmenu($submenu, $trigger) {
+		if (this.ws.mobile)
+			return;
+
 		// Reset positioning
 		$submenu.style.left = '';
 		$submenu.style.right = '';
@@ -3408,7 +3704,9 @@ export class GUI {
 	}
 
 	positionLevelsMenu($button, $menu) {
-		// Reset previous positioning
+		if (this.ws.mobile)
+			return;
+
 		$menu.style.left = '';
 		$menu.style.right = '';
 		$menu.style.top = '';
@@ -3456,6 +3754,9 @@ export class GUI {
 	}
 
 	positionWarningSubmenu($submenu, $trigger) {
+		if (this.ws.mobile)
+			return;
+
 		// Reset previous positioning
 		$submenu.style.left = '';
 		$submenu.style.right = '';

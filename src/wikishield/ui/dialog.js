@@ -36,9 +36,7 @@ export class Dialog {
         });
     }
 
-    controller(event) {
-
-    }
+    controller(event) { }
 
     check() {
         if (this.popups.length === 0)

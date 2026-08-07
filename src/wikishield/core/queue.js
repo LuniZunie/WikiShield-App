@@ -429,7 +429,7 @@ export class Queue {
 		items = items.filter(item => !this.queues[type].memory.has(item[prop]));
 		items.forEach(item => this.queues[type].memory.add(item[prop]));
 
-		const len = items.length;
+		let len = items.length;
 		if (len === 0)
 			return;
 
@@ -439,8 +439,9 @@ export class Queue {
 			case "edit": {
 				const threshold = this.ws.store.settings.audio.ores_alert.threshold;
 				for (let i = 0; i < len; i++) {
-					const item = items[i];
-					const data = parsed[i];
+					const item = items[i], data = parsed[i];
+					if (this.ws.mobile && !data.consecutive?.diff)
+						continue;
 
 					this.queues[type].queue.push(data);
 
@@ -455,8 +456,7 @@ export class Queue {
 			} break;
 			case "logevent": {
 				for (let i = 0; i < len; i++) {
-					const item = items[i];
-					const data = parsed[i];
+					const item = items[i], data = parsed[i];
 
 					this.queues[type].queue.push(data);
 
@@ -468,8 +468,7 @@ export class Queue {
 			} break;
 			case "abuselog": {
 				for (let i = 0; i < len; i++) {
-					const item = items[i];
-					const data = parsed[i];
+					const item = items[i], data = parsed[i];
 
 					this.queues[type].queue.push(data);
 
@@ -483,10 +482,12 @@ export class Queue {
 
 		this.sort(type);
 
-		if (play.ores && this.ws.store.settings.audio.ores_alert.enabled)
-			this.ws.audio.playSound([ "queue", "ores" ]);
-		if (play.mention && this.ws.store.settings.username_highlighting.enabled)
-			this.ws.audio.playSound([ "queue", "mention" ]);
+		if (!this.ws.mobile) {
+			if (play.ores && this.ws.store.settings.audio.ores_alert.enabled)
+				this.ws.audio.playSound([ "queue", "ores" ]);
+			if (play.mention && this.ws.store.settings.username_highlighting.enabled)
+				this.ws.audio.playSound([ "queue", "mention" ]);
+		}
 
 		this.ws.gui.renderQueue(this.queues[type].queue, this.queues[type].item, type);
 	}
@@ -650,9 +651,6 @@ export class Queue {
 				const parsed = await ws.api.parseEdits(items, simple, this.ws.store.settings.queue.ores_bias, bypass);
 				for (const temp of parsed) {
 					const { item, prior, data } = temp;
-					if (this.ws.mobile && !data.page?.consecutive?.diff)
-						continue;
-
 					const mentions = { comment: false, diff: false };
 					if (username)
 						if (data.edit.diff) {
@@ -750,7 +748,7 @@ export class Queue {
 						simple: simple,
 						origin: item,
 					};
-					if (!simple && ws.AI) {
+					if (!this.ws.mobile && !simple && ws.AI) {
 						if (ws.store.settings.AI.edit_analysis.enabled)
 							ws.AI.analyze.edit(object)
 								.then(analysis => object.AI.edit = analysis)
@@ -903,7 +901,7 @@ export class Queue {
 						simple: simple,
 						origin: item,
 					};
-					if (!simple && ws.AI) {
+					if (!this.ws.mobile && !simple && ws.AI) {
 						if (!object.user.anon && !ws.store.whitelist.users.has(object.user.name) && ws.store.settings.AI.username_analysis.enabled)
 							ws.AI.analyze.username(object)
 								.then(analysis => {
@@ -1025,7 +1023,7 @@ export class Queue {
 						simple: simple,
 						origin: item,
 					};
-					if (!simple && ws.AI) {
+					if (!this.ws.mobile && !simple && ws.AI) {
 						if (ws.store.settings.AI.edit_analysis.enabled && data.edit.diff) // only analyze if diff exists
 							ws.AI.analyze.edit(object)
 								.then(analysis => object.AI.edit = analysis)
@@ -1093,7 +1091,7 @@ export class Queue {
 		const i = this.current.queue.findIndex(item => item.id === this.current.item?.id);
 		if (this.current.type === "pending") {
 			this.current.item = this.current.queue[Math.max(i - 1, 0)];
-			return this.ws.gui.renderQueue();
+			return this.ws.gui.renderQueue(null, null, null, "previous");
 		}
 
 		if (i <= 0) {
@@ -1103,24 +1101,24 @@ export class Queue {
 			this.current.queue.unshift(this.current.history.pop());
 			this.current.item = this.current.queue[0];
 
-			return this.ws.gui.renderQueue();
+			return this.ws.gui.renderQueue(null, null, null, "previous");
 		}
 
 		this.current.item = this.current.queue[i - 1];
 
-		this.ws.gui.renderQueue();
+		this.ws.gui.renderQueue(null, null, null, "previous");
 	}
 
 	next() {
 		const i = this.current.queue.findIndex(item => item.id === this.current.item?.id);
 		if (i === -1) {
 			this.current.item = this.current.queue[0];
-			return this.ws.gui.renderQueue();
+			return this.ws.gui.renderQueue(null, null, null, "next");
 		}
 
 		if (this.current.type === "pending") {
 			this.current.item = this.current.queue[Math.min(i + 1, this.current.queue.length - 1)];
-			return this.ws.gui.renderQueue();
+			return this.ws.gui.renderQueue(null, null, null, "next");
 		}
 
 		const leaving = this.current.item;
@@ -1130,7 +1128,7 @@ export class Queue {
 				this.ws.api.markWatchlistSeen(leaving.page.title, leaving.id);
 
 			const id = leaving.type === "abuselog" ? leaving.revid : leaving.id;
-			[ "recent", "watchlist", "abuselog" ].filter(t => t !== leaving.type).forEach(t => {
+			[ "recent", "watchlist", "abuselog" ].filter(t => t !== leaving.type).forEach(t => { // FIX not working on watchlist
 				if (t === "abuselog")
 					this.queues[t].queue = this.queues[t].queue.filter(item => {
 						if (item.revid === id) {
@@ -1156,7 +1154,7 @@ export class Queue {
 				let toRemove = this.queues.abuselog.queue.filter(item => {
 					return leaving.user.name === item.user.name &&
 						   leaving.page.title === item.page.title &&
-						   Math.abs(new Date(leaving.timestamp).getTime() - new Date(item.timestamp).getTime()) < 10 * 1000 // 10 seconds
+						   Math.abs(new Date(leaving.timestamp).getTime() - new Date(item.timestamp).getTime()) < 3 * 1000 // 3 seconds
 				});
 
 				if (toRemove.length > 0) {
@@ -1203,7 +1201,7 @@ export class Queue {
 			this.promptWelcome(leaving);
 
 		this.current.history.push({ ...leaving, history: performance.now() });
-		this.ws.gui.renderQueue();
+		this.ws.gui.renderQueue(null, null, null, "next");
 	}
 
 	canGoPrevious() {

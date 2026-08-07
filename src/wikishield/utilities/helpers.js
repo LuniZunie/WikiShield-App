@@ -107,6 +107,17 @@ export class Utility {
 		return parseFloat((bytes / Math.pow(1024, i)).toFixed(2)) + " " + sizes[i];
 	}
 
+	getWarningLevelColor(level) {
+		switch (level) {
+			case "1": return "rgba(107, 163, 216, 1)";
+			case "2": return "rgba(255, 193, 7, 1)";
+			case "3": return "rgba(255, 87, 34, 1)";
+			case "4": return "rgba(244, 67, 54, 1)";
+			case "4im": return "rgba(178, 34, 34, 1)";
+			default: return "rgba(255, 255, 255, .7)";
+		}
+	}
+
 	getChangeColor(delta) {
 		if (delta === 0) return "#888"; // Gray for no change
 		if (delta > 0) {

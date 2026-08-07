@@ -377,8 +377,11 @@ body {
                     justify-content: space-between;
                     gap: 12px;
 
+                    -webkit-touch-callout: none;
                     -webkit-user-select: none;
-                            user-select: none;
+                    -moz-user-select: none;
+                    -ms-user-select: none;
+                    user-select: none;
 
                     & > .remember-left {
                         display: flex;

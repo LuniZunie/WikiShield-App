@@ -64,7 +64,8 @@ export class WikiShield {
 		this.util = new Utility(this);
 
 		this.api = new API(this, server, username, pendingChangesServers);
-		this.notifications = new Notifications(this);
+		if (!mobile)
+			this.notifications = new Notifications(this);
 
 		this.rights = { };
 		this.groups = { };
@@ -351,7 +352,9 @@ export class WikiShield {
 					if (param.id && !(param.id in params) && "default" in param)
 						params[param.id] = param.default;
 
-				if (action.name === "if" || action.name === "if not")
+				if (action.name === "return")
+					continuity = continuity ? -1 : -2;
+				else if (action.name === "if" || action.name === "if not")
 					continuity = await this.execute(action, continuity, updateProgress, item);
 				else {
 					const event = this.gui.events.events[action.name];
@@ -392,6 +395,12 @@ export class WikiShield {
 						this.gui.dialog.toast("Please report to developer", `An error occurred while executing action "${action.name}". Check the console for details.`, "error");
 						console.error(`Error executing action "${action.name}":`, error.message || String(error));
 					}
+				}
+
+				if (continuity < 0) {
+					if (!script.name)
+						updateProgress("Done", continuity === -2);
+					return continuity;
 				}
 			}
 		}
@@ -481,15 +490,15 @@ export class WikiShield {
 	}
 
 	open(href, external) {
-		if (external === "force")
-			external = false;
-		else if (window.arePopupsBlocked)
+		if (window.arePopupsBlocked)
 			external = true;
+		else if (external === "force")
+			external = false;
 		else
 			external ||= !this.store.settings.wikipedia_popups.enabled;
 
 		if (external)
-			electron.openExternal(href ?? "https://google.com/");
+			electron.openExternal(href ?? "about:blank");
 		else {
 			electron.openInBrowser(href).then(popupId => {
 				if (popupId)

@@ -60,6 +60,16 @@ class Memory {
 	size() {
 		return this.store.size;
 	}
+
+	keys() {
+		return this.store.keys();
+	}
+	values() {
+		return this.store.values();
+	}
+	entries() {
+		return this.store.entries();
+	}
 }
 
 module.exports = { Memory };

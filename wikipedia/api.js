@@ -91,12 +91,6 @@ class MediaWikiAPI {
         return `[[Special:CentralAuth/${username}|${username}]]`;
     }
 
-    summary(base, custom) {
-        const watermark = " ([[:en:WP:WikiShield|WS]])"; // tehehe
-        const message = `${base}${custom ? `: ${custom}` : ""}`;
-        return `${truncate(message, 500 - watermark.length)}${watermark}`;
-    }
-
     async post(params, bypass = false, serverOverride = null) {
         try {
             const data = await this.oauth.fetch(`https://${serverOverride || this.server}/w/api.php`, this.build({ ...params, format: "json", formatversion: 2 }, serverOverride), undefined, "POST", bypass, serverOverride);
@@ -740,7 +734,7 @@ class MediaWikiAPI {
     async getConsecutiveEdits(page, revid, username, bypass, serverOverride) {
         try {
             const data = await this.continuous({
-                action: "query", prop: "revisions", titles: page, rvprop: "ids|timestamp|user|size|parsedcomment|comment", rvlimit: "max", rvstartid: revid
+                action: "query", prop: "revisions", titles: page, rvprop: "ids|timestamp|user|size|parsedcomment|comment|tags|flags", rvlimit: "max", rvstartid: revid
             }, data => data.query?.pages?.[0]?.revisions.some(rev => rev.user !== username), bypass, serverOverride);
 
             const revisions = data.responses.flatMap(response => response.query?.pages?.[0]?.revisions || [ ]);

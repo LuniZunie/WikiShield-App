@@ -1,5 +1,6 @@
+let preventStopScrolling = false;
 const stopScrolling = event => {
-    if (event.cancelable)
+    if (!preventStopScrolling && event.cancelable)
         event.preventDefault();
 };
 
@@ -22,11 +23,19 @@ export function SetupGestures(ws) {
 
             const deltaY = y - start.y;
             if (deltaY > 0) {
-                if ($editDetails.classList.contains("expanded"))
-                    $editDetails.style.height = `${Math.max(maxHeight - deltaY, 75)}px`;
+                if ($editDetails.classList.contains("expanded")) {
+                    preventStopScrolling = $editDetails.scrollTop > 0;
+                    if (!preventStopScrolling)
+                        $editDetails.style.height = `${Math.max(maxHeight - deltaY, 75)}px`;
+                } else
+                    preventStopScrolling = false;
             } else {
-                if (!$editDetails.classList.contains("expanded"))
+                if ($editDetails.classList.contains("expanded"))
+                    preventStopScrolling = true;
+                else {
                     $editDetails.style.height = `${Math.min(75 - deltaY, maxHeight)}px`;
+                    preventStopScrolling = false;
+                }
             }
         };
         const eventEnd = (x, y) => {
@@ -71,45 +80,49 @@ export function SetupGestures(ws) {
         }, { passive: true });
         window.addEventListener("pointerup", event => {
             eventEnd(event.clientX, event.clientY);
+            preventStopScrolling = false;
             window.removeEventListener("touchmove", stopScrolling, { passive: false });
         }, { passive: true });
         window.addEventListener("pointercancel", event => {
             eventEnd(event.clientX, event.clientY);
+            preventStopScrolling = false;
             window.removeEventListener("touchmove", stopScrolling, { passive: false });
         }, { passive: true });
     })(document.querySelector("#edit-details"));
 
     ($diffContainer => {
-        const start = { dragging: false, x: 0, y: 0 };
-        let _stopScrollingAdded = false;
+        const start = { done: false, dragging: false, x: 0, y: 0 };
+        let stopScrollingAdded = false;
         const ensureStopScrolling = () => {
-            if (!_stopScrollingAdded) {
+            if (!stopScrollingAdded) {
                 window.addEventListener("touchmove", stopScrolling, { passive: false });
-                _stopScrollingAdded = true;
+                stopScrollingAdded = true;
             }
         };
         const removeStopScrolling = () => {
-            if (_stopScrollingAdded) {
+            if (stopScrollingAdded) {
                 window.removeEventListener("touchmove", stopScrolling, { passive: false });
-                _stopScrollingAdded = false;
+                stopScrollingAdded = false;
             }
         };
 
         const eventStart = (x, y) => {
+            start.done = false;
             start.dragging = true;
             start.x = x;
             start.y = y;
         };
-        const eventEnd = (x, y) => {
-            if (!start.dragging)
+        const eventMove = (x, y, event) => {
+            if (!start.dragging || start.done)
                 return;
 
-            start.dragging = false;
-
-            const deltaX = x - start.x;
-            if (Math.abs(deltaX) < Math.min(100, window.innerWidth * .1))
+            const deltaX = x - start.x, deltaY = y - start.y;
+            if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 10)
+                return start.dragging = false;
+            else if (Math.abs(deltaX) < Math.min(100, window.innerWidth * .1))
                 return;
 
+            start.done = true;
             if (deltaX > 0)
                 ws.execute({
 				    actions: [
@@ -129,29 +142,17 @@ export function SetupGestures(ws) {
                     ]
                 });
         };
-
-        const eventMove = (x, y, event) => {
+        const eventEnd = (x, y) => {
             if (!start.dragging)
                 return;
 
-            const deltaX = x - start.x;
-            const deltaY = y - start.y;
-
-            if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 10) {
-                start.dragging = false;
-                return;
-            }
-
-            if (event && event.pointerType === "touch")
-                ensureStopScrolling();
+            start.dragging = false;
         };
 
         $diffContainer.addEventListener("pointerdown", event => {
             if (document.querySelectorAll(".tooltip.buttons").length)
                 return;
             else if (event.target.closest("a"))
-                return;
-            else if (window.getSelection().toString().trim().length)
                 return;
             eventStart(event.clientX, event.clientY);
         }, { passive: true });

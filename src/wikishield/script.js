@@ -2,28 +2,33 @@ import "./electron.js";
 
 import "./elements/manager.js";
 
+import { isMobileUserAgent } from "./utilities/is-mobile.js";
+
 import { WikiShield } from "./core/wikishield.js";
 import { StorageManager } from "./data/storage/manager.js";
 
 import { Killswitch } from "./wikipedia/killswitch.js";
 
-window.isMobile = true; // TODO detect mobile properly
+window.isMobile = isMobileUserAgent(window.navigator.userAgent || window.navigator.vendor || window.opera);
 window.arePopupsBlocked = false;
 
 export function run() {
-    window.arePopupsBlocked = (() => {
-        let popup;
-        try {
-            popup = window.open("about:blank", "_blank", "width=100,height=100,left=-100,top=-100");
-            if (!popup || popup.closed || typeof popup.closed === "undefined")
-                return true;
+    if (window.isMobile)
+        window.arePopupsBlocked = true;
+    else
+        window.arePopupsBlocked = (() => {
+            let popup;
+            try {
+                popup = window.open("about:blank", "_blank", "width=100,height=100,left=-100,top=-100");
+                if (!popup || popup.closed || typeof popup.closed === "undefined")
+                    return true;
 
-            popup.close();
-            return false;
-        } catch (e) {
-            return true;
-        }
-    })();
+                popup.close();
+                return false;
+            } catch (e) {
+                return true;
+            }
+        })();
 
     window.addEventListener("click", () => window.ineractedWithPage = true, { once: true });
 
@@ -54,7 +59,7 @@ export function run() {
             electron.onOpenUrl(url => ws.open(url, false));
             electron.onOpenNotification(link => {
                 const url = new URL(link);
-                if (url.searchParams.has("markasread")) {
+                if (!ws.mobile && url.searchParams.has("markasread")) {
                     const n = ws.notifications.find(null, +url.searchParams.get("markasread"));
                     if (n)
                         ws.notifications.read(n.type, n.notification);

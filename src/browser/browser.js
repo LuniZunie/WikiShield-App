@@ -26,8 +26,10 @@ class Tab {
     }
 
     get displayUrl() {
-        if (this.isError && this.failedUrl) return this.failedUrl;
-        if (this.isBlank) return "";
+        if (this.isError && this.failedUrl)
+            return this.failedUrl;
+        if (this.isBlank)
+            return "";
         return this.url;
     }
 
@@ -119,11 +121,11 @@ class Tab {
             }
         });
 
-        this.$webview.addEventListener("did-fail-load", (e) => this.#handleLoadError(e));
+        this.$webview.addEventListener("did-fail-load", e => this.#handleLoadError(e));
 
-        this.$webview.addEventListener("ipc-message", (event) => this.#handleIPCMessage(event));
+        this.$webview.addEventListener("ipc-message", e => this.#handleIPCMessage(e));
 
-        this.$webview.addEventListener("context-menu", (e) => e.preventDefault());
+        this.$webview.addEventListener("context-menu", e => e.preventDefault());
     }
 
     #handleNavigation(e) {
@@ -133,7 +135,6 @@ class Tab {
 
         this.url = e.url;
 
-        // Clear failedUrl when navigating away from the error page
         if (this.failedUrl && !this.isError)
             this.failedUrl = null;
 
@@ -165,10 +166,8 @@ class Tab {
     }
 
     #handleLoadError(e) {
-        // Ignore certain errors
         if (e.errorCode === -3 || e.isMainFrame === false || e.validatedURL.includes("/about-blank/index.html") || e.validatedURL.includes("/error/index.html") || e.validatedURL.startsWith("data:text/html"))
             return;
-
         if (!this.$webview?.isConnected)
             return;
 
@@ -177,7 +176,6 @@ class Tab {
         const errorCode = Browser.getErrorCodeString(e.errorCode);
         const errorDesc = e.errorDescription || errorCode;
 
-        // Defer fallback until the failed navigation fully settles to avoid guest-view abort races.
         this.pendingErrorPageUrl = Browser.buildInlineErrorPageUrl(errorCode, e.validatedURL, errorDesc);
     }
 
@@ -214,7 +212,6 @@ class Tab {
         try {
             this.$webview.getWebContentsId();
         } catch {
-            // WebContents is not available yet (usually before first dom-ready).
             this.pendingNavigationUrl = url;
             return;
         }
@@ -283,12 +280,9 @@ class Tab {
     }
 }
 
-/**
- * HistoryManager class - Manages browsing history and URL suggestions
- */
 class HistoryManager {
     constructor(maxSize = 100) {
-        this.items = [];
+        this.items = [ ];
         this.maxSize = maxSize;
     }
 
@@ -296,23 +290,20 @@ class HistoryManager {
         if (!url.startsWith("http") || url.includes("/about-blank/index.html"))
             return;
 
-        // Remove duplicates
         this.items = this.items.filter(item => item.url !== url);
-
-        // Add to beginning
         this.items.unshift({
             url: url,
             title: this.#getHostname(url),
             timestamp: Date.now()
         });
 
-        // Limit size
         if (this.items.length > this.maxSize)
             this.items = this.items.slice(0, this.maxSize);
     }
 
     search(query) {
-        if (!query) return [];
+        if (!query)
+            return [ ];
 
         const lowerQuery = query.toLowerCase();
         const matches = this.items.filter(item =>
@@ -320,7 +311,6 @@ class HistoryManager {
             item.title.toLowerCase().includes(lowerQuery)
         );
 
-        // Remove duplicates
         const seen = new Set();
         return matches.filter(item => {
             if (seen.has(item.url))
@@ -339,9 +329,6 @@ class HistoryManager {
     }
 }
 
-/**
- * SuggestionsProvider class - Provides search suggestions from Google
- */
 class SuggestionsProvider {
     constructor() {
         this.cache = new Map();
@@ -358,7 +345,7 @@ class SuggestionsProvider {
             return suggestions;
         } catch (error) {
             console.error("Failed to fetch search suggestions:", error);
-            return [];
+            return [ ];
         }
     }
 
@@ -380,13 +367,13 @@ class SuggestionsProvider {
                 if (window[callbackName]) {
                     delete window[callbackName];
                     script.remove();
-                    resolve([query, []]);
+                    resolve([query, [ ]]);
                 }
             }, 3000);
         });
 
         const data = await promise;
-        return (data[1] || []).slice(0, 4).map(term => ({
+        return (data[1] || [ ]).slice(0, 4).map(term => ({
             url: `https://www.google.com/search?q=${encodeURIComponent(term)}`,
             title: term,
             isSearch: true,
@@ -395,9 +382,6 @@ class SuggestionsProvider {
     }
 }
 
-/**
- * NavigationManager class - Handles navigation controls and URL bar
- */
 class NavigationManager {
     constructor(browser) {
         this.browser = browser;
@@ -472,19 +456,19 @@ class NavigationManager {
 
     navigateToUrl(input) {
         const activeTab = this.browser.getActiveTab();
-        if (!activeTab) return;
+        if (!activeTab)
+            return;
 
         const trimmedInput = input.trim();
-        if (!trimmedInput) return;
+        if (!trimmedInput)
+            return;
 
-        // Handle about:blank
         if (trimmedInput.toLowerCase() === "about:blank") {
             this.browser.elements.$urlBar.value = "";
             activeTab.navigateTo("./about-blank/index.html");
             return;
         }
 
-        // Check if input is a URL
         if (this.isUrl(trimmedInput)) {
             let url = trimmedInput;
             if (!url.match(/^https?:\/\//i))
@@ -513,9 +497,6 @@ class NavigationManager {
     }
 }
 
-/**
- * AutocompleteManager class - Manages URL bar autocomplete dropdown
- */
 class AutocompleteManager {
     #debounceTimer = null;
 
@@ -606,7 +587,7 @@ class AutocompleteManager {
     async #getSuggestions(query) {
         const historyMatches = this.browser.history.search(query);
 
-        let searchSuggestions = [];
+        let searchSuggestions = [ ];
         if (!this.browser.navigation.isUrl(query))
             searchSuggestions = await this.browser.suggestionsProvider.get(query);
 
@@ -650,8 +631,8 @@ class Browser {
         this.#initialize();
 
         electron.onGetTabUrls(() => {
-            const urls = [];
-            for (const [, tab] of this.tabs) {
+            const urls = [ ];
+            for (const [ , tab ] of this.tabs) {
                 const url = tab.displayUrl || tab.url;
                 if (url && url !== "about:blank" && !url.includes("/about-blank/index.html"))
                     urls.push(url);
@@ -677,9 +658,8 @@ class Browser {
                 const activeTab = this.getActiveTab();
                 if (activeTab)
                     activeTab.navigateTo(url);
-            } else {
+            } else
                 this.createTab(url);
-            }
         });
     }
 

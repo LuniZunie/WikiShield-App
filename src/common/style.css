@@ -46,10 +46,17 @@
 }
 
 html, body {
+	touch-action: none;
+
     width: 100%;
 	height: 100%;
 
+	position: fixed;
+	top: 0;
+	left: 0;
+
 	overflow: hidden;
+	overscroll-behavior: none;
 
     /* Theme dependent */
     background: linear-gradient(135deg,

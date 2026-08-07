@@ -65,21 +65,29 @@ export class Text {
 
             const end = temp.length - 1;
             temp[end] = (single => {
-                let temp;
+                switch (single.toLowerCase()) {
+                    // en
+                    case "child": return `${single}ren`;
+                    case "oxe": return `${single}n`;
 
-                // s, sh, ch, x, z, consonant + o -> -es
-                temp = single.replace(/(?<=sh?|ch|x|z|[^aeiou]o)$/i, "es");
-                if (temp !== single) return temp;
+                    default: {
+                        let temp;
 
-                // consonant + y -> -ies
-                temp = single.replace(/(?<=[^aeiou])y$/i, "ies");
-                if (temp !== single) return temp;
+                        // s, sh, ch, x, z, consonant + o -> -es
+                        temp = single.replace(/(?<=sh?|ch|x|z|[^aeiou]o)$/i, "es");
+                        if (temp !== single) return temp;
 
-                // f, fe -> -ves
-                temp = single.replace(/fe?$/i, "ves");
-                if (temp !== single) return temp;
+                        // consonant + y -> -ies
+                        temp = single.replace(/(?<=[^aeiou])y$/i, "ies");
+                        if (temp !== single) return temp;
 
-                return `${single}s`;
+                        // f, fe -> -ves
+                        temp = single.replace(/fe?$/i, "ves");
+                        if (temp !== single) return temp;
+
+                        return `${single}s`;
+                    }
+                }
             })(this.#single[end]);
 
             return temp;

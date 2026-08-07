@@ -173,6 +173,9 @@ export class Settings {
 	}
 
 	start() {
+		if (this.ws.mobile)
+			document.querySelector("#settings-AI-button").classList.add("hidden");
+
 		electron.onOpenChangelog(() => void(this.open()) ?? this.changelog());
 
 		let cockBlock = 0;
@@ -180,6 +183,15 @@ export class Settings {
 			if (e.target.id === "settings-container" && !(cockBlock = Math.max(0, cockBlock)))
 				this.close();
 		});
+
+		document.querySelector("#settings-container > .settings > .settings-left").addEventListener("click", e => {
+			if (this.ws.mobile && e.target.closest(".settings-left-menu-item"))
+				document.querySelector("#settings-container > .settings").classList.add("mobile-detail");
+		});
+		document.querySelector("#settings-mobile-back").addEventListener("click", () => {
+			document.querySelector("#settings-container > .settings").classList.remove("mobile-detail");
+		});
+		document.querySelector("#settings-mobile-close").addEventListener("click", () => this.close());
 
 		document.querySelector("#settings-general-button").addEventListener("click", this.general.bind(this));
 		document.querySelector("#settings-audio-button").addEventListener("click", this.audio.bind(this));
@@ -1120,6 +1132,7 @@ export class Settings {
 
 	open() {
 		document.querySelector("#settings-container").classList.add("show");
+		document.querySelector("#settings-container > .settings").classList.remove("mobile-detail");
 		this.general();
 
 		this.#promise = new Promise(resolve => {
@@ -1149,25 +1162,29 @@ export class Settings {
 	general() {
 		this.deselect();
 
-		document.querySelector("#settings-general-button").classList.add("selected");
+		if (!this.ws.mobile)
+			document.querySelector("#settings-general-button").classList.add("selected");
 		document.querySelector("#settings-container > .settings > .settings-right > .general").classList.remove("hidden");
 	}
 	performance() {
 		this.deselect();
 
-		document.querySelector("#settings-performance-button").classList.add("selected");
+		if (!this.ws.mobile)
+			document.querySelector("#settings-performance-button").classList.add("selected");
 		document.querySelector("#settings-container > .settings > .settings-right > .performance").classList.remove("hidden");
 	}
 	audio() {
 		this.deselect();
 
-		document.querySelector("#settings-audio-button").classList.add("selected");
+		if (!this.ws.mobile)
+			document.querySelector("#settings-audio-button").classList.add("selected");
 		document.querySelector("#settings-container > .settings > .settings-right > .audio").classList.remove("hidden");
 	}
 	controls() {
 		this.deselect();
 
-		document.querySelector("#settings-controls-button").classList.add("selected");
+		if (!this.ws.mobile)
+			document.querySelector("#settings-controls-button").classList.add("selected");
 		document.querySelector("#settings-container > .settings > .settings-right > .controls").classList.remove("hidden");
 
 		{
@@ -1765,52 +1782,60 @@ export class Settings {
 	zen() {
 		this.deselect();
 
-		document.querySelector("#settings-zen-button").classList.add("selected");
+		if (!this.ws.mobile)
+			document.querySelector("#settings-zen-button").classList.add("selected");
 		document.querySelector("#settings-container > .settings > .settings-right > .zen").classList.remove("hidden");
 	}
 
 	app() {
 		this.deselect();
 
-		document.querySelector("#settings-app-button").classList.add("selected");
+		if (!this.ws.mobile)
+			document.querySelector("#settings-app-button").classList.add("selected");
 		document.querySelector("#settings-container > .settings > .settings-right > .app").classList.remove("hidden");
 	}
 	queue() {
 		this.deselect();
 
-		document.querySelector("#settings-queue-button").classList.add("selected");
+		if (!this.ws.mobile)
+			document.querySelector("#settings-queue-button").classList.add("selected");
 		document.querySelector("#settings-container > .settings > .settings-right > .queue").classList.remove("hidden");
 	}
 	accessibility() {
 		this.deselect();
 
-		document.querySelector("#settings-accessibility-button").classList.add("selected");
+		if (!this.ws.mobile)
+			document.querySelector("#settings-accessibility-button").classList.add("selected");
 		document.querySelector("#settings-container > .settings > .settings-right > .accessibility").classList.remove("hidden");
 	}
 
 	AI() {
 		this.deselect();
 
-		document.querySelector("#settings-AI-button").classList.add("selected");
+		if (!this.ws.mobile)
+			document.querySelector("#settings-AI-button").classList.add("selected");
 		document.querySelector("#settings-container > .settings > .settings-right > .AI").classList.remove("hidden");
 	}
 	autoReporting() {
 		this.deselect();
 
-		document.querySelector("#settings-auto-reporting-button").classList.add("selected");
+		if (!this.ws.mobile)
+			document.querySelector("#settings-auto-reporting-button").classList.add("selected");
 		document.querySelector("#settings-container > .settings > .settings-right > .auto-reporting").classList.remove("hidden");
 	}
 	gadgets() {
 		this.deselect();
 
-		document.querySelector("#settings-gadgets-button").classList.add("selected");
+		if (!this.ws.mobile)
+			document.querySelector("#settings-gadgets-button").classList.add("selected");
 		document.querySelector("#settings-container > .settings > .settings-right > .gadgets").classList.remove("hidden");
 	}
 
 	whitelist(type) {
 		this.deselect();
 
-		document.querySelector(`#settings-whitelist-${type}s-button`).classList.add("selected");
+		if (!this.ws.mobile)
+			document.querySelector(`#settings-whitelist-${type}s-button`).classList.add("selected");
 		document.querySelector(`#settings-container > .settings > .settings-right > .whitelist.${type}s`).classList.remove("hidden");
 
 		{
@@ -1906,7 +1931,8 @@ export class Settings {
 	highlight(type) {
 		this.deselect();
 
-		document.querySelector(`#settings-highlight-${type}s-button`).classList.add("selected");
+		if (!this.ws.mobile)
+			document.querySelector(`#settings-highlight-${type}s-button`).classList.add("selected");
 		document.querySelector(`#settings-container > .settings > .settings-right > .highlight.${type}s`).classList.remove("hidden");
 
 		{
@@ -2004,7 +2030,8 @@ export class Settings {
 	statistics() {
 		this.deselect();
 
-		document.querySelector("#settings-statistics-button").classList.add("selected");
+		if (!this.ws.mobile)
+			document.querySelector("#settings-statistics-button").classList.add("selected");
 		document.querySelector("#settings-container > .settings > .settings-right > .statistics").classList.remove("hidden");
 
 		{
@@ -2227,7 +2254,8 @@ export class Settings {
 	save() {
 		this.deselect();
 
-		document.querySelector("#settings-save-button").classList.add("selected");
+		if (!this.ws.mobile)
+			document.querySelector("#settings-save-button").classList.add("selected");
 		document.querySelector("#settings-container > .settings > .settings-right > .save").classList.remove("hidden");
 
 		document.querySelector("#settings-save-status").classList.add("hidden");
@@ -2236,7 +2264,8 @@ export class Settings {
 	changelog() {
 		this.deselect();
 
-		document.querySelector("#settings-changelog-button").classList.add("selected");
+		if (!this.ws.mobile)
+			document.querySelector("#settings-changelog-button").classList.add("selected");
 		document.querySelector("#settings-container > .settings > .settings-right > .changelog").classList.remove("hidden");
 
 		const $changelog = document.querySelector("#settings-container > .settings > .settings-right > .changelog > div > .changelog-content");
@@ -2247,7 +2276,8 @@ export class Settings {
 	about() {
 		this.deselect();
 
-		document.querySelector("#settings-about-button").classList.add("selected");
+		if (!this.ws.mobile)
+			document.querySelector("#settings-about-button").classList.add("selected");
 		document.querySelector("#settings-container > .settings > .settings-right > .about").classList.remove("hidden");
 
 		document.querySelector("#settings-about-version").textContent = WikiShield.config.version;

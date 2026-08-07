@@ -5,6 +5,29 @@ import { welcomes } from "../data/welcomes.js";
 import { fullTrim } from "../../../global/full-trim/script.esm.js";
 
 export const events = {
+    "return": {
+        title: "End current action",
+        icon: "fas fa-circle-xmark",
+    },
+
+    "error": {
+        title: "Send error message",
+        icon: "fas fa-bug",
+
+        parameters: (ws, item) => [
+            {
+                id: "message",
+                title: "Error message",
+                type: "text",
+                default: "Error occurred while processing the action.",
+            }
+        ],
+
+        script: (ws, item, params) => {
+            return { valid: false, reason: params.message };
+        }
+    },
+
     "next-item": {
         title: "Go to next item",
         icon: "fas fa-arrow-right",
