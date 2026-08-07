@@ -119,7 +119,8 @@ export class Utility {
 	}
 
 	getChangeColor(delta) {
-		if (delta === 0) return "#888"; // Gray for no change
+		if (delta === 0)
+			return "#888"; // Grey for no change
 		if (delta > 0) {
 			if (delta >= 1000) return "#00b894";
 			if (delta >= 500) return "#00d4a1";

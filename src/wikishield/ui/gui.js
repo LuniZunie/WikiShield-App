@@ -1381,7 +1381,7 @@ export class GUI {
 		const pending = Queue.groups[item.type] === "edit" ? this.ws.queue.pending.get(item.id) : null;
 
 		const sizediff = (consecutive ? item?.consecutive?.sizediff : undefined) ?? item.sizediff;
-		$details.style.setProperty("--diff-color", sizediff === undefined ? undefined : this.ws.util.getChangeColor(item.sizediff));
+		$details.style.setProperty("--diff-color", sizediff === undefined ? undefined : this.ws.util.getChangeColor(sizediff));
 		$details.innerHTML = "";
 
 		{
