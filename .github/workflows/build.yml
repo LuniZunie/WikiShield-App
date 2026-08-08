@@ -28,7 +28,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
 
       - name: Install dependencies
@@ -41,7 +41,16 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dist-${{ matrix.os }}
-          path: dist/**/*
+          path: |
+            dist/*.exe
+            dist/*.msi
+            dist/*.dmg
+            dist/*.zip
+            dist/*.AppImage
+            dist/*.deb
+            dist/*.rpm
+            dist/latest*.yml
+            dist/*.blockmap
           retention-days: 1
 
   create-release:
@@ -56,7 +65,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -101,7 +110,7 @@ jobs:
             /\\.deb$/,         // Linux deb
             /\\.rpm$/,         // Linux rpm
             /latest.*\\.yml$/,  // Latest metadata files
-            /builder-debug\\.yml\$/ // Builder debug files
+            /builder-debug\.yml$/ // Builder debug files
           ];
 
           function findFiles(dir) {
