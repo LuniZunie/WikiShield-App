@@ -2027,7 +2027,16 @@ export const events = {
             return { valid: true };
         },
         script: (ws, item, params) => {
-            ws.open(ws.page(`Special:Diff/${item.id}`));
+            if (item.showingConsecutive) {
+                if (item.pending)
+                    ws.open(ws.page(`Special:Diff/${item.pending.revid}/${item.pending.stable_revid}`));
+                else {
+                    const newest = item.consecutive.edits[0], oldest = item.consecutive.edits[item.consecutive.edits.length - 1];
+                    ws.open(ws.page(`Special:Diff/${newest.revid}/${oldest.parentid}`));
+                }
+            } else
+                ws.open(ws.page(`Special:Diff/${item.id}`));
+
             return { valid: true };
         }
     },
