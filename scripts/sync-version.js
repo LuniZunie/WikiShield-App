@@ -4,7 +4,11 @@ const path = require("path");
 const packageJsonPath = path.join(__dirname, "..", "package.json");
 const packageJson = require(packageJsonPath);
 
+const packageLockPath = path.join(__dirname, "..", "package-lock.json");
+const packageLock = require(packageLockPath);
+
 const version = packageJson.version;
+packageLock.version = version;
 
 if (packageJson.config?.forge?.packagerConfig?.win32metadata) {
     packageJson.config.forge.packagerConfig.win32metadata.FileVersion = version;
@@ -20,6 +24,7 @@ if (packageJson.build?.nsis)
     packageJson.build.nsis.artifactName = `WikiShield-Setup-${version}.exe`;
 
 fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`, "utf8");
+fs.writeFileSync(packageLockPath, `${JSON.stringify(packageLock, null, 2)}\n`, "utf8");
 
 console.log(`Updated all version fields to ${version}`);
 
