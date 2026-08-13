@@ -48,7 +48,7 @@ export class Settings {
 	}
 
 	get active() {
-		return document.querySelector("#settings-container > .settings > .settings-right > div:not(.hidden)");
+		return document.querySelector("#settings-container > .settings > .settings-right > div:not(.hidden):not(#settings-mobile-back)");
 	}
 
 	controller(event) {
