@@ -791,7 +791,7 @@ Version.v1 = class V1 extends Version {
                 if (!Array.isArray(value))
                     this.reset("settings", "namespaces");
 
-                root.settings.namespaces = [ ...new Set(root.settings.namespaces) ].filter(v => {
+                root.settings.namespaces = Array.from(new Set(root.settings.namespaces)).filter(v => {
                     const valid = namespaces.some(ns => ns.id === v);
                     if (!valid)
                         this.loadedLogger.warn(`Removing invalid namespace ID [ ${v} ] from stored data.`);
@@ -955,7 +955,7 @@ Version.v1 = class V1 extends Version {
                     if (!Array.isArray(value))
                         this.reset("settings", "auto_report", "for");
 
-                    root.settings.auto_report.for = [ ...new Set(root.settings.auto_report.for) ].filter(v => {
+                    root.settings.auto_report.for = Array.from(new Set(root.settings.auto_report.for)).filter(v => {
                         const valid = v in warningsLookup;
                         if (!valid)
                             this.loadedLogger.warn(`Removing invalid auto-report reason [ ${v} ] from stored data.`);

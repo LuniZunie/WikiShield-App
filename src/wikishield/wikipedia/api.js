@@ -4,6 +4,7 @@ import { wikishield } from "../global.js";
 const serversWithPendingChanges = new Set([ ]);
 
 import { truncate } from "../../../global/truncate/script.esm.js";
+import { uniquify } from "../../../global/uniquify/script.esm.js";
 
 import { MediaWikiAPI } from "../web-port/api.js";
 import { MediaWikiOAuth2 } from "../web-port/oauth2.js";
@@ -22,7 +23,7 @@ if (wikishield.isElectron) {
         static paramify(param) {
             if (!Array.isArray(param))
                 param = [ param ];
-            return [ ...new Set(param) ].filter(p => typeof p === "string" && p.trim());
+            return uniquify(param).filter(p => typeof p === "string" && p.trim());
         }
 
         #ws = null;

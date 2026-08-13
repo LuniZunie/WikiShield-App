@@ -4,8 +4,9 @@ import { convertToUTCString } from "../../../global/utc-string/script.esm.js";
 import { truncate } from "../../../global/truncate/script.esm.js";
 import { Memory } from "../../../global/memory/script.esm.js";
 import { Trie } from "../../../global/trie/script.esm.js";
-import { ORES } from "./ores.js";
+import { uniquify } from "../../../global/uniquify/script.esm.js";
 
+import { ORES } from "./ores.js";
 import { __servers__ } from "./servers.js";
 
 const __tags__ = new Set(__servers__.filter(s => s.tag).map(s => s.host));
@@ -33,7 +34,7 @@ export class MediaWikiAPI {
     static paramify(param) {
         if (!Array.isArray(param))
             param = [ param ];
-        return [ ...new Set(param) ];
+        return uniquify(param);
     }
     static join(param) {
         return param.join("|").replace(/\|\|+/g, "|");

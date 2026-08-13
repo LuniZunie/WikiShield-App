@@ -4,8 +4,9 @@ const { convertToUTCString } = require("../global/utc-string/script.com.js");
 const { truncate } = require("../global/truncate/script.com.js");
 const { Memory } = require("../global/memory/script.com.js");
 const { Trie } = require("../global/trie/script.com.js");
-const { ORES } = require("./ores.js");
+const { uniquify } = require("../global/uniquify/script.com.js");
 
+const { ORES } = require("./ores.js");
 const __servers__ = require("../servers.js");
 
 const __tags__ = new Set(__servers__.filter(s => s.tag).map(s => s.host));
@@ -33,7 +34,7 @@ class MediaWikiAPI {
     static paramify(param) {
         if (!Array.isArray(param))
             param = [ param ];
-        return [ ...new Set(param) ];
+        return uniquify(param);
     }
     static join(param) {
         return param.join("|").replace(/\|\|+/g, "|");

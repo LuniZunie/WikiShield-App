@@ -322,7 +322,7 @@ export class Zengine {
 		if (this.debug)
 			console.log("[Zengine] Initialized", {
 				soundCount: this.sounds.length,
-				categories: [ ...new Set(this.sounds.map(s => s.category)) ]
+				categories: Array.from(new Set(this.sounds.map(s => s.category)))
 			});
 
 		return this.sounds.length;
