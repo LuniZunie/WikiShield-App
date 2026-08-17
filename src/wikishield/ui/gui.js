@@ -1010,6 +1010,10 @@ export class GUI {
 	}
 
 	animation() {
+		let requestIdleCallback = window.requestIdleCallback;
+		if (requestIdleCallback === undefined)
+			requestIdleCallback = callback => setTimeout(callback, 0);
+
 		requestIdleCallback(() => { // if under heavy load, we don't want this taking resources.
 			try {
 				const cache = this.#cache;
