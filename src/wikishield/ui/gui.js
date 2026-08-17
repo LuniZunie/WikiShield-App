@@ -1010,76 +1010,78 @@ export class GUI {
 	}
 
 	animation() {
-		try {
-			const cache = this.#cache;
-			if (!cache.$pc?.isConnected) {
-				cache.$pc = document.querySelector("#pending-changes-container");
-				cache.top = null;
-				cache.left = null;
-			}
-			if (!cache.$bottom?.isConnected) {
-				cache.$bottom = this.ws.mobile ? document.querySelector("#edit-details") : document.querySelector("#bottom-tools");
-				cache.top = null;
-				cache.left = null;
-				cache.marginBottom = null;
-			}
-
-			if (this.ws.mobile) {
-				if (!cache.$mobile?.isConnected) {
-					cache.$mobile = document.querySelector("#mobile-user-warning-level");
-					cache.mobileTop = null;
+		requestIdleCallback(() => { // if under heavy load, we don't want this taking resources.
+			try {
+				const cache = this.#cache;
+				if (!cache.$pc?.isConnected) {
+					cache.$pc = document.querySelector("#pending-changes-container");
+					cache.top = null;
+					cache.left = null;
 				}
-				if (!cache.$diffScrollUp?.isConnected) {
-					cache.$diffScrollUp = document.querySelector("#diff-scroll-up");
-					cache.mobileTop = null;
-				}
-				if (!cache.$notices?.isConnected) {
-					cache.$notices = document.querySelector("#mobile-notices");
-					cache.mobileTop = null;
-				}
-			}
-
-			if (cache.$pc && cache.$bottom) {
-				const bottomRect = cache.$bottom.getBoundingClientRect();
-
-				const top = bottomRect.top - cache.$pc.offsetHeight;
-				const left = (bottomRect.left + bottomRect.right) / 2;
-
-				if (cache.top !== top) {
-					cache.$pc.style.top = `${top + 1}px`;
-					cache.top = top;
-				}
-				if (cache.left !== left) {
-					cache.$pc.style.left = `${left}px`;
-					cache.left = left;
-				}
-
-				if (!cache.$diff?.isConnected) {
-					cache.$diff = document.querySelector("#diff-container > *");
+				if (!cache.$bottom?.isConnected) {
+					cache.$bottom = this.ws.mobile ? document.querySelector("#edit-details") : document.querySelector("#bottom-tools");
+					cache.top = null;
+					cache.left = null;
 					cache.marginBottom = null;
 				}
-				if (cache.$diff) {
-					const marginBottom = this.ws.mobile ? 80 : window.innerHeight - bottomRect.top;
-					if (cache.marginBottom !== marginBottom) {
-						cache.$diff.style.marginBottom = `${marginBottom}px`;
-						cache.marginBottom = marginBottom;
+
+				if (this.ws.mobile) {
+					if (!cache.$mobile?.isConnected) {
+						cache.$mobile = document.querySelector("#mobile-user-warning-level");
+						cache.mobileTop = null;
+					}
+					if (!cache.$diffScrollUp?.isConnected) {
+						cache.$diffScrollUp = document.querySelector("#diff-scroll-up");
+						cache.mobileTop = null;
+					}
+					if (!cache.$notices?.isConnected) {
+						cache.$notices = document.querySelector("#mobile-notices");
+						cache.mobileTop = null;
+					}
+				}
+
+				if (cache.$pc && cache.$bottom) {
+					const bottomRect = cache.$bottom.getBoundingClientRect();
+
+					const top = bottomRect.top - cache.$pc.offsetHeight;
+					const left = (bottomRect.left + bottomRect.right) / 2;
+
+					if (cache.top !== top) {
+						cache.$pc.style.top = `${top + 1}px`;
+						cache.top = top;
+					}
+					if (cache.left !== left) {
+						cache.$pc.style.left = `${left}px`;
+						cache.left = left;
 					}
 
-					if (this.ws.mobile) {
-						const diffRect = cache.$diff.getBoundingClientRect();
-						const top = diffRect.top;
-						if (cache.mobileTop !== top) {
-							cache.$mobile.style.top = `${Math.max(8, top)}px`;
-							cache.$diffScrollUp.style.top = `${Math.max(8, top)}px`;
-							cache.$notices.style.top = `${Math.max(8, top)}px`;
-							cache.mobileTop = top;
+					if (!cache.$diff?.isConnected) {
+						cache.$diff = document.querySelector("#diff-container > *");
+						cache.marginBottom = null;
+					}
+					if (cache.$diff) {
+						const marginBottom = this.ws.mobile ? 80 : window.innerHeight - bottomRect.top;
+						if (cache.marginBottom !== marginBottom) {
+							cache.$diff.style.marginBottom = `${marginBottom}px`;
+							cache.marginBottom = marginBottom;
+						}
+
+						if (this.ws.mobile) {
+							const diffRect = cache.$diff.getBoundingClientRect();
+							const top = diffRect.top;
+							if (cache.mobileTop !== top) {
+								cache.$mobile.style.top = `${Math.max(8, top)}px`;
+								cache.$diffScrollUp.style.top = `${Math.max(8, top)}px`;
+								cache.$notices.style.top = `${Math.max(8, top)}px`;
+								cache.mobileTop = top;
+							}
 						}
 					}
 				}
-			}
-		} catch (error) { console.error("Error in animation loop:", error); }
+			} catch (error) { console.error("Error in animation loop:", error); }
 
-		requestAnimationFrame(() => this.animation());
+			requestAnimationFrame(() => this.animation());
+		});
 	}
 
 	update() {

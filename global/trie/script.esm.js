@@ -13,186 +13,203 @@ const Node = {
 import { generateRandomUUID } from "../UUID/script.esm.js";
 
 class Trie {
-	constructor(options = { }) {
-		this.order = { };
-		this.store = new Map();
-		this.timeouts = new Map();
+    #size;
+    #timeout;
 
-		if ("timeout" in options)
-			this.timeout = options.timeout;
-		if ("size" in options)
-			this.maxSize = options.size;
-	}
+    #store;
+    #order;
+    #timeouts;
 
-	clear() {
-		this.order = { };
-		this.store.clear();
-		this.timeouts.clear();
-	}
+    constructor({ timeout, size } = { }) {
+        if (timeout !== undefined && (!Number.isFinite(timeout) || timeout < 0))
+            throw new RangeError("timeout must be a non-negative finite number");
+        else if (size !== undefined && (!Number.isInteger(size) || size < 0))
+            throw new RangeError("size must be a non-negative integer");
 
-	has(...keys) {
-        const lastKey = keys.pop();
-        let scope = this.store;
-		for (const key of keys) {
-            if (!scope.has(key))
-                return false;
+        this.#size = size;
+        this.#timeout = timeout;
 
-            const temp = scope.get(key);
-            if (temp.terminal)
-                return false;
+        this.#store = new Map();
+        this.#order = new Map();
+        this.#timeouts = new Map();
+    }
 
-            scope = temp.children;
+    #clearTimeout(UUID) {
+        const timer = this.#timeouts.get(UUID);
+        if (timer !== undefined) {
+            clearTimeout(timer);
+            this.#timeouts.delete(UUID);
         }
+    }
 
-        return scope.get(lastKey)?.defined === true;
-	}
-
-	get(...keys) {
-        const lastKey = keys.pop();
-        let scope = this.store;
-		for (const key of keys) {
-            if (!scope.has(key))
-                return undefined;
-
-            const temp = scope.get(key);
-            if (temp.terminal)
-                return undefined;
-
-            scope = temp.children;
-        }
-
-        return scope.get(lastKey)?.value;
-	}
-
-	set(...keys) {
-        const value = keys.pop();
-
-		let UUID = ((keys) => {
-            const lastKey = keys.pop();
-            let scope = this.store;
-            for (const key of keys) {
-                if (!scope.has(key))
-                    return undefined;
-
-                const temp = scope.get(key);
-                if (temp.terminal)
-                    return undefined;
-
-                scope = temp.children;
-            }
-
-            return scope.get(lastKey)?.UUID;
-        })(keys);
-
-        delete this.order[UUID];
-
-        if (UUID === undefined)
-            UUID = generateRandomUUID();
-
-        const finalKey = keys.pop();
-        let scope = this.store;
+    #findNode(keys) {
+        let scope = this.#store;
         for (const key of keys) {
-            if (scope.has(key)) {
-                const temp = scope.get(key);
-                temp.terminal = false;
-                temp.children ??= new Map();
+            const node = scope.get(key);
+            if (node === undefined)
+                return undefined;
 
-                scope = temp.children;
-            } else {
-                const temp = {
-                    defined: false,
-
-                    terminal: false,
-                    children: new Map()
-                };
-
-                scope.set(key, temp);
-                scope = temp.children;
-            }
+            scope = node.children;
         }
 
-		const final = scope.get(finalKey) ?? { terminal: true };
-        final.UUID = UUID;
-        final.defined = true;
-        final.value = value;
-        scope.set(finalKey, final);
+        return scope;
+    }
 
-        this.order[UUID] = keys.concat([ finalKey ]);
+    #findFinal(keys) {
+        if (keys.length === 0)
+            return undefined;
 
-		if (this.timeouts.has(UUID))
-			clearTimeout(this.timeouts.get(UUID));
+        const finalKey = keys[keys.length - 1];
+        const scope = this.#findNode(keys.slice(0, -1));
 
-		if (this.timeout !== undefined)
-			this.timeouts.set(UUID, setTimeout(() => { this.#deleteByUUID(UUID); }, this.timeout));
-
-		if (this.maxSize !== undefined && Object.keys(this.order).length > this.maxSize)
-			this.#deleteByUUID(this.order.shift());
-	}
-    add(key) {
-        if (!this.store.has(key))
-            this.set(key, true);
+        return scope?.get(finalKey);
     }
 
     #deleteByUUID(UUID) {
-        if (this.timeouts.has(UUID))
-            clearTimeout(this.timeouts.get(UUID));
-        this.timeouts.delete(UUID);
+        const keys = this.#order.get(UUID);
+        if (keys === undefined)
+            return false;
 
-        const keys = this.order[UUID];
-        delete this.order[UUID];
+        this.#clearTimeout(UUID);
+        this.#order.delete(UUID);
 
-        const scopes = [ { children: this.store } ];
-        let scope = this.store;
+        const scopes = [ this.#store ];
+        let scope = this.#store;
+
         for (const key of keys) {
-            const temp = scope.get(key);
-            scopes.push(temp);
+            const node = scope.get(key);
+            if (node === undefined)
+                return false;
 
-            scope = temp.children;
+            scopes.push(node);
+            scope = node.children;
         }
 
-        const final = scopes.pop();
+        const final = scopes[scopes.length - 1];
         final.defined = false;
+        delete final.UUID;
         delete final.value;
-        if (final.children?.size > 0)
-            return;
 
-        for (let i = scopes.length - 1; i >= 0; i--) {
-            const scope = scopes[i];
-            const key = keys.pop();
+        if (final.children.size > 0)
+            return true;
 
-            scope.children.delete(key);
-            if (scope.children.size > 0 || scope.defined)
+        for (let i = keys.length - 1; i >= 0; i--) {
+            const parent = scopes[i];
+            const key = keys[i];
+            const node = parent.get(key);
+
+            parent.delete(key);
+            if (parent.size > 0)
                 break;
-
-            scope.terminal = true;
-            delete scope.children;
         }
+
+        return true;
     }
-	delete(...keys) {
-        const UUID = ((keys) => {
-            const lastKey = keys.pop();
-            let scope = this.store;
-            for (const key of keys) {
-                if (!scope.has(key))
-                    return undefined;
 
-                const temp = scope.get(key);
-                if (temp.terminal)
-                    return undefined;
+    clear() {
+        for (const timeout of this.#timeouts.values())
+            clearTimeout(timeout);
 
-                scope = temp.children;
+        this.#store.clear();
+        this.#order.clear();
+        this.#timeouts.clear();
+    }
+
+    has(...keys) {
+        return this.#findFinal(keys)?.defined === true;
+    }
+
+    get(...keys) {
+        const node = this.#findFinal(keys);
+
+        return node?.defined === true ? node.value : undefined;
+    }
+
+    set(...args) {
+        const value = args.pop();
+        const keys = args;
+
+        if (keys.length === 0)
+            throw new TypeError("at least one key is required");
+
+        const existing = this.#findFinal(keys);
+        let UUID = existing?.UUID;
+        if (UUID !== undefined) {
+            this.#order.delete(UUID);
+            this.#clearTimeout(UUID);
+        } else
+            UUID = generateRandomUUID();
+
+        const finalKey = keys[keys.length - 1];
+        let scope = this.#store;
+
+        for (let i = 0; i < keys.length - 1; i++) {
+            const key = keys[i];
+            let node = scope.get(key);
+
+            if (node === undefined) {
+                node = {
+                    defined: false,
+                    children: new Map()
+                };
+
+                scope.set(key, node);
             }
 
-            return scope.get(lastKey)?.UUID;
-        })(keys);
+            scope = node.children;
+        }
 
-        if (UUID !== undefined)
-            this.#deleteByUUID(UUID);
-	}
+        let final = scope.get(finalKey);
+        if (final === undefined) {
+            final = {
+                defined: false,
+                children: new Map()
+            };
 
-	size() {
-		return Object.keys(this.order).length;
-	}
+            scope.set(finalKey, final);
+        }
+
+        final.UUID = UUID;
+        final.defined = true;
+        final.value = value;
+
+        this.#order.set(UUID, keys);
+
+        if (this.#timeout !== undefined)
+            this.#timeouts.set(UUID, setTimeout(() => {
+                this.#deleteByUUID(UUID);
+            }, this.#timeout));
+
+        if (this.#size !== undefined && this.#order.size > this.#size)
+            this.#deleteByUUID(this.#order.keys().next().value);
+
+        return this;
+    }
+
+    add(...keys) {
+        if (!this.has(...keys))
+            this.set(...keys, true);
+
+        return this;
+    }
+
+    delete(...keys) {
+        const UUID = this.#findFinal(keys)?.UUID;
+        if (UUID === undefined)
+            return false;
+        return this.#deleteByUUID(UUID);
+    }
+
+    get size() {
+        return this.#size;
+    }
+    get timeout() {
+        return this.#timeout;
+    }
+
+    get count() {
+        return this.#order.size;
+    }
 }
 
 export { Trie };

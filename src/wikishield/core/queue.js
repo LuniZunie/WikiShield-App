@@ -1095,7 +1095,7 @@ export class Queue {
 		}
 
 		if (i <= 0) {
-			if (this.current.history.length === 0)
+			if (this.current.history.count === 0)
 				return;
 
 			this.current.queue.unshift(this.current.history.pop());
@@ -1207,12 +1207,12 @@ export class Queue {
 	canGoPrevious() {
 		const i = this.current.queue.findIndex(item => item.id === this.current.item?.id);
 		if (i === -1)
-			return this.current.history.length > 0;
+			return this.current.history.count > 0;
 
 		if (this.current.type === "pending")
 			return i > 0;
 		else if (i === 0)
-			return this.current.history.length > 0;
+			return this.current.history.count > 0;
 		else
 			return true;
 	}

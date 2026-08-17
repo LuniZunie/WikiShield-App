@@ -1,75 +1,111 @@
 class Memory {
-	constructor(options = { }) {
-		this.order = [ ];
-		this.store = new Map();
-		this.timeouts = new Map();
+    #size;
+    #timeout;
 
-		if ("timeout" in options)
-			this.timeout = options.timeout;
-		if ("size" in options)
-			this.maxSize = options.size;
-	}
+    #store;
+    #timeouts;
 
-	clear() {
-		this.order = [ ];
-		this.store.clear();
-		this.timeouts.clear();
-	}
+    constructor({ timeout, size } = { }) {
+        if (timeout !== undefined && (!Number.isFinite(timeout) || timeout < 0))
+            throw new RangeError("timeout must be a non-negative finite number");
+        else if (size !== undefined && (!Number.isInteger(size) || size < 0))
+            throw new RangeError("size must be a non-negative integer");
 
-	has(key) {
-		return this.store.has(key);
-	}
+        this.#size = size;
+        this.#timeout = timeout;
 
-	get(key) {
-		return this.store.get(key);
-	}
-
-	set(key, value) {
-		const existingIndex = this.order.indexOf(key);
-		if (existingIndex !== -1)
-			this.order.splice(existingIndex, 1);
-
-		this.order.push(key);
-		this.store.set(key, value);
-
-		if (this.timeouts.has(key))
-			clearTimeout(this.timeouts.get(key));
-
-		if (this.timeout !== undefined)
-			this.timeouts.set(key, setTimeout(() => { this.delete(key); }, this.timeout));
-
-		if (this.maxSize !== undefined && this.store.size > this.maxSize)
-			this.delete(this.order.shift());
-	}
-    add(key) {
-        if (!this.store.has(key))
-            this.set(key, true);
+        this.#store = new Map();
+        this.#timeouts = new Map();
     }
 
-	delete(key) {
-		const index = this.order.indexOf(key);
-		if (index !== -1)
-			this.order.splice(index, 1);
+    #clearTimeout(key) {
+        const timer = this.#timeouts.get(key);
 
-		this.store.delete(key);
+        if (timer !== undefined) {
+            clearTimeout(timer);
+            this.#timeouts.delete(key);
+        }
+    }
 
-		clearTimeout(this.timeouts.get(key));
-		this.timeouts.delete(key);
-	}
+    clear() {
+        for (const timeout of this.#timeouts.values())
+            clearTimeout(timeout);
 
-	size() {
-		return this.store.size;
-	}
+        this.#store.clear();
+        this.#timeouts.clear();
+    }
 
-	keys() {
-		return this.store.keys();
-	}
-	values() {
-		return this.store.values();
-	}
-	entries() {
-		return this.store.entries();
-	}
+    has(key) {
+        return this.#store.has(key);
+    }
+
+    get(key) {
+        return this.#store.get(key);
+    }
+
+    set(key, value) {
+        const exists = this.#store.has(key);
+        if (exists) {
+            this.#store.delete(key);
+            this.#clearTimeout(key);
+        }
+
+        this.#store.set(key, value);
+
+        if (this.#timeout !== undefined)
+            this.#timeouts.set(key, setTimeout(() => {
+                this.delete(key);
+            }, this.#timeout));
+
+        if (this.#size !== undefined && this.#store.size > this.#size)
+            this.delete(this.#store.keys().next().value);
+
+        return this;
+    }
+
+    add(key) {
+        if (!this.#store.has(key))
+            this.set(key, true);
+
+        return this;
+    }
+
+    delete(key) {
+        if (!this.#store.has(key))
+            return false;
+
+        this.#store.delete(key);
+        this.#clearTimeout(key);
+
+        return true;
+    }
+
+    get size() {
+        return this.#size;
+    }
+    get timeout() {
+        return this.#timeout;
+    }
+
+    get count() {
+        return this.#store.size;
+    }
+
+    keys() {
+        return this.#store.keys();
+    }
+
+    values() {
+        return this.#store.values();
+    }
+
+    entries() {
+        return this.#store.entries();
+    }
+
+    [Symbol.iterator]() {
+        return this.#store[Symbol.iterator]();
+    }
 }
 
 export { Memory };

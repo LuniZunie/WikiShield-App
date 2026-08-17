@@ -1,6 +1,6 @@
 {
   "name": "WikiShield",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "WikiShield is an anti-vandalism tool for Wikipedia.",
   "main": "index.js",
   "repository": {
@@ -50,7 +50,7 @@
     "electron-icon-builder": "^2.0.1",
     "electron-winstaller": "^5.4.0",
     "terser-webpack-plugin": "^5.3.10",
-    "webpack-cli": "^7.0.2"
+    "webpack-cli": "^7.2.2"
   },
   "dependencies": {
     "@babel/core": "^7.29.7",
@@ -77,11 +77,11 @@
           "CompanyName": "WikiShield Team",
           "FileDescription": "WikiShield Application",
           "ProductName": "WikiShield",
-          "FileVersion": "2.1.1",
-          "ProductVersion": "2.1.1"
+          "FileVersion": "2.1.2",
+          "ProductVersion": "2.1.2"
         },
-        "appVersion": "2.1.1",
-        "buildVersion": "2.1.1"
+        "appVersion": "2.1.2",
+        "buildVersion": "2.1.2"
       },
       "makers": [
         {
@@ -247,7 +247,7 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "WikiShield",
-      "artifactName": "WikiShield-Setup-2.1.1.exe"
+      "artifactName": "WikiShield-Setup-2.1.2.exe"
     },
     "publish": {
       "provider": "github",

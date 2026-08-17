@@ -3600,7 +3600,8 @@ body {
                             font-size: clamp(.75rem, .7rem + .25vw, .875rem);
                             font-weight: 500;
 
-                            hyphens: auto;
+                            word-wrap: break-word;
+                            word-break: break-word;
 
                             /* Theme dependent */
                             color: rgba(180, 180, 180, 1);

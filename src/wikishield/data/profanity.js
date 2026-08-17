@@ -1762,7 +1762,7 @@ class Profanity {
               averageObfuscation < -0.2 ?
               Math.abs(averageObfuscation) * .4 : 0;
 
-        // Critical patterns only count if backed by decent confidence
+        // The critical patterns only count if backed by decent confidence
         const criticalPatterns = matches.filter(
             m => (m.severity >= 1.0 && m.confidence >= .5) || m.confidence >= .9
         ).length;
