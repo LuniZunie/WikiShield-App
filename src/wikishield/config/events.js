@@ -2012,7 +2012,7 @@ export const events = {
             return { valid: true };
         },
         script: (ws, item, params) => {
-            ws.open(ws.page(`Special:Permalink/${item.id}`));
+            ws.open(ws.page(`Special:Permalink/${item.type === "abuselog" ? item.revid : item.id}`));
             return { valid: true };
         }
     },
@@ -2041,7 +2041,7 @@ export const events = {
                     ws.open(ws.page(`Special:Diff/${newest.revid}/${oldest.parentid}`));
                 }
             } else
-                ws.open(ws.page(`Special:Diff/${item.id}`));
+                ws.open(ws.page(`Special:Diff/${item.type === "abuselog" ? item.revid : item.id}`));
 
             return { valid: true };
         }

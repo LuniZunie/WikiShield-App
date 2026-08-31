@@ -19,6 +19,7 @@
     "test": "electron . --trace-warnings",
     "build": "electron-builder --publish never",
     "build-web": "webpack --mode production",
+    "bump": "node scripts/bump.js",
     "sync-version": "node scripts/sync-version.js",
     "publish": "node scripts/publish-release.js",
     "publish:win": "electron-builder --win --publish always",
