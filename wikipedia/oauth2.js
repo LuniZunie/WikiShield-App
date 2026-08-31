@@ -241,11 +241,30 @@ class MediaWikiOAuth2 {
         } catch (err) { throw new Error(`OAuth2 authorization failed: ${err.message}`); }
     }
 
+    async get(url, params = { }, signal = null, method = "POST", bypass) {
+        if (!this.accessToken)
+            throw new Error("No access token available");
+        else if (this.expires && Date.now() >= (this.expires.getTime() - 30 * 60 * 1000)) // refresh 30 minutes before expiry
+            await this.refresh();
+
+        // [ electron?, ...arguments ]
+        return [ true, url, {
+            method,
+            headers: {
+                "Authorization": `Bearer ${this.accessToken}`,
+                "Content-Type": "application/x-www-form-urlencoded",
+                "User-Agent": this.userAgent
+            },
+            body: method === "GET" ? undefined : new URLSearchParams(params).toString(),
+            ...(bypass ? { priority: "high" } : { }),
+            signal
+        } ];
+    }
+
     async fetch(url, params = { }, signal = null, method = "POST", bypass) {
         if (!this.accessToken)
             throw new Error("No access token available");
-
-        if (this.expires && Date.now() >= (this.expires.getTime() - 30 * 60 * 1000)) // refresh 30 minutes before expiry
+        else if (this.expires && Date.now() >= (this.expires.getTime() - 30 * 60 * 1000)) // refresh 30 minutes before expiry
             await this.refresh();
 
         if (this.throttle.count % 100 === 0)

@@ -1140,8 +1140,14 @@ export const events = {
             if (await ws.api.areUsersBlocked([ item.user.name ])[item.user.name])
                 return { valid: false, reason: "User cannot be reported because they are blocked." };
 
+            let attemptText = " ";
+            if (params.reason === "Vandalism past final warning" && params.summary == false) {
+                const attempts = ws.queue.getWarningHistory(item.user.talk || "").some(warning => warning.template.toLowerCase() === "uw-attempt");
+                attemptText = attempts ? ` See also {{subst:filter log|username=${item.user.name}}}.` : " ";
+            }
+
             return await ws.api.append(WikiShield.config.pages.AIV, null, fullTrim(`
-                * {{vandal|${item.user.name}}} &ndash; ${params.reason}${params.summary ? `: ${params.summary}` : "."} ~~~~
+                * {{vandal|${item.user.name}}} &ndash; ${params.reason}${params.summary ? `: ${params.summary}` : "."}${attemptText}~~~~
             `), ws.api.summary(`Reporting ${ws.api.user(item.user.name)}`), page => {
                 const content = ws.util.getPageSections(page).find(section => section.title === "User-reported")?.content;
                 return {

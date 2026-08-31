@@ -52,6 +52,15 @@ export class MediaWikiOAuth2 {
         return origin;
     }
 
+    async get(url, params = { }, signal = null, method = "POST", bypass) {
+        const origin = this.getOrigin(url);
+        if (origin)
+            url += (url.includes("?") ? "&" : "?") + `origin=${encodeURIComponent(origin)}`;
+
+        // [ electron?, ...arguments ]
+        return [ false, { ...params, origin }, { url, method, ...(origin ? { xhrFields: { withCredentials: true } } : { }) } ];
+    }
+
     async fetch(url, params = { }, signal = null, method = "POST", bypass) {
         return await this.throttle.call(async () => {
             const origin = this.getOrigin(url);

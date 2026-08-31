@@ -4129,23 +4129,9 @@ export class GUI {
 		});
 
 		const executeWithWarn = async (warningTitle, level) => {
-			const warning = getWarningFromLookup(warningTitle);
-			const reportObject = {
-				name: "if",
-				condition: {
-					name: "user-final-warning"
-				},
-				actions: [
-					{
-						name: "report-user-to-aiv",
-						params: {
-							reportMessage: "Vandalism past final warning"
-						}
-					}
-				]
-			};
-
 			const autoReporting = this.ws.store.settings.auto_report;
+			const warning = getWarningFromLookup(warningTitle);
+
 			await this.ws.execute({
 				actions: [
 					{
@@ -4169,7 +4155,23 @@ export class GUI {
 						name: "highlight-user",
 						params: { }
 					},
-				].concat(autoReporting.enabled && warning.reportable && autoReporting.for.has(warningTitle) ? [ reportObject ] : [ ])
+				].concat(
+					autoReporting.enabled && warning.reportable && autoReporting.for.has(warningTitle) ?
+						[ {
+							name: "if",
+							condition: {
+								name: "user-final-warning"
+							},
+							actions: [
+								{
+									name: "report-user-to-aiv",
+									params: {
+										reportMessage: "Vandalism past final warning"
+									}
+								}
+							]
+						} ] : [ ]
+				)
 			});
 		};
 

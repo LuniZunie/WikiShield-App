@@ -92,6 +92,15 @@ class MediaWikiAPI {
         return `[[Special:CentralAuth/${username}|${username}]]`;
     }
 
+    async get(params, bypass = false, serverOverride = null) {
+        try {
+            return await this.oauth.get(`https://${serverOverride || this.server}/w/api.php`, this.build({ ...params, format: "json", formatversion: 2 }, serverOverride), undefined, "POST", bypass, serverOverride);
+        } catch (err) {
+            Logger.error("Error in API GET request:", err, JSON.stringify(params));
+            throw err;
+        }
+    }
+
     async post(params, bypass = false, serverOverride = null) {
         try {
             const data = await this.oauth.fetch(`https://${serverOverride || this.server}/w/api.php`, this.build({ ...params, format: "json", formatversion: 2 }, serverOverride), undefined, "POST", bypass, serverOverride);

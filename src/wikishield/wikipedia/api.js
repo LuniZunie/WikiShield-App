@@ -71,6 +71,16 @@ if (wikishield.isElectron) {
             return `[[Special:CentralAuth/${username}|${username}]]`;
         }
 
+        async get(params, bypass, serverOverride) {
+            try {
+                return await electron.mwapi("get", params, bypass, serverOverride);
+            } catch (error) {
+                if (error === "assertnameduserfailed" || error.message?.includes("assertnameduserfailed"))
+                    return this.#ws.disable("Invalid account", "Your account was logged out or changed.");
+                throw error;
+            }
+        }
+
         async post(params, bypass, serverOverride) {
             try {
                 return await electron.mwapi("post", params, bypass, serverOverride);
