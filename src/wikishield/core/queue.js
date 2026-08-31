@@ -69,7 +69,7 @@ export class Queue {
 		this.blocked = new Memory({ size: 10000 });
 
 		this.playedSound = {
-			mention: new Memory({ timeout: 60 * 1000 })
+			mention: new WeakSet(),
 		};
 
 		this.bypass = new Memory({ timeout: 60 * 60 * 1000, size: 10000 }); // 1 hour

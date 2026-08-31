@@ -22,24 +22,15 @@ export class Notifications {
             notformat: "model"
         })
             .then(response => {
-                const [ isElectron, ...args ] = response;
-                if (isElectron)
-                    fetch(...args)
-                        .then(response => response.json())
-                        .then(data => {
-                            console.log("Initial notifications:", data);
-                        })
-                        .catch(error => {
-                            console.error("Failed to load initial notifications:", error);
-                        });
-                else
-                    new mw.Api().ajax(...args)
-                        .then(data => {
-                            console.log("Initial notifications:", data);
-                        })
-                        .catch(error => {
-                            console.error("Failed to load initial notifications:", error);
-                        });
+                const [ ...args ] = response;
+                fetch(...args)
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log("Initial notifications:", data);
+                    })
+                    .catch(error => {
+                        console.error("Failed to load initial notifications:", error);
+                    });
             })
             .catch(error => {
                 console.error("Failed to load notifications:", error);

@@ -57,8 +57,19 @@ export class MediaWikiOAuth2 {
         if (origin)
             url += (url.includes("?") ? "&" : "?") + `origin=${encodeURIComponent(origin)}`;
 
-        // [ electron?, ...arguments ]
-        return [ false, { ...params, origin }, { url, method, ...(origin ? { xhrFields: { withCredentials: true } } : { }) } ];
+        return [
+            url,
+            {
+                method,
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                body: method === "GET" ? undefined : new URLSearchParams(params).toString(),
+                ...(bypass ? { priority: "high" } : { }),
+                signal,
+                ...(origin ? { credentials: "include" } : { })
+            }
+        ]
     }
 
     async fetch(url, params = { }, signal = null, method = "POST", bypass) {
