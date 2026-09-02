@@ -12,10 +12,16 @@ import { StorageManager } from "./data/storage/manager.js";
 
 import { Killswitch } from "./wikipedia/killswitch.js";
 
+import { Multithread } from "./multithreading/class.js";
+import { loadMultithreadedCode } from "./multithreading/electron.js";
+
 wikishield.isMobile = isMobileUserAgent(window.navigator.userAgent || window.navigator.vendor || window.opera);
 wikishield.arePopupsBlocked = false;
 
-export function run() {
+export async function run() {
+    if (wikishield.isElectron)
+        await loadMultithreadedCode();
+
     if (wikishield.isMobile)
         wikishield.arePopupsBlocked = true;
     else
@@ -125,7 +131,7 @@ export function run() {
                     await ws.init();
                 }, { once: true });
 
-                killswitch.check().then(() => killswitch.monitor(10 * 1000));
+                killswitch.monitor(10 * 1000);
             }, { once: true });
         } else {
             alert("An error has occurred with the WikiShield storage system that could lead to data loss. For that reason, WikiShield has been automatically disabled. Please report this immediately to the development team.");

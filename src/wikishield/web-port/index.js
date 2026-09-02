@@ -1,10 +1,14 @@
 import { run } from "../script.js";
 import { build } from "./build.js";
 
+import { loadMultithreadedCode } from "../multithreading/webpack.js";
+
 {
     "use strict";
 
-    function start() {
+    async function start() {
+        await loadMultithreadedCode();
+
         if ((window.navigator.userAgent || window.navigator.vendor || window.opera).endsWith("WikipediaApp"))
             return (async title => {
                 const html = await new mw.Api().get({ action: "parse", page: title, prop: "text", formatversion: 2 });

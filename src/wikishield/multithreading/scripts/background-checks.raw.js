@@ -1,10 +1,18 @@
+let killswitchInterval;
+
 self.onmessage = event => {
-    const { command, opts } = event.data;
+    const { type, body } = event.data;
+    if (type !== "post")
+        return;
+
+    const { command, data } = body;
     switch (command) {
         case "killswitch": {
-            const { interval, expected, fetchArgs } = opts;
+            const { interval, expected, fetchArgs } = data;
+            if (killswitchInterval)
+                clearInterval(killswitchInterval);
 
-            setInterval(async () => {
+            const check = async () => {
                 try {
                     const response = await fetch(...fetchArgs)
                         .then(response => response.json())
@@ -16,22 +24,25 @@ self.onmessage = event => {
                     if (!data)
                         throw new Error("No killswitch found");
                     else if (data.disabled)
-                        return self.postMessage({ command: "killswitch", opts: { event: "kill" } });
+                        return self.postMessage({ body: { command: "killswitch", data: { event: "kill" } } });
 
                     const soft = data.reload?.soft ?? 0;
                     const hard = data.reload?.hard ?? 0;
 
                     if (hard > expected.hard)
-                        return self.postMessage({ command: "killswitch", opts: { event: "force-update" } });
+                        return self.postMessage({ body: { command: "killswitch", data: { event: "force-update" } } });
                     else if (soft > expected.soft)
-                        return self.postMessage({ command: "killswitch", opts: { event: "update", soft } });
+                        return self.postMessage({ body: { command: "killswitch", data: { event: "update", soft } } });
 
-                    return self.postMessage({ command: "killswitch", opts: { event: "okay" } });
+                    return self.postMessage({ body: { command: "killswitch", data: { event: "okay" } } });
                 } catch (error) {
                     console.error(`[WikiShield] Killswitch worker error:`, error);
-                    self.postMessage({ command: "killswitch", opts: { event: "unsafe" } });
+                    self.postMessage({ body: { command: "killswitch", data: { event: "unsafe" } } });
                 }
-            }, interval);
+            };
+
+            killswitchInterval = setInterval(check, interval);
+            check();
         } break;
     }
 };

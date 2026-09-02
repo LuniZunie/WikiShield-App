@@ -1,7 +1,7 @@
 import { fullTrim } from "../../../global/full-trim/script.esm.js";
 import { generateRandomUUID } from "../../../global/UUID/script.esm.js";
 
-import { WebWorker } from "../utilities/web-worker.js";
+import { Multithread } from "../multithreading/class.js";
 
 class Killswitch {
     static #page = "User:LuniZunie/JSON/Killswitch.json";
@@ -12,7 +12,6 @@ class Killswitch {
     #worker = null;
 
     #api = null;
-    #interval = null;
 
     #events = {
         okay: [ ],
@@ -27,37 +26,7 @@ class Killswitch {
     constructor(ws) {
         this.#api = ws.api;
 
-        this.#worker = new WebWorker(fullTrim(`
-            self.onmessage = async event => {
-                const { UUID, staticSoft, staticHard, args } = event.data;
-
-                try {
-                    const response = await fetch(...args)
-                        .then(response => response.json())
-                        .then(data => data.query?.pages || { })
-                        .catch((err) => { return console.error(err) || { }; });
-
-                    const content = Object.values(response)?.[0]?.revisions?.[0]?.slots?.main?.content || "";
-                    const data = JSON.parse(content)?.WikiShield;
-                    if (!data)
-                        throw new Error("No killswitch found");
-                    else if (data.disabled)
-                        return self.postMessage({ UUID, event: "kill" });
-
-                    const soft = data.reload?.soft ?? 0;
-                    const hard = data.reload?.hard ?? 0;
-
-                    if (hard > staticHard)
-                        return self.postMessage({ UUID, event: "force-update" });
-                    else if (soft > staticSoft)
-                        return self.postMessage({ UUID, event: "update", soft });
-
-                    return self.postMessage({ UUID, event: "okay" });
-                } catch {
-                    self.postMessage({ UUID, event: "unsafe" });
-                }
-            };
-        `));
+        this.#worker = new Multithread(Multithread.LOADED_FILES["background-checks"]);
     }
 
     on(event, callback, options = { }) {
@@ -80,49 +49,43 @@ class Killswitch {
         return this;
     }
 
-    async check() {
-        const UUID = generateRandomUUID();
+    async monitor(interval = 10 * 1000) {
+        this.#worker.onmessage = event => {
+            const { command, data } = event.data.body;
+            if (command !== "killswitch")
+                return;
 
-        return new Promise(async (resolve, reject) => {
-            this.#worker.onmessage = event => {
-                const { UUID: returnedUUID, event: eventName, soft } = event.data;
-                if (returnedUUID !== UUID)
-                    return; // was not meant for us
+            const { event: eventName, soft } = data;
+            if (eventName === "update")
+                Killswitch.#soft = soft;
+            this.#emit(eventName);
+        };
+        this.#worker.onerror = error => {
+            console.error("[WikiShield] Killswitch worker error:", error);
+            this.#emit("unsafe");
+        };
+        this.#worker.onmessageerror = error => {
+            console.error("[WikiShield] Killswitch worker message error:", error);
+            this.#emit("unsafe");
+        };
 
-                if (eventName === "update")
-                    Killswitch.#soft = soft;
-
-                this.#emit(eventName);
-                resolve();
-            };
-
-            this.#worker.onerror = error => {
-                console.error("[WikiShield] Killswitch worker error:", error);
-
-                this.#emit("unsafe");
-                reject(error);
-            };
-
-            this.#worker.postMessage({
-                UUID,
-                staticSoft: Killswitch.#soft,
-                staticHard: Killswitch.#hard,
-                args: await this.#api.get({
+        this.#worker.post({
+            command: "killswitch",
+            data: {
+                interval,
+                expected: {
+                    soft: Killswitch.#soft,
+                    hard: Killswitch.#hard
+                },
+                fetchArgs: await this.#api.get({
                     action: "query",
                     prop: "revisions",
                     rvprop: "content",
                     rvslots: "*",
                     titles: Killswitch.#page
                 }, false, "en.wikipedia.org")
-            });
+            }
         });
-    }
-
-    monitor(interval = 10 * 1000) {
-        if (this.#interval)
-            clearInterval(this.#interval);
-        this.#interval = setInterval(() => this.check(), +interval);
-        return this;
     }
 }
 

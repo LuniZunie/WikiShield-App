@@ -62,6 +62,10 @@ module.exports = (env, argv) => {
                     }
                 },
                 {
+                    test: /\.raw\.js$/,
+                    type: 'asset/source', // Import raw JS files as raw text strings
+                },
+                {
                     test: /\.css$/,
                     type: 'asset/source', // Import CSS files as raw text strings
                 },
