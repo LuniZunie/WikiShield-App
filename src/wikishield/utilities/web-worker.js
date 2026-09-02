@@ -4,7 +4,7 @@ class WebWorker {
     }
 
     constructor(code, options = { }) {
-        if (!WebWorker.isSupported()) {
+        if (WebWorker.isSupported()) {
             const url = URL.createObjectURL(new Blob([ code ], { type: "text/javascript" }));
             const worker = new Worker(url, options);
             URL.revokeObjectURL(url);
