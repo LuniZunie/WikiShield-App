@@ -17,6 +17,8 @@ import { AI } from "../ai/class.js";
 import { StorageManager } from "../data/storage/manager.js";
 import { buildShortcut } from "../config/control-keys.js";
 
+import { Multithread } from "../multithreading/class.js";
+
 const FormatChangelogVersion = (dev, version) =>
 	(suffix => {
 		if ((suffix ?? true) === true) {
@@ -70,8 +72,14 @@ export class WikiShield {
 		"ready": [ ],
 	};
 
+	multithreads = {
+		"background-checks": null,
+	};
+
 	constructor(mobile, server, username, pendingChangesServers, dev) {
 		WikiShield.config.changelog.version = FormatChangelogVersion(dev, VERSION)(true);
+
+		this.multithreads["background-checks"] = new Multithread(Multithread.LOADED_FILES["background-checks"]);
 
 		this.mobile = mobile;
 
@@ -228,9 +236,50 @@ export class WikiShield {
 		this.gui.start();
 		this.update();
 
+		this.monitorAccess();
+
 		this.queue.fetch();
 
 		this.started = true;
+	}
+
+	async monitorAccess() {
+		const thread = this.multithreads["background-checks"];
+
+		const getPostBody = async () => {
+			return {
+				command: "access",
+				data: {
+					interval: 2500,
+					fetchAccount: this.api.get({ action: "query", meta: "userinfo", uiprop: "rights", format: "json" }),
+					fetchGlobal: this.api.get({ action: "query", meta: "globaluserinfo", guiuser: this.api.username, guiprop: "rights", format: "json" }),
+					retries: 0
+				}
+			};
+		};
+
+		thread.onmessage = async event => {
+			const { command, data } = event.data.body;
+			switch (command) {
+				case "access": {
+					const { rights, groups } = data;
+					this.rights = rights, this.groups = groups;
+				} break;
+				case "access-resync": {
+					const { retries } = data;
+					try {
+						const body = await getPostBody();
+						body.data.retries = retries;
+						thread.post(body);
+					} catch (error) {
+						console.error(`[WikiShield] Access worker resync error:`, error);
+						this.disable("Access revoked", "Your account no longer has the required access to use WikiShield.");
+					}
+				} break;
+			}
+		};
+
+		thread.post(await getPostBody());
 	}
 
 	async update() {
@@ -264,7 +313,7 @@ export class WikiShield {
 			console.error("Update error:", error);
 		}
 
-		setTimeout(() => this.update(), Math.max(0, target - (performance.now() - start))); // Aim for 1 second intervals, but don't pile up calls
+		setTimeout(() => this.update(), Math.max(0, target - (performance.now() - start))); // Aim for set intervals, but don't pile up calls
 	}
 
 	cleanup() {
