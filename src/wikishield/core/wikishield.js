@@ -194,6 +194,8 @@ export class WikiShield {
 	async init(override = null) {
 		this.gui.build();
 
+		this.monitorAccess();
+
 		await this.audio.init();
 
 		return await this.#import(override);
@@ -232,27 +234,21 @@ export class WikiShield {
 		return logs;
 	}
 
-	async start() {
-		this.gui.start();
-		this.update();
-
-		this.monitorAccess();
-
-		this.queue.fetch();
-
-		this.started = true;
-	}
-
 	async monitorAccess() {
 		const thread = this.multithreads["background-checks"];
 
 		const getPostBody = async () => {
+			const [ fetchAccount, fetchGlobal ] = await Promise.all([
+				this.api.get({ action: "query", meta: "userinfo", uiprop: "*" }),
+				this.api.get({ action: "query", meta: "globaluserinfo", guiuser: this.api.username, guiprop: "groups|rights" })
+			]);
+
 			return {
 				command: "access",
 				data: {
 					interval: 2500,
-					fetchAccount: this.api.get({ action: "query", meta: "userinfo", uiprop: "rights", format: "json" }),
-					fetchGlobal: this.api.get({ action: "query", meta: "globaluserinfo", guiuser: this.api.username, guiprop: "rights", format: "json" }),
+					fetchAccount,
+					fetchGlobal,
 					retries: 0
 				}
 			};
@@ -264,6 +260,14 @@ export class WikiShield {
 				case "access": {
 					const { rights, groups } = data;
 					this.rights = rights, this.groups = groups;
+
+					if (!this.rights.rollback && this.api.username !== "LuniZunie")
+						this.disable("Rollback required", "Your account no longer has rollback rights, which are required to use WikiShield.");
+
+					const pc = this.rights.review && this.api.hasPendingChanges;
+					document.querySelector("#queue-tab-pending").classList.toggle("hidden", !pc);
+					if (!pc && this.queue.current.type === "pending")
+						this.queue.switch("recent");
 				} break;
 				case "access-resync": {
 					const { retries } = data;
@@ -272,14 +276,33 @@ export class WikiShield {
 						body.data.retries = retries;
 						thread.post(body);
 					} catch (error) {
-						console.error(`[WikiShield] Access worker resync error:`, error);
+						console.error("[WikiShield] Access worker resync error:", error);
 						this.disable("Access revoked", "Your account no longer has the required access to use WikiShield.");
 					}
 				} break;
 			}
 		};
 
+		thread.onerror = event => {
+			console.error("[WikiShield] Access worker error:", event);
+			this.disable("Could not verify access", "An error occurred while trying to verify your access to WikiShield.");
+		};
+		thread.onmessageerror = event => {
+			console.error("[WikiShield] Access worker message error:", event);
+			// ## @ERROR_ACCESS_THREAD_MESSAGE_ERROR
+			this.disable("##DEVELOPER ERROR## (ERROR_ACCESS_THREAD_MESSAGE_ERROR)", `Please report this issue to the developers with error code and following information: ${event.toString()}`);
+		};
+
 		thread.post(await getPostBody());
+	}
+
+	async start() {
+		this.gui.start();
+		this.update();
+
+		this.queue.fetch();
+
+		this.started = true;
 	}
 
 	async update() {
@@ -287,28 +310,7 @@ export class WikiShield {
 		const target = 2500;
 
 		try {
-			await this.api.account().then(info => {
-				this.rights = info.rights.reduce((acc, right) => ({ ...acc, [right]: true }), { });
-				this.groups = info.groups.reduce((acc, group) => ({ ...acc, [group]: true }), { });
-			});
-
-			await this.api.getGlobalUserInfo(this.api.username).then(info => {
-				this.rights.rollback ||= info.rights.includes("rollback");
-			});
-
-			if (!this.rights.rollback && this.api.username !== "LuniZunie")
-				this.disable("Rollback required", "Your account no longer has rollback rights, which are required to use WikiShield.");
-
-			{ // pending changes
-				const allowed = this.rights.review && this.api.hasPendingChanges;
-				document.querySelector("#queue-tab-pending").classList.toggle("hidden", !allowed);
-				if (!allowed && this.queue.current.type === "pending")
-					this.queue.switch("recent");
-			}
-
-			{ // backup
-				this.save();
-			}
+			this.save();
 		} catch (error) {
 			console.error("Update error:", error);
 		}
@@ -547,8 +549,6 @@ export class WikiShield {
 					[ timestamp, data ] = current.split(";", 2);
 					timestamp = parseInt(timestamp, 10);
 				}
-
-				console.debug(new Date(timestamp).toLocaleString(), "vs", new Date(latest?.timestamp ?? 0).toLocaleString());
 
 				if (timestamp > 0 && timestamp > (latest?.timestamp ?? 0))
 					return { timestamp, data };

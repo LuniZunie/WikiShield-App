@@ -8,33 +8,73 @@ export class Notifications {
             this.update(type);
 
             this.first[type] = true;
-            this.load(type);
         });
 
-        // Experiment
-        ws.api.get({
-            action: "query",
-            meta: "notifications",
-            notlimit: "max",
-            notprop: "list",
-            notfilter: "!read",
-            notsections: "alert|message",
-            notformat: "model"
-        })
-            .then(response => {
-                const [ ...args ] = response;
-                fetch(...args)
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log("Initial notifications:", data);
-                    })
-                    .catch(error => {
-                        console.error("Failed to load initial notifications:", error);
-                    });
-            })
-            .catch(error => {
-                console.error("Failed to load notifications:", error);
-            });
+        this.monitor();
+    }
+
+    async monitor() {
+        const thread = this.ws.multithreads["background-checks"];
+
+        const getPostBody = async () => {
+            const [ fetchParse, ...fetches ] = await Promise.all(
+                [
+                    this.ws.api.get({
+                        action: "parse",
+                        prop: "text",
+                        preview: false,
+                        text: "__temp__",
+                        contentmodel: "wikitext",
+                        disablelimitreport: true,
+                        disableeditsection: true,
+                        disabletoc: true,
+                    }),
+                    ...[ "alert", "message" ].map(type =>
+                        this.ws.api.get({ action: "query", meta: "notifications", notlimit: "max", notprop: "list", notfilter: "!read", notsections: type, notformat: "model" })
+                    )
+                ]
+            );
+
+            return {
+                command: "notifications",
+                data: {
+                    interval: 10000,
+                    fetchParse,
+                    fetches,
+                    retries: 0
+                }
+            };
+        };
+
+        thread.onmessage = async (event) => {
+            const { command, data } = event.data.body;
+			switch (command) {
+				case "notifications": {
+					const [ alerts, messages ] = data.results;
+					this.load("alert", alerts);
+					this.load("message", messages);
+				} break;
+				case "notifications-resync": {
+					const { retries } = data;
+					try {
+						const body = await getPostBody();
+						body.data.retries = retries;
+						thread.post(body);
+					} catch (error) {
+						console.error("[WikiShield] Notifications worker resync error:", error);
+					}
+				} break;
+			}
+        };
+
+        thread.onerror = (error) => {
+            console.error("[WikiShield] Notifications worker error:", error);
+        };
+        thread.onmessageerror = (error) => {
+            console.error("[WikiShield] Notifications worker message error:", error);
+        };
+
+        thread.post(await getPostBody());
     }
 
     find(type, id) {
@@ -52,36 +92,21 @@ export class Notifications {
             return this[type].find(n => n.id === id);
     }
 
-    async load(type) {
-        try {
-            const response = (await this.ws.api.continuous({
-                action: "query",
-                meta: "notifications",
-                notlimit: "max",
-                notprop: "list",
-                notfilter: "!read",
-                notsections: type,
-                notformat: "model"
-            })).responses.flatMap(response => response.query?.notifications?.list || [ ]);
-            await Promise.all(response.map(async n =>
-                this.ws.api.parse(n["*"].body, void(0), void(0), true).then(parsed => { return void(n["*"].parsed = parsed) ?? n; })
-            ));
-
-            let update = false;
-            for (const n of response)
-                if (!this[type].some(existing => existing.id === n.id && existing.read === n.read)) {
-                    this[type].unshift(n);
-                    update = true;
-                }
-
-            if (update) {
-                const zen = this.ws.store.settings.zen_mode;
-                if (!zen.enabled || zen[`${type}s`].enabled)
-                    this.ws.audio.playSound([ "notification", type ]);
-
-                this.update(type);
+    load(type, response) {
+        let update = false;
+        for (const n of response)
+            if (!this[type].some(existing => existing.id === n.id && existing.read === n.read)) {
+                this[type].unshift(n);
+                update = true;
             }
-        } finally { setTimeout(() => this.load(type), 10 * 1000); }
+
+        if (update) {
+            const zen = this.ws.store.settings.zen_mode;
+            if (!zen.enabled || zen[`${type}s`].enabled)
+                this.ws.audio.playSound([ "notification", type ]);
+
+            this.update(type);
+        }
     }
 
     update(type) {

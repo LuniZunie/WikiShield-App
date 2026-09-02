@@ -64,7 +64,7 @@ class Killswitch {
                         rvslots: "*",
                         titles: Killswitch.#page
                     }, false, "en.wikipedia.org"),
-                    retries
+                    retries: 0
                 }
             };
         };

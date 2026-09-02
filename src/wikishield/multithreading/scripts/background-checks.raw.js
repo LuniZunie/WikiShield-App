@@ -1,5 +1,6 @@
 const killswitch = { ID: 0n };
 const access = { ID: 0n };
+const notifications = { ID: 0n };
 
 self.onmessage = event => {
     const { type, body } = event.data;
@@ -33,7 +34,6 @@ self.onmessage = event => {
 
                     if (response === null || ID !== killswitch.ID)
                         return;
-
                     retries = 0;
 
                     const content = Object.values(response)?.[0]?.revisions?.[0]?.slots?.main?.content || "";
@@ -64,7 +64,7 @@ self.onmessage = event => {
 
             check();
         } break;
-        case "acccess": {
+        case "access": {
             const ID = ++access.ID;
 
             let { retries } = data;
@@ -79,7 +79,7 @@ self.onmessage = event => {
                     const [ account, global ] = await Promise.all([
                         fetch(...fetchAccount)
                             .then(response => response.json())
-                            .then(data => /* TODO */ 0)
+                            .then(data => data.query?.userinfo || { })
                             .catch(error => {
                                 if (retries++ < 3) {
                                     self.postMessage({ body: { command: "access-resync", data: { retries } } });
@@ -89,7 +89,7 @@ self.onmessage = event => {
                             }),
                         fetch(...fetchGlobal)
                             .then(response => response.json())
-                            .then(data => /* TODO */ 0)
+                            .then(data => data.query?.globaluserinfo || { })
                             .catch(error => {
                                 if (retries++ < 3) {
                                     self.postMessage({ body: { command: "access-resync", data: { retries } } });
@@ -101,17 +101,89 @@ self.onmessage = event => {
 
                     if (account === null || global === null || ID !== access.ID)
                         return;
-
                     retries = 0;
 
+                    const rights = account.rights.reduce((acc, right) => ({ ...acc, [right]: true }), { });
+				    const groups = account.groups.reduce((acc, group) => ({ ...acc, [group]: true }), { });
+
+                    rights.rollback ||= global.rights.includes("rollback");
+
+                    self.postMessage({ body: { command: "access", data: { rights, groups } } });
                 } catch (error) {
                     console.error(`[WikiShield] Access worker error:`, error);
-                    self.postMessage({ body: { command: "access", data: { event: "unsafe" } } });
                 } finally {
                     if (ID === access.ID)
                         setTimeout(() => check(), Math.max(0, interval - (performance.now() - start)));
                 }
             };
+
+            check();
+        } break;
+        case "notifications": {
+            const ID = ++notifications.ID;
+
+            let { retries } = data;
+            const { interval, fetchParse, fetches } = data;
+
+            const check = async () => {
+                const start = performance.now();
+                if (ID !== notifications.ID)
+                    return;
+
+                try {
+                    const results = await Promise.all(fetches.map(async fetchConfig => {
+                        let cont = null;
+
+                        const responses = [ ];
+                        do {
+                            const fetchBody = new URLSearchParams(fetchConfig[1]?.body || "");
+                            if (cont)
+                                fetchBody.set("notcontinue", cont);
+
+                            const data = (await fetch(fetchConfig[0], { ...(fetchConfig[1] || {}), body: fetchBody.toString() }, ...fetchConfig.slice(2))
+                                .then(response => response.json()))?.query?.notifications;
+                            responses.push(data);
+
+                            cont = data.continue || null;
+                        } while (cont);
+
+                        const list = responses.flatMap(response => response?.list || [ ]);
+
+                        await Promise.all(list.map(async notification => {
+                             const fetchParseBody = new URLSearchParams(fetchParse[1]?.body || "");
+                             if (fetchParseBody)
+                                 fetchParseBody.set("text", notification["*"].body);
+
+                             const parsed = (await fetch(fetchParse[0], { ...(fetchParse[1] || {}), body: fetchParseBody.toString() }, ...fetchParse.slice(2))
+                                 .then(response => response.json()))?.parse?.text;
+                             notification["*"].parsed = parsed;
+
+                             return notification;
+                        }));
+
+                        return list;
+                    })).catch(error => {
+                        if (retries++ < 3) {
+                            self.postMessage({ body: { command: "notifications-resync", data: { retries } } });
+                            return null;
+                        } else
+                            throw error;
+                    });
+
+                    if (results === null)
+                        return;
+                    retries = 0;
+
+                    self.postMessage({ body: { command: "notifications", data: { results } } });
+                } catch (error) {
+                    console.error(`[WikiShield] Notifications worker error:`, error);
+                } finally {
+                    if (ID === notifications.ID)
+                        setTimeout(() => check(), Math.max(0, interval - (performance.now() - start)));
+                }
+            };
+
+            check();
         } break;
     }
 };

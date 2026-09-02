@@ -16,7 +16,7 @@
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",
-    "test": "electron . --trace-warnings",
+    "test": "electron . --trace-warnings --disable-http-cache",
     "build": "electron-builder --publish never",
     "build-web": "webpack --mode production",
     "bump": "node scripts/bump.js",
