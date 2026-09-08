@@ -1,3 +1,5 @@
+// npm run bump -- --<major|minor|patch> or npm run bump -- --V<version>
+
 const fs = require("fs");
 const path = require("path");
 const { execSync } = require("child_process");
@@ -21,9 +23,11 @@ if (level.startsWith("--V")) {
     }
 
     packageJson.version = packageJson.version.split(".").map((v, i) => {
-    if (i === levelIndex)
-        return parseInt(v) + 1;
-    return v;
+        if (i === levelIndex)
+            return parseInt(v) + 1;
+        else if (i > levelIndex)
+            return 0;
+        return v;
     }).join(".");
 }
 
