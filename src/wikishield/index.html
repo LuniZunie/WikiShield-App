@@ -1518,5 +1518,17 @@ export OLLAMA_ORIGINS="https://*.wikipedia.org"</pre>
                 </div>
             </div>
         </div>
+
+        <svg>
+            <filter id="image-displacement" x="0" y="0" width="100%" height="100%">
+                <feImage xlink:href="displacement-map.svg"
+                        result="dispMap" />
+                <feDisplacementMap in="SourceGraphic"
+                                    in2="dispMap"
+                                    scale="30"
+                                    xChannelSelector="R"
+                                    yChannelSelector="G" />
+            </filter>
+        </svg>
     </body>
 </html>

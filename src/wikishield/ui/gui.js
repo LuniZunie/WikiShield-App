@@ -17,6 +17,8 @@ import { BuildPalette } from "../utilities/build-palette.js";
 
 import { SetupGestures } from "./mobile/gestures.js";
 
+import { addLiquidGlassEffect } from "./liquid-glass/calculate.js";
+
 export class GUI {
 	static palettes = {
 		traffic: BuildPalette(1000, "#78c675", "#fdff7a", "#fcff54", "#fbff12", "#ffc619", "#ff8812", "#f56214", "#f73214", "#fc0303", "#fc0303"),
@@ -47,6 +49,11 @@ export class GUI {
 	}
 
 	async build() {
+		{
+			const $el = document.body.querySelector("#bottom-tools");
+			addLiquidGlassEffect($el, { height: $el.clientHeight, width: $el.clientWidth, radius: 16 });
+		}
+
 		if (this.ws.mobile) {
 			const $app = document.querySelector("#app");
 			$app.appendChild(document.querySelector("#queue-tabs"));
