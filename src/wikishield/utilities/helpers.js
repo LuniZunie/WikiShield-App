@@ -2,39 +2,59 @@ import { truncate } from "../../../global/truncate/script.esm.js";
 
 export const expiryRegex = /(infinity|^((?<years>[0-9]+)Y)?((?<months>[0-9]+)M)?((?<weeks>[0-9]+)W)?((?<days>[0-9]+)D)?((?<hours>[0-9]+)h)?((?<minutes>[0-9]+)m)?((?<seconds>[0-9]+)s)?)$/;
 
-function hasApproxSubstring(needle, haystack, k) {
-	const n = needle.length;
-	const m = haystack.length;
-	if (n === 0) return true;
-	if (m === 0) return n <= k;
+function hasApproxSubstring(a, b, alphabet = 256) {
+	if (a.length === 0)
+		return true;
+	if (b.length === 0)
+		return false;
 
-	let prev = new Array(m + 1).fill(0);
-	let curr = new Array(m + 1).fill(0);
+	const maxError = Math.floor(Math.max(a.length, b.length) / 4);
+	const minLength = Math.max(1, a.length - maxError);
+	const maxLength = Math.min(b.length, a.length + maxError);
 
-	for (let j = 0; j <= m; j++) prev[j] = 0;
+	for (let length = minLength; length <= maxLength; length++) {
+		for (let start = 0; start + length <= b.length; start++) {
+			const candidate = b.slice(start, start + length);
+			const da = new Array(alphabet).fill(0);
+			const d = new Array(a.length + 2).fill(0).map(() => new Array(candidate.length + 2).fill(0));
 
-	for (let i = 1; i <= n; i++) {
-		curr[0] = i;
+			const maxdist = a.length + candidate.length;
+			d[0][0] = maxdist;
+			for (let i = 0; i <= a.length; i++) {
+				d[i + 1][0] = maxdist;
+				d[i + 1][1] = i;
+			}
+			for (let j = 0; j <= candidate.length; j++) {
+				d[0][j + 1] = maxdist;
+				d[1][j + 1] = j;
+			}
 
-		let rowMin = curr[0];
+			for (let i = 1; i <= a.length; i++) {
+				let db = 0;
+				for (let j = 1; j <= candidate.length; j++) {
+					const k = da[candidate.charCodeAt(j - 1)], l = db;
 
-		for (let j = 1; j <= m; j++) {
-			const cost = needle[i - 1] === haystack[j - 1] ? 0 : 1;
+					let cost;
+					if (a[i - 1] === candidate[j - 1]) {
+						cost = 0;
+						db = j;
+					} else
+						cost = 1;
 
-			const del = prev[j] + 1;
-			const ins = curr[j - 1] + 1;
-			const sub = prev[j - 1] + cost;
+					d[i + 1][j + 1] = Math.min(
+						d[i][j] + cost, // substitution
+						d[i + 1][j] + 1, // insertion
+						d[i][j + 1] + 1, // deletion
+						d[k][l] + (i - k - 1) + cost + (j - l - 1) // transposition
+					);
+				}
 
-			const d = Math.min(del, ins, sub);
-			curr[j] = d;
-			if (d < rowMin) rowMin = d;
+				da[a.charCodeAt(i - 1)] = i;
+			}
 
-			if (i === n && d <= k) return true;
+			if (d[a.length + 1][candidate.length + 1] <= Math.floor(Math.max(a.length, candidate.length) / 4))
+				return true;
 		}
-
-		if (rowMin > k) return false;
-
-		[ prev, curr ] = [ curr, prev ];
 	}
 
 	return false;
@@ -177,7 +197,7 @@ export class Utility {
 
 	match(needle, haystack) {
 		if (this.ws.store.settings.username_highlighting.fuzzy) {
-			return hasApproxSubstring(needle, haystack, 2);
+			return hasApproxSubstring(needle, haystack);
 		} else {
 			return haystack.toLowerCase().includes(needle.toLowerCase());
 		}
