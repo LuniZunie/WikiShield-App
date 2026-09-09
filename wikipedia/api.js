@@ -903,7 +903,7 @@ class MediaWikiAPI {
                         [
                             result[i].data.parsedcomment,
                         ] = await Promise.all([
-                            this.parse(item.comment, undefined, false, true, bypass, serverOverride)
+                            this.parse(item.comment, item.title, false, true, bypass, serverOverride)
                         ]);
                     }));
                 })(),
