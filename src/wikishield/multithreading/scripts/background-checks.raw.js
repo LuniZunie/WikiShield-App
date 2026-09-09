@@ -148,7 +148,6 @@ self.onmessage = event => {
                         } while (cont);
 
                         const list = responses.flatMap(response => response?.list || [ ]);
-
                         await Promise.all(list.map(async notification => {
                              const fetchParseBody = new URLSearchParams(fetchParse[1]?.body || "");
                              if (fetchParseBody)
