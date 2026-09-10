@@ -49,10 +49,9 @@ export class GUI {
 	}
 
 	async build() {
-		{
-			const $el = document.body.querySelector("#bottom-tools");
-			addLiquidGlassEffect($el, { height: $el.clientHeight, width: $el.clientWidth, radius: 16 });
-		}
+		document.body.querySelectorAll(".liquid-glass").forEach($el => {
+			addLiquidGlassEffect($el, { depth: parseFloat($el.dataset.liquidGlassDepth) || 2 });
+		});
 
 		if (this.ws.mobile) {
 			const $app = document.querySelector("#app");
@@ -3135,7 +3134,7 @@ export class GUI {
 				});
 
 				function updateOffScreen() {
-					const $changes = $diff.querySelectorAll(":is(.diff-addedline, .diff-deletedline) .diffchange");
+					const $changes = $diff.querySelectorAll(":is(.diff-addedline, .diff-deletedline) :is(.diffchange, div:not(:has(.diffchange)))");
 
 					let $above = null, $below = null;
 					const rect = $diff.getBoundingClientRect();

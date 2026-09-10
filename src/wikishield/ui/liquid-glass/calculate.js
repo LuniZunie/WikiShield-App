@@ -122,14 +122,33 @@ function getDisplacementFilter({ height, width, radius, depth, strength, chromat
 }
 
 function addLiquidGlassEffect($el, { height, width, radius, depth, strength = 100, chromaticAberration = 0, blur = 2 }) {
-    $el.style.backdropFilter = `blur(${blur / 2}px) url('${getDisplacementFilter({
-        height,
-        width,
-        radius,
-        depth,
-        strength,
-        chromaticAberration,
-    })}') blur(${blur}px) brightness(1.1) saturate(1.5)`
+    const getBorderRadius = $el => {
+        const cs = getComputedStyle($el);
+        return Math.max(
+            parseFloat(cs.borderTopLeftRadius),
+            parseFloat(cs.borderTopRightRadius),
+            parseFloat(cs.borderBottomRightRadius),
+            parseFloat(cs.borderBottomLeftRadius)
+        );
+    };
+
+    function update() {
+        requestIdleCallback(() => {
+            $el.style.backdropFilter = `blur(${blur / 2}px) url('${getDisplacementFilter({
+                height: height ?? $el.clientHeight,
+                width: width ?? $el.clientWidth,
+                radius: radius ?? getBorderRadius($el),
+                depth,
+                strength,
+                chromaticAberration,
+            })}') blur(${blur}px) brightness(0.7) saturate(1.5)`
+        });
+    }
+
+    update();
+
+    const resizeObserver = new ResizeObserver(update);
+    resizeObserver.observe($el);
 }
 
 export { addLiquidGlassEffect }
