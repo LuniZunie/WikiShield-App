@@ -22,7 +22,7 @@
         </div>
         <div id="initial" class="hidden">
 			<canvas id="dots-canvas"></canvas>
-			<div id="welcome-container" class="shimmer shimmer-border">
+			<div id="welcome-container" class="shimmer shimmer-border liquid-glass" data-liquid-glass-brightness="1.1">
 				<div class="shield-container">
 					<div class="glow-ring"></div>
 					<div class="glow-ring"></div>
@@ -37,9 +37,9 @@
 				</div>
 				<h1>Welcome to <span id="wikishield-sikiwhield">WikiShield</span></h1>
 				<div class="about-links">
-					<a rel="noopener" href="https://en.wikipedia.org/wiki/Wikipedia:WikiShield" target="_blank" class="about-link">About</a>
-					<a rel="noopener" href="https://en.wikipedia.org/wiki/Wikipedia talk:WikiShield" target="_blank" class="about-link">Discuss</a>
-					<span class="about-link">v<span class="VERSION"></span></span>
+					<a rel="noopener" href="https://en.wikipedia.org/wiki/Wikipedia:WikiShield" target="_blank" class="about-link liquid-glass">About</a>
+					<a rel="noopener" href="https://en.wikipedia.org/wiki/Wikipedia talk:WikiShield" target="_blank" class="about-link liquid-glass">Discuss</a>
+					<span class="about-link liquid-glass">v<span class="VERSION"></span></span>
 				</div>
 				<div id="rollback-needed" class="hidden">
 					<p><span class="fa fa-exclamation-triangle"></span> You must have rollback or admin rights to use this script.</p>
@@ -54,7 +54,7 @@
             <div id="container">
                 <div id="queue">
                     <div id="queue-top">
-                        <div id="queue-top-left" class="queue-button-cluster liquid-glass" data-zen-show="alerts,messages">
+                        <div id="queue-top-left" class="queue-button-cluster liquid-glass" data-liquid-glass-brightness=".55" data-zen-show="alerts,messages">
                             <span class="fa fa-bell" id="alerts-icon" data-tooltip="Alerts" data-zen-show="alerts">
                                 <span id="alerts-count" class="icon-count hidden red" data-zen-show="badges"></span>
                             </span>
@@ -62,11 +62,11 @@
                                 <span id="messages-count" class="icon-count hidden blue" data-zen-show="badges"></span>
                             </span>
                         </div>
-                        <div id="DEFCON" class="liquid-glass">
+                        <div id="DEFCON" class="liquid-glass" data-liquid-glass-brightness=".55">
                             <div class="dot"></div>
                             <span><span class="DEFCON-RPM">0</span> RPM</span>
                         </div>
-                        <div id="queue-top-right" class="queue-button-cluster liquid-glass">
+                        <div id="queue-top-right" class="queue-button-cluster liquid-glass" data-liquid-glass-brightness=".55">
                             <span class="fa fa-envelope" id="email-button" data-tooltip="Email Emergency, ArbCom, or Oversight" data-multiple-hrefs="email" href></span>
                             <span class="fa fa-gear" id="settings-icon" data-tooltip="Settings"></span>
                         </div>
@@ -74,27 +74,27 @@
                     <div id="queue-tabs" class="liquid-glass">
                         <div id="queue-tab-recent" class="queue-tab selected" data-tooltip="Recent edits">
                             <span class="fas fa-stopwatch">
-                                <span class="icon-count hidden gray" data-zen-show="badges"></span>
+                                <span class="icon-count hidden gray liquid-glass" data-zen-show="badges"></span>
                             </span>
                         </div>
                         <div id="queue-tab-pending" class="queue-tab" data-tooltip="Pending edits">
                             <span class="fas fa-flag">
-                                <span class="icon-count hidden orange" data-zen-show="badges"></span>
+                                <span class="icon-count hidden orange liquid-glass" data-zen-show="badges"></span>
                             </span>
                         </div>
                         <div id="queue-tab-users" class="queue-tab" data-tooltip="User creation logs">
                             <span class="fas fa-user">
-                                <span class="icon-count hidden green" data-zen-show="badges"></span>
+                                <span class="icon-count hidden green liquid-glass" data-zen-show="badges"></span>
                             </span>
                         </div>
                         <div id="queue-tab-watchlist" class="queue-tab" data-tooltip="Watchlist edits">
                             <span class="fas fa-book-bookmark">
-                                <span class="icon-count hidden blue" data-zen-show="badges"></span>
+                                <span class="icon-count hidden blue liquid-glass" data-zen-show="badges"></span>
                             </span>
                         </div>
                         <div id="queue-tab-abuselog" class="queue-tab" data-tooltip="Abuse logs">
                             <span class="fas fa-filter-circle-xmark">
-                                <span class="icon-count hidden red" data-zen-show="badges"></span>
+                                <span class="icon-count hidden red liquid-glass" data-zen-show="badges"></span>
                             </span>
                         </div>
                     </div>
