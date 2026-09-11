@@ -16,6 +16,7 @@ import { warnings, warningsLookup, warningTemplateColors, getWarningFromLookup }
 import { BuildPalette } from "../utilities/build-palette.js";
 
 import { SetupGestures } from "./mobile/gestures.js";
+import { WelcomeBackground } from "./welcome-background/pen.js";
 
 export class GUI {
 	static palettes = {
@@ -111,7 +112,11 @@ export class GUI {
 
 		let animationFrame;
 		const startupPerformance = this.ws.store.settings.performance.startup;
-		if (startupPerformance !== "always_off") {
+
+		const test = new WelcomeBackground(document.getElementById("dots-canvas"));
+		test.animate();
+
+		if (startupPerformance !== "always_off" && false) {
 			const $paper = document.getElementById("dots-canvas");
 			const pen = $paper.getContext("2d");
 
@@ -375,6 +380,9 @@ export class GUI {
 
 			if (animationFrame)
 				cancelAnimationFrame(animationFrame);
+
+			test.terminate();
+
 			this.ws.start();
 		});
 
