@@ -54,14 +54,14 @@ export class Dialog {
 			return false;
 
 		const $toast = document.createElement("div");
-		$toast.classList.add("toast-alert", type);
+		$toast.className = `toast-alert ${type} liquid-glass`;
 
 		const $icon = document.createElement("div");
-		$icon.classList.add("toast-icon");
+		$icon.className = "toast-icon";
 		$toast.appendChild($icon);
 
 		const $i = document.createElement("i");
-		$i.classList.add("fa");
+		$i.className = "fa";
 		$icon.appendChild($i);
 		switch (type) {
 			case "success": {
@@ -79,28 +79,28 @@ export class Dialog {
 		}
 
 		const $content = document.createElement("div");
-		$content.classList.add("toast-content");
+		$content.className = "toast-content";
 		$toast.appendChild($content);
 
 		const $title = document.createElement("div");
-		$title.classList.add("toast-title");
+		$title.className = "toast-title";
 		$title.textContent = title;
 		$content.appendChild($title);
 
 		const $message = document.createElement("div");
-		$message.classList.add("toast-message");
+		$message.className = "toast-message";
 		$message.textContent = message;
 		$content.appendChild($message);
 
 		const $close = document.createElement("div");
-		$close.classList.add("toast-close");
+		$close.className = "toast-close";
 		$close.addEventListener("click", () => {
 			this.#hideToast($toast);
 		});
 		$toast.appendChild($close);
 
 		const $closeIcon = document.createElement("i");
-		$closeIcon.classList.add("fa", "fa-xmark");
+		$closeIcon.className = "fa fa-xmark";
 		$close.appendChild($closeIcon);
 
 		document.body.querySelector("#app").appendChild($toast);

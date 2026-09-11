@@ -1,17 +1,17 @@
 export class ProgressBar {
     constructor() {
         this.$bar = document.createElement("div");
-        this.$bar.classList.add("progress-bar");
+        this.$bar.className = "progress-bar liquid-glass";
         this.$bar.style.opacity = 1;
-        document.querySelector('#progress-bar-container').appendChild(this.$bar);
+        document.querySelector("#progress-bar-container").appendChild(this.$bar);
 
         this.$overlay = document.createElement("div");
-        this.$overlay.classList.add("progress-bar-overlay");
+        this.$overlay.className = "progress-bar-overlay";
         this.$overlay.style.width = "0%";
         this.$bar.appendChild(this.$overlay);
 
         this.$text = document.createElement("div");
-        this.$text.classList.add("progress-bar-text");
+        this.$text.className = "progress-bar-text";
         this.$bar.appendChild(this.$text);
     }
 

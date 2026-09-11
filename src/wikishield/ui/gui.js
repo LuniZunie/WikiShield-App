@@ -18,6 +18,8 @@ import { BuildPalette } from "../utilities/build-palette.js";
 import { SetupGestures } from "./mobile/gestures.js";
 import { WelcomeBackground } from "./welcome-background/pen.js";
 
+import { addLiquidGlassEffect } from "./liquid-glass/calculate.js";
+
 export class GUI {
 	static palettes = {
 		traffic: BuildPalette(1000, "#78c675", "#fdff7a", "#fcff54", "#fbff12", "#ffc619", "#ff8812", "#f56214", "#f73214", "#fc0303", "#fc0303"),
@@ -48,6 +50,26 @@ export class GUI {
 	}
 
 	async build() {
+		{ // liquid glass
+			const addLiquidGlassEffectWrapper = $el =>
+				addLiquidGlassEffect($el, {
+					depth: parseFloat($el.dataset.liquidGlassDepth) || 2,
+					brightness: parseFloat($el.dataset.liquidGlassBrightness) || .7,
+				});
+
+			document.body.querySelectorAll(".liquid-glass").forEach($el => addLiquidGlassEffectWrapper($el));
+
+			const observer = new MutationObserver(function(mutationsList, observer) {
+				for (const mutation of mutationsList)
+					if (mutation.type === "childList")
+						mutation.addedNodes.forEach($node => {
+							if ($node.nodeType === Node.ELEMENT_NODE && $node.classList.contains("liquid-glass"))
+								addLiquidGlassEffectWrapper($node);
+						});
+			});
+			observer.observe(document.body, { childList: true, subtree: true });
+		}
+
 		if (this.ws.mobile) {
 			const $app = document.querySelector("#app");
 			$app.appendChild(document.querySelector("#queue-tabs"));
@@ -3136,7 +3158,7 @@ export class GUI {
 				});
 
 				function updateOffScreen() {
-					const $changes = $diff.querySelectorAll(":is(.diff-addedline, .diff-deletedline) .diffchange");
+					const $changes = $diff.querySelectorAll(":is(.diff-addedline, .diff-deletedline) :is(.diffchange, div:not(:has(.diffchange)))");
 
 					let $above = null, $below = null;
 					const rect = $diff.getBoundingClientRect();
@@ -3329,14 +3351,14 @@ export class GUI {
 		if (show) {
 			const $notice = document.createElement("div");
 			$notice.id = "edit-war-notice";
-			$notice.classList.add("notice", "edit-war");
+			$notice.className = "notice edit-war";
 
 			const $icon = document.createElement("span");
-			$icon.classList.add("fa", "fa-warning");
+			$icon.className = "fa fa-warning";
 			$notice.appendChild($icon);
 
 			const $text = document.createElement("span");
-			$text.classList.add("text");
+			$text.className = "text";
 			$text.innerHTML = this.ws.mobile ? `<b>(3RR)</b> Revert count: ${count}` : `You have made ${count} reverts on this page in the last 24 hours.`;
 			$notice.appendChild($text);
 
@@ -3367,16 +3389,16 @@ export class GUI {
 		if (show) {
 			const $notice = document.createElement("div");
 			$notice.id = "outdated-notice";
-			$notice.classList.add("notice", "outdated");
+			$notice.className = "notice outdated";
 			$notice.dataset.id = newer;
 			$notice.dataset.page = page;
 
 			const $icon = document.createElement("span");
-			$icon.classList.add("fa", "fa-clock-rotate-left");
+			$icon.className = "fa fa-clock-rotate-left";
 			$notice.appendChild($icon);
 
 			const $text = document.createElement("span");
-			$text.classList.add("text");
+			$text.className = "text";
 			$text.textContent = this.ws.mobile ? "Newer revision available" : "Newer revision available on this page.";
 			$notice.appendChild($text);
 
@@ -3391,7 +3413,7 @@ export class GUI {
 				});
 			else {
 				const $restore = document.createElement("span");
-				$restore.classList.add("button");
+				$restore.className = "button";
 				$restore.innerHTML = "<i class='fas fa-redo restore'></i> Restore this revision";
 				$restore.addEventListener("click", async e => {
 					e.preventDefault();
@@ -3417,7 +3439,7 @@ export class GUI {
 				$notice.appendChild($restore);
 
 				const $latest = document.createElement("span");
-				$latest.classList.add("button");
+				$latest.className = "button";
 				$latest.innerHTML = "View latest <i class='fas fa-arrow-right'></i>";
 				$latest.addEventListener("click", e => {
 					e.preventDefault();
@@ -3451,14 +3473,14 @@ export class GUI {
 		if (show) {
 			const $notice = document.createElement("div");
 			$notice.id = "pending-notice";
-			$notice.classList.add("notice", "outdated", "pending");
+			$notice.className = "notice outdated pending";
 
 			const $icon = document.createElement("span");
-			$icon.classList.add("fa", "fa-shield-alt");
+			$icon.className = "fa fa-shield-alt";
 			$notice.appendChild($icon);
 
 			const $text = document.createElement("span");
-			$text.classList.add("text");
+			$text.className = "text";
 			$text.textContent = this.ws.mobile ? (
 				pending ? "Outdated revision" : "Not pending review"
 			) : (
