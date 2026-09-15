@@ -1043,7 +1043,7 @@ class Popup {
         const { width, height } = screen.getPrimaryDisplay().workAreaSize;
 
         const popup = new BrowserWindow({
-            parent: glob.windows.main,
+            parent: isPopup ? glob.windows.main : undefined,
             width: Math.floor(width * (isPopup ? .6 : .8)),
             height: Math.floor(height * (isPopup ? .6 : .8)),
             frame: isPopup ? true : false,
