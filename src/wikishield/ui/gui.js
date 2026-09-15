@@ -494,7 +494,7 @@ export class GUI {
 									$preview.classList.add("button");
 									$preview.innerText = "Log";
 									$preview.addEventListener("click", event => {
-										const page = this.ws.page(`Special:Log/${encodeURIComponent(log.user)}?page=${encodeURIComponent(title)}&type=${log.type}&wptime=${log.timestamp}&limit=1`, false, false);
+										const page = this.ws.page(`Special:Log?logid=${encodeURIComponent(log.id)}`, false, false);
 										const popup = this.ws.open(page, event.altKey);
 										$tooltip.remove();
 
