@@ -409,7 +409,8 @@ class NavigationManager {
                 this.navigateToUrl($urlBar.value);
         });
 
-        $urlBar.addEventListener("click", () => $urlBar.select());
+        $urlBar.addEventListener("blur", () => $urlBar.setSelectionRange(0, 0));
+        $urlBar.addEventListener("focus", () => $urlBar.select());
     }
 
     goBack() {
