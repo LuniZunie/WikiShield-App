@@ -1,5 +1,3 @@
-const DPR = Math.min(devicePixelRatio || 1, 2);
-
 // Utility functions (moved outside hot path for performance)
 const averageColor = (a, b) => [
     (a[0] + b[0]) / 2,
@@ -66,20 +64,59 @@ class WelcomeBackground {
 
         for (const entry of entries) {
             const { width, height } = entry.contentRect;
-            if (width !== cacheWidth || height !== cacheHeight)
-                this.#resize(width, height);
+            if (width !== cacheWidth || height !== cacheHeight) {
+                if (this.#resizeCallback)
+                    cancelAnimationFrame(this.#resizeCallback);
+                this.#resizeCallback = requestAnimationFrame(() => this.#resize(width, height));
+            }
         }
     }
 
+    #resizeCallback;
     #resize(width, height) {
+        if (this.#resizeCallback)
+            cancelAnimationFrame(this.#resizeCallback);
+
+        const { width: oldWidth, height: oldHeight } = this.#observerCache;
+
+        let $copy;
+        if (oldWidth && oldHeight) {
+            $copy = document.createElement("canvas");
+            $copy.width = oldWidth;
+            $copy.height = oldHeight;
+
+            $copy.getContext("2d").drawImage(this.#$paper, 0, 0);
+        }
+
         this.#observerCache.width = width;
         this.#observerCache.height = height;
 
         this.#$paper.width = width;
         this.#$paper.height = height;
 
+        const scaleX = width / oldWidth || 1;
+		const scaleY = height / oldHeight || 1;
+
+        this.#dots.forEach(dot => {
+            dot.x *= scaleX;
+            dot.y *= scaleY;
+        });
+
+        const targetDots = Dot.target(width, height);
+        if (targetDots > this.#dots.length)
+            for (let i = this.#dots.length; i < targetDots; i++)
+                this.#dots.push(new Dot(this));
+        else if (targetDots < this.#dots.length)
+            this.#dots.length = targetDots;
+
         this.#pen.setTransform(1, 0, 0, 1, 0, 0);
-        this.#pen.scale(DPR, DPR);
+
+        if ($copy)
+            this.#pen.drawImage(
+                $copy,
+                0, 0, $copy.width, $copy.height,
+                0, 0, width, height
+            );
     }
 
     #dots = [ ];
@@ -94,9 +131,6 @@ class WelcomeBackground {
         this.#observer.observe($paper);
 
         this.#resize($paper.clientWidth, $paper.clientHeight);
-
-        for (let i = 0; i < 250; i++)
-            this.#dots.push(new Dot(this));
     }
 
     update() {
@@ -252,6 +286,10 @@ class WelcomeBackground {
 }
 
 class Dot {
+    static target(width, height) {
+        return Math.max(40, Math.min(250, Math.floor((width * height) / 7000)));
+    }
+
     static colors = [
         Object.freeze([ 102, 126, 234, .8 ]),
         Object.freeze([ 240, 147, 251, .8 ]),
