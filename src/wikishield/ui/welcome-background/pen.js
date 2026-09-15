@@ -55,7 +55,10 @@ class WelcomeBackground {
     #$paper;
     #pen;
 
+    #performance = 1;
+    #performanceIncreaseInterval;
     #performanceSetting;
+    #performanceObserver;
 
     #observer;
     #observerCache = { width: undefined, height: undefined };
@@ -101,13 +104,7 @@ class WelcomeBackground {
             dot.x *= scaleX;
             dot.y *= scaleY;
         });
-
-        const targetDots = Dot.target(width, height);
-        if (targetDots > this.#dots.length)
-            for (let i = this.#dots.length; i < targetDots; i++)
-                this.#dots.push(new Dot(this));
-        else if (targetDots < this.#dots.length)
-            this.#dots.length = targetDots;
+        this.#setDotAmount(Dot.target(width, height) * this.#performance);
 
         this.#pen.setTransform(1, 0, 0, 1, 0, 0);
 
@@ -120,6 +117,14 @@ class WelcomeBackground {
     }
 
     #dots = [ ];
+    #setDotAmount(target) {
+        target = Math.round(target);
+        if (target > this.#dots.length)
+            for (let i = this.#dots.length; i < target; i++)
+                this.#dots.push(new Dot(this));
+        else if (target < this.#dots.length)
+            this.#dots.length = target;
+    }
 
     constructor($paper, performanceSetting) {
         this.#$paper = $paper;
@@ -131,6 +136,20 @@ class WelcomeBackground {
         this.#observer.observe($paper);
 
         this.#resize($paper.clientWidth, $paper.clientHeight);
+
+        this.#performanceObserver = new PerformanceObserver(list => {
+            for (const entry of list.getEntries())
+                if (entry.duration > 10) {
+                    this.#performance = Math.max(Math.min(this.#performance - Math.sqrt((entry.duration - 10) / 1000), 1), 0);
+                    this.#setDotAmount(Dot.target(this.#observerCache.width, this.#observerCache.height) * this.#performance);
+                }
+        });
+
+        this.#performanceIncreaseInterval = setInterval(() => {
+            this.#performance = Math.max(Math.min(this.#performance + .01, 1), 0);
+            this.#setDotAmount(Dot.target(this.#observerCache.width, this.#observerCache.height) * this.#performance)
+        }, 100);
+        this.#performanceObserver.observe({ type: "longtask", buffered: true });
     }
 
     update() {
@@ -269,8 +288,15 @@ class WelcomeBackground {
 
     terminate() {
         this.#observer.disconnect();
+        this.#performanceObserver.disconnect();
+
+        if (this.#performanceIncreaseInterval)
+            clearInterval(this.#performanceIncreaseInterval);
+
         if (this.animationFrame)
             cancelAnimationFrame(this.animationFrame);
+        if (this.#resizeCallback)
+            cancelAnimationFrame(this.#resizeCallback);
     }
 
     get width() {
