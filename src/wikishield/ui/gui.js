@@ -53,7 +53,10 @@ export class GUI {
 		{ // liquid glass
 			const addLiquidGlassEffectWrapper = $el =>
 				addLiquidGlassEffect($el, {
+					strength: parseFloat($el.dataset.liquidGlassStrength) || 100,
 					depth: parseFloat($el.dataset.liquidGlassDepth) || 2,
+					chromaticAberration: parseFloat($el.dataset.liquidGlassChromaticAberration) || 0,
+					blur: parseFloat($el.dataset.liquidGlassBlur) || 2,
 					brightness: parseFloat($el.dataset.liquidGlassBrightness) || .7,
 				});
 

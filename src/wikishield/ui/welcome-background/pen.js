@@ -1,10 +1,63 @@
 const DPR = Math.min(devicePixelRatio || 1, 2);
 
+// Utility functions (moved outside hot path for performance)
+const averageColor = (a, b) => [
+    (a[0] + b[0]) / 2,
+    (a[1] + b[1]) / 2,
+    (a[2] + b[2]) / 2,
+];
+
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+const almostEqual = (a, b, epsilon = 1e-9) => Math.abs(a - b) < epsilon;
+
+const clipLineToRect = (p0x, p0y, p1x, p1y, minX, minY, maxX, maxY) => {
+    const dx = p1x - p0x;
+    const dy = p1y - p0y;
+
+    let t0 = 0, t1 = 1;
+
+    const clip = (p, q) => {
+        if (almostEqual(p, 0))
+            return q >= 0;
+
+        const r = q / p;
+        if (p < 0) {
+            if (r > t1)
+                return false;
+            if (r > t0)
+                t0 = r;
+        } else {
+            if (r < t0)
+                return false;
+            if (r < t1)
+                t1 = r;
+        }
+
+        return true;
+    };
+
+    if (
+        !clip(-dx, p0x - minX) ||
+        !clip(dx, maxX - p0x) ||
+        !clip(-dy, p0y - minY) ||
+        !clip(dy, maxY - p0y)
+    )
+        return null;
+
+    return [
+        p0x + dx * t0,
+        p0y + dy * t0,
+        p0x + dx * t1,
+        p0y + dy * t1,
+    ];
+};
+
 class WelcomeBackground {
     #$paper;
     #pen;
 
-    #performanceSetting = "adaptive";
+    #performanceSetting;
 
     #observer;
     #observerCache = { width: undefined, height: undefined };
@@ -42,13 +95,16 @@ class WelcomeBackground {
 
         this.#resize($paper.clientWidth, $paper.clientHeight);
 
-        for (let i = 0; i < 100; i++)
+        for (let i = 0; i < 250; i++)
             this.#dots.push(new Dot(this));
     }
 
     update() {
         const pen = this.#pen;
         const { width, height } = this.#observerCache;
+
+        pen.fillStyle = "rgba(0, 0, 0, .1)";
+        pen.fillRect(0, 0, width, height);
 
         for (const connections of this.getConnections()) {
             const [ start, end, color, opacity ] = connections;
@@ -73,100 +129,93 @@ class WelcomeBackground {
 
     getConnections() {
         const { width, height } = this.#observerCache;
+        const threshold = Math.min(width, height) * .25;
+        const thresholdSq = threshold * threshold;
+        const invWidth = 1 / width;
+        const invHeight = 1 / height;
 
-        const threshhold = Math.min(width, height) * .25;
-
-        const getAverageColor = (a, b) => [
-            (a[0] + b[0]) / 2,
-            (a[1] + b[1]) / 2,
-            (a[2] + b[2]) / 2,
-        ];
-
-        const cache = new Map();
         const connections = [ ];
-        for (const a of this.#dots) {
-            cache.set(a, new Set());
-            for (const b of this.#dots) {
-                if (a === b || cache.get(b)?.has(a))
-                    continue;
-                else
-                    cache.get(a).add(b);
 
-                const averageColor = getAverageColor(a.color, b.color);
+        const addWrappedConnection = (a, b, offsetX, offsetY, color, baseDx, baseDy, baseDistSq) => {
+            const dx = baseDx + offsetX * width;
+            const dy = baseDy + offsetY * height;
+            const distSq = dx * dx + dy * dy;
 
-                {
-                    const distance = Math.hypot(a.x - b.x, a.y - b.y);
-                    if (distance <= threshhold)
-                        connections.push([ { x: a.x, y: a.y }, { x: b.x, y: b.y }, averageColor, (1 - distance / threshhold) ** 2 * (a.size + b.size) / 8 ]);
+            if (distSq > thresholdSq)
+                return;
+
+            const distance = Math.sqrt(distSq);
+            const opacity = (1 - distance / threshold) ** 2 * .6 * (a.size + b.size) / 8;
+
+            const targetX = b.x + offsetX * width;
+            const targetY = b.y + offsetY * height;
+
+            const minTileX = Math.floor(Math.min(a.x, targetX) * invWidth);
+            const maxTileX = Math.floor(Math.max(a.x, targetX) * invWidth);
+            const minTileY = Math.floor(Math.min(a.y, targetY) * invHeight);
+            const maxTileY = Math.floor(Math.max(a.y, targetY) * invHeight);
+
+            for (let tileY = minTileY; tileY <= maxTileY; tileY++) {
+                for (let tileX = minTileX; tileX <= maxTileX; tileX++) {
+                    const tileLeft = tileX * width;
+                    const tileTop = tileY * height;
+                    const tileRight = tileLeft + width;
+                    const tileBottom = tileTop + height;
+
+                    const clipped = clipLineToRect(
+                        a.x, a.y,
+                        targetX, targetY,
+                        tileLeft, tileTop, tileRight, tileBottom
+                    );
+
+                    if (!clipped)
+                        continue;
+
+                    const [ fromX, fromY, toX, toY ] = clipped;
+                    if (almostEqual(fromX, toX) && almostEqual(fromY, toY))
+                        continue;
+
+                    connections.push([
+                        {
+                            x: clamp(fromX - tileLeft, 0, width),
+                            y: clamp(fromY - tileTop, 0, height),
+                        },
+                        {
+                            x: clamp(toX - tileLeft, 0, width),
+                            y: clamp(toY - tileTop, 0, height),
+                        },
+                        color,
+                        opacity,
+                    ]);
+                }
+            }
+        };
+
+        const dots = this.#dots;
+        const dotsLength = dots.length;
+
+        for (let i = 0; i < dotsLength; i++) {
+            const a = dots[i];
+
+            for (let j = i + 1; j < dotsLength; j++) {
+                const b = dots[j];
+                const baseDx = b.x - a.x;
+                const baseDy = b.y - a.y;
+                const baseDistSq = baseDx * baseDx + baseDy * baseDy;
+
+                // Early exit if direct distance is already too far
+                if (baseDistSq > thresholdSq) {
+                    // Check if any wrapping offset could work
+                    const maxOffsetDist = Math.abs(width) + Math.abs(height);
+                    if (baseDistSq > (threshold + maxOffsetDist) ** 2)
+                        continue;
                 }
 
-                {
-                    const [ left, right ] = b.x >= a.x ? [ a, b ] : [ b, a ];
+                const color = averageColor(a.color, b.color);
 
-                    const distance = Math.hypot(right.x - width - left.x, right.y - left.y);
-                    if (distance <= threshhold) {
-                        const opacity = (1 - distance / threshhold) ** 2 * .6;
-
-                        /*
-                            y = mx + b
-                            b = y - mx
-
-                            y = left.y
-                            m = (right.y - left.y) / (right.x - width - left.x)
-                            x = left.x
-
-                            b = left.y - (right.y - left.y) / (right.x - width - left.x) * left.x
-                        */
-                        const yIntercept = Math.round(left.y - (right.y - left.y) / (right.x - width - left.x) * left.x);
-                        connections.push(
-                            [ { x: right.x, y: right.y }, { x: width, y: yIntercept }, averageColor, opacity ],
-                            [ { x: 0, y: yIntercept }, { x: left.x, y: left.y }, averageColor, opacity ]
-                        );
-                    }
-                }
-
-                {
-                    const [ top, bottom ] = b.y >= a.y ? [ a, b ] : [ b, a ];
-
-                    const distance = Math.hypot(bottom.x - top.x, bottom.y - height - top.y);
-                    if (distance <= threshhold) {
-                        const opacity = (1 - distance / threshhold) ** 2 * .6;
-
-                        /*
-                            y = mx + b
-                            x = (y - b) / m
-
-                            need to find b:
-                            b = y - mx
-
-                            y = top.y
-                            m = (bottom.y - height - top.y) / (bottom.x - top.x)
-                            x = top.x
-
-                            b = top.y - (bottom.y - height - top.y) / (bottom.x - top.x) * top.x
-
-                            now find x:
-                            y = 0
-                            b = top.y - (bottom.y - height - top.y) / (bottom.x - top.x) * top.x
-                            m = (bottom.y - height - top.y) / (bottom.x - top.x);
-
-                            x = (0 - (top.y - (bottom.y - height - top.y) / (bottom.x - top.x) * top.x)) / ((bottom.y - height - top.y) / (bottom.x - top.x))
-
-                            simplify:
-                            x = (0 - (y1 - (y2 - h - y1) / (x2 - x1) * x1)) / ((y2 - h - y1) / (x2 - x1))
-
-                            x = (x1 * (y2 - h) - x2 * y1) / (y2 - h - y1)
-
-                            x = (top.x * (bottom.y - height) - bottom.x * top.y) / (bottom.y - height - top.y)
-                        */
-
-                        const xIntercept = top.x === bottom.x ?
-                            top.x :
-                            Math.round((top.x * (bottom.y - height) - bottom.x * top.y) / (bottom.y - height - top.y));
-                        connections.push(
-                            [ { x: bottom.x, y: bottom.y }, { x: xIntercept, y: height }, averageColor, opacity ],
-                            [ { x: xIntercept, y: 0 }, { x: top.x, y: top.y }, averageColor, opacity ]
-                        );
+                for (let offsetY = -1; offsetY <= 1; offsetY++) {
+                    for (let offsetX = -1; offsetX <= 1; offsetX++) {
+                        addWrappedConnection(a, b, offsetX, offsetY, color, baseDx, baseDy, baseDistSq);
                     }
                 }
             }
@@ -213,7 +262,7 @@ class Dot {
     constructor(parent) {
         this.parent = parent;
 
-        this.size = Math.random() * 3 + 1 | 0;
+        this.size = Math.random() * 1 + 1 | 0;
 
         this.x = Math.random() * parent.width;
         this.y = Math.random() * parent.height;
@@ -241,7 +290,7 @@ class Dot {
         if (Math.random() < .01)
             this.ay = (Math.random() - .5) * .01;
 
-        this.size = Math.max(Math.min(this.size + (Math.random() - .5) * .1, 4), 1);
+        this.size = Math.max(Math.min(this.size + (Math.random() - .5) * .1, 2), 1);
     }
 }
 

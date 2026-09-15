@@ -138,7 +138,7 @@ function getDisplacementFilter({ height, width, radius, depth, strength, chromat
     return value;
 }
 
-function addLiquidGlassEffect($el, { height, width, radius, depth, strength = 100, chromaticAberration = 0, blur = 2, brightness = .7 }) {
+function addLiquidGlassEffect($el, { height, width, radius, depth = 2, strength = 100, chromaticAberration = 0, blur = 2, brightness = .7 }) {
     $el.classList.remove("liquid-glass");
 
     const getBorderRadius = $el => {
@@ -152,7 +152,7 @@ function addLiquidGlassEffect($el, { height, width, radius, depth, strength = 10
     };
 
     function update() {
-        requestIdleCallback(() => {
+        requestAnimationFrame(() => {
             $el.style.backdropFilter = `blur(${blur / 2}px) url('${getDisplacementFilter({
                 height: height ?? $el.clientHeight,
                 width: width ?? $el.clientWidth,
