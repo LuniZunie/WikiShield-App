@@ -1,13 +1,13 @@
 import { wikishield } from "../global.js";
 
 
-const serversWithPendingChanges = new Set([ ]);
-
 import { truncate } from "../../../global/truncate/script.esm.js";
 import { uniquify } from "../../../global/uniquify/script.esm.js";
 
 import { MediaWikiAPI } from "../web-port/api.js";
 import { MediaWikiOAuth2 } from "../web-port/oauth2.js";
+
+import { configLookup } from "../data/configs.js";
 
 let API;
 if (wikishield.isElectron) {
@@ -35,16 +35,13 @@ if (wikishield.isElectron) {
         }
 
         get hasPendingChanges() {
-            return serversWithPendingChanges.has(this.#server);
+            return configLookup[this.#server]?.pending_changes ?? false;
         }
 
-        constructor(ws, server, username, pendingChangesServers) {
+        constructor(ws, server, username) {
             this.#ws = ws;
             this.#server = server;
             this.#account = username;
-
-            for (const pcServer of pendingChangesServers)
-                serversWithPendingChanges.add(pcServer);
         }
 
         build(opts = { }) {
@@ -297,18 +294,15 @@ if (wikishield.isElectron) {
         #ws = null;
 
         get hasPendingChanges() {
-            return serversWithPendingChanges.has(this.server);
+            return configLookup[this.server]?.pending_changes ?? false;
         }
 
-        constructor(ws, server, username, pendingChangesServers) {
+        constructor(ws, server, username) {
             super(ws, new MediaWikiOAuth2(`WikiShield (${server}; ${username})`), server, username);
 
             this.#ws = ws;
             this.server = server;
             this.username = username;
-
-            for (const pcServer of pendingChangesServers)
-                serversWithPendingChanges.add(pcServer);
         }
     }
 }

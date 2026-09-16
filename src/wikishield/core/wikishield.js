@@ -76,7 +76,7 @@ export class WikiShield {
 		"background-checks": null,
 	};
 
-	constructor(mobile, server, username, pendingChangesServers, dev) {
+	constructor(mobile, server, username, dev) {
 		WikiShield.config.changelog.version = FormatChangelogVersion(dev, VERSION)(true);
 
 		this.multithreads["background-checks"] = new Multithread(Multithread.LOADED_FILES["background-checks"]);
@@ -96,7 +96,7 @@ export class WikiShield {
 
 		this.util = new Utility(this);
 
-		this.api = new API(this, server, username, pendingChangesServers);
+		this.api = new API(this, server, username);
 		if (!mobile)
 			this.notifications = new Notifications(this);
 

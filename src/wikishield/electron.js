@@ -12,14 +12,13 @@ if (window.electron === undefined) {
                 detail: {
                     server: window.location.host,
                     username: mw.user.getName(),
-                    pendingChangesServers: MediaWikiAPI.pendingChangesServers,
                     dev: false,
                 }
             }));
         },
         mwapiLoaded: callback => window.addEventListener("mwapi-loaded", event => {
-            const { server, username, pendingChangesServers, dev } = event.detail;
-            callback(server, username, pendingChangesServers, dev);
+            const { server, username, dev } = event.detail;
+            callback(server, username, dev);
         }),
         mwapi: () => Promise.reject(new Error("Not running in Electron environment")),
 

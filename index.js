@@ -18,6 +18,8 @@ const { CreateBadgeIcon } = require("./app/badge.js");
 const { MediaWikiOAuth2 } = require("./wikipedia/oauth2.js");
 const { MediaWikiAPI } = require("./wikipedia/api.js");
 
+const { LoadConfig } = require("./configs.js");
+
 const DiscordRPC = require("discord-rpc");
 
 // constants
@@ -1331,6 +1333,8 @@ async function CreateAPI(username = null, api = true) {
 
 // app setup
 app.whenReady().then(async () => {
+    await LoadConfig(__servers__.map(server => server.host));
+
     try {
         const isUpdatedStart = process.argv.includes("--updated");
         if (isUpdatedStart) {
@@ -1510,7 +1514,7 @@ app.whenReady().then(async () => {
             try {
                 if (await CreateAPI(username)) {
                     if (glob.windows.main)
-                        glob.windows.main.webContents.send("mwapi-loaded", glob.server, username, MediaWikiAPI.pendingChangesServers, __dev__);
+                        glob.windows.main.webContents.send("mwapi-loaded", glob.server, username, __dev__);
                 } else {
                     if (glob.windows.main)
                         glob.windows.main.close();

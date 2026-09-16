@@ -2,7 +2,7 @@ const { contextBridge, ipcRenderer } = require("electron/renderer");
 
 contextBridge.exposeInMainWorld("electron", {
     mwapiLoader: () => ipcRenderer.invoke("mwapi-loader"),
-    mwapiLoaded: callback => ipcRenderer.on("mwapi-loaded", (event, server, username, pendingChangesServers, dev) => callback(server, username, pendingChangesServers, dev)),
+    mwapiLoaded: callback => ipcRenderer.on("mwapi-loaded", (event, server, username, dev) => callback(server, username, dev)),
     mwapi: (action, ...args) => ipcRenderer.invoke("mwapi", action, ...args),
 
     menuEnabler: opts => ipcRenderer.send("menu-enabler", opts),

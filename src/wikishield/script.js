@@ -7,6 +7,7 @@ import "./elements/manager.js";
 
 import { isMobileUserAgent } from "./utilities/is-mobile.js";
 
+import { LoadConfig } from "./data/configs.js";
 import { LoadWarnings } from "./data/warnings.js";
 import { LoadWelcomes } from "./data/welcomes.js";
 
@@ -57,18 +58,18 @@ export async function run() {
         }
     }, { passive: true });
 
-    await Promise.all([ LoadWarnings, LoadWelcomes ].map(fn => fn([ "en.wikipedia.org" ])));
+    await Promise.all([ LoadConfig, LoadWarnings, LoadWelcomes ].map(fn => fn([ "en.wikipedia.org" ])));
 
     electron.menuEnabler();
 
-    electron.mwapiLoaded(async (server, username, pendingChangesServers, dev) => {
+    electron.mwapiLoaded(async (server, username, dev) => {
         if (StorageManager.okay(null, electron)) {
             document.querySelector("#rollback-needed .request-link").href = await fetch("https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q7765871&props=sitelinks/urls&format=json&origin=*")
                 .then(res => res.json())
                 .then(data => Object.values(data.entities.Q7765871.sitelinks).find(sitelink => sitelink.url.startsWith(`https://${server}/wiki/`))?.url || null)
                 .catch(() => null) ?? "https://www.wikidata.org/wiki/Q7765871";
 
-            const ws = new WikiShield(wikishield.isMobile, server, username, pendingChangesServers, dev);
+            const ws = new WikiShield(wikishield.isMobile, server, username, dev);
             document.body.classList.toggle("mobile", wikishield.isMobile);
 
             electron.onOpenBrowser(() => ws.open(null, false));

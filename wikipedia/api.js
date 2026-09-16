@@ -7,19 +7,14 @@ const { Trie } = require("../global/trie/script.com.js");
 const { uniquify } = require("../global/uniquify/script.com.js");
 
 const { ORES } = require("./ores.js");
-const __servers__ = require("../servers.js");
 
-const __tags__ = new Set(__servers__.filter(s => s.tag).map(s => s.host));
-const __pendingChanges__ = new Set(__servers__.filter(s => s.pending_changes).map(s => s.host));
+const { configLookup } = require("../configs.js");
 
 class MediaWikiAPI {
     static cache = { };
 
-    static get pendingChangesServers() {
-        return Array.from(__pendingChanges__);
-    }
     static hasPendingChanges(server) {
-        return __pendingChanges__.has(server);
+        return configLookup[server]?.pending_changes ?? false;
     }
 
     static chunk(array, size = 50) {
@@ -75,7 +70,7 @@ class MediaWikiAPI {
 
     build(opts = { }, serverOverride = null) {
         return {
-            "tags": __tags__.has(serverOverride ?? this.server) ? "WikiShield script" : "",
+            "tags": configLookup[serverOverride ?? this.server]?.wikishield_script_tag ? "WikiShield script" : "",
             "assertuser": this.username,
             "discussiontoolsautosubscribe": "no",
             ...opts
@@ -974,7 +969,7 @@ class MediaWikiAPI {
 
                 options.rclimit = "max";
             }
-            if (pending !== null && __pendingChanges__.has(this.server)) {
+            if (pending !== null && MediaWikiAPI.hasPendingChanges(this.server)) {
                 options.list.push("oldreviewedpages");
 
                 options.ornamespace = pending.ns || "*";
