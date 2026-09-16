@@ -7,7 +7,8 @@ import "./elements/manager.js";
 
 import { isMobileUserAgent } from "./utilities/is-mobile.js";
 
-import { LoadWarnings, warningsLookup } from "./data/warnings.js";
+import { LoadWarnings } from "./data/warnings.js";
+import { LoadWelcomes } from "./data/welcomes.js";
 
 import { WikiShield } from "./core/wikishield.js";
 import { StorageManager } from "./data/storage/manager.js";
@@ -56,8 +57,7 @@ export async function run() {
         }
     }, { passive: true });
 
-    await LoadWarnings([ "en.wikipedia.org" ]);
-    console.log(warningsLookup);
+    await Promise.all([ LoadWarnings, LoadWelcomes ].map(fn => fn([ "en.wikipedia.org" ])));
 
     electron.menuEnabler();
 

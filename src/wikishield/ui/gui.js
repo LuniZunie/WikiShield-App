@@ -12,7 +12,7 @@ import { Dialog } from "./dialog.js";
 import { EventManager } from "../core/event-manager.js";
 import { Settings } from "./settings.js";
 import { Queue } from "../core/queue.js";
-import { warningsLookup, warningTemplateColors, getWarningFromLookup } from "../data/warnings.js";
+import { warningsTree, warningsLookup, warningTemplateColors } from "../data/warnings.js";
 import { BuildPalette } from "../utilities/build-palette.js";
 
 import { SetupGestures } from "./mobile/gestures.js";
@@ -4163,7 +4163,7 @@ export class GUI {
 
 		const executeWithWarn = async (warningTitle, level) => {
 			const autoReporting = this.ws.store.settings.auto_report;
-			const warning = getWarningFromLookup(warningTitle);
+			const warning = warningsLookup["en.wikipedia.org"][warningTitle];
 
 			await this.ws.execute({
 				actions: [
@@ -4209,7 +4209,7 @@ export class GUI {
 		};
 
 		const executeNoWarn = async warningTitle => {
-			const warning = getWarningFromLookup(warningTitle);
+			const warning = warningsLookup["en.wikipedia.org"][warningTitle];
 			await this.ws.execute({
 				actions: [
 					{
@@ -4246,7 +4246,7 @@ export class GUI {
 			$container.className = "favorites-container";
 			$favorites.appendChild($container);
 
-			const allWarnings = Object.values(warningsLookup).filter(w => w.queueType.includes(group) && (!item || typeof w.show !== "function" || w.show(item)));
+			const allWarnings = Object.values(warningsLookup["en.wikipedia.org"]).filter(w => w.queueType.includes(group) && (!item || typeof w.show !== "function" || w.show(item)));
 			for (const favorite of this.ws.store.favorite[type]) {
 				const warning = allWarnings.find(w => w.title === favorite);
 				if (warning) {
@@ -4263,7 +4263,7 @@ export class GUI {
 		}
 
 		let allMade = 0;
-		for (const [ , category ] of Object.entries(warnings)) {
+		for (const [ , category ] of Object.entries(warningsTree["en.wikipedia.org"])) {
 			let categoryMade = 0;
 			const categoryWarnings = [ ];
 
@@ -4307,8 +4307,8 @@ export class GUI {
 				$submenu.appendChild($item);
 			}
 
-			$option.addEventListener("click", e => {
-				e.stopPropagation();
+			$option.addEventListener("click", event => {
+				event.stopPropagation();
 
 				const wasShown = $submenu.classList.contains("show");
 				document.body.querySelectorAll(".warning-submenu.show").forEach($menu => {

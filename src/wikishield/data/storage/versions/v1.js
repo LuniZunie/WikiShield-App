@@ -956,7 +956,7 @@ Version.v1 = class V1 extends Version {
                         this.reset("settings", "auto_report", "for");
 
                     root.settings.auto_report.for = Array.from(new Set(root.settings.auto_report.for)).filter(v => {
-                        const valid = v in warningsLookup;
+                        const valid = v in warningsLookup["en.wikipedia.org"];
                         if (!valid)
                             this.loadedLogger.warn(`Removing invalid auto-report reason [ ${v} ] from stored data.`);
 

@@ -1,4 +1,4 @@
-export const welcomes = {
+const welcomes = {
     "Auto": {
         title: "Auto",
         template: user => { }

@@ -7,6 +7,7 @@ export const warningTemplateColors = {
 	"4im": "#000000"
 };
 
+export const warningsTree = { };
 export const warningsLookup = { };
 export async function LoadWarnings(servers) {
 	const serverWarnings = await Promise.all(servers.map(async server =>
@@ -24,22 +25,16 @@ export async function LoadWarnings(servers) {
 	for (const [ server, code ] of serverWarnings) {
 		const hijackedCode = `${code}\n\nreturn warnings;`;
 		try {
-			const warnings = new Function(hijackedCode)();
+			warningsTree[server] = new Function(hijackedCode)();
 
 			const serverLookup = warningsLookup[server] = { };
-			for (const [ type, category ] of Object.entries(warnings)) {
-				const len = category.warnings.length;
-				for (let i = 0; i < len; i++) {
+			for (const [ , category ] of Object.entries(warningsTree[server]))
+				for (let i = category.warnings.length - 1; i >= 0; i--) {
 					const warning = category.warnings[i];
 					serverLookup[warning.title] = warning;
 				}
-			}
 		} catch (error) {
 			console.error(`[WikiShield] - Error parsing warnings for ${server}.`, error);
 		}
 	}
-}
-
-export function getWarningFromLookup(server, title) {
-	return warningsLookup[server][title];
 }

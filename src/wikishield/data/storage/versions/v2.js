@@ -955,7 +955,7 @@ Version.v2 = class V2 extends Version {
                         this.reset("settings", "auto_report", "for");
 
                     root.settings.auto_report.for = Array.from(new Set(root.settings.auto_report.for)).filter(v => {
-                        const valid = v in warningsLookup;
+                        const valid = v in warningsLookup["en.wikipedia.org"];
                         if (!valid)
                             this.loadedLogger.warn(`Removing invalid auto-report reason [ ${v} ] from stored data.`);
 
@@ -1677,7 +1677,7 @@ Version.v2 = class V2 extends Version {
                     this.reset("favorite", "warnings");
 
                 root.favorite.warnings = root.favorite.warnings.filter(v => {
-                    const valid = v in warningsLookup;
+                    const valid = v in warningsLookup["en.wikipedia.org"];
                     if (!valid)
                         this.loadedLogger.warn(`Removing invalid favorite warning [ ${v} ] from stored data.`);
 
@@ -1691,7 +1691,7 @@ Version.v2 = class V2 extends Version {
                     this.reset("favorite", "reverts");
 
                 root.favorite.reverts = root.favorite.reverts.filter(v => {
-                    const valid = v in warningsLookup;
+                    const valid = v in warningsLookup["en.wikipedia.org"];
                     if (!valid)
                         this.loadedLogger.warn(`Removing invalid favorite revert [ ${v} ] from stored data.`);
 

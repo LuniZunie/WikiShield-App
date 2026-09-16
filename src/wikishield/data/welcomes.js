@@ -1,73 +1,23 @@
-export const welcomes = {
-    "Auto": {
-        title: "Auto",
-        template: user => { }
-    },
-    "Default": {
-        title: "Default",
-        template: "Welcome",
-        sign: true
-    },
+export const welcomesLookup = { };
+export async function LoadWelcomes(servers) {
+    const serverWelcomes = await Promise.all(servers.map(async server =>
+        [
+            server,
+            await fetch(`https://raw.githubusercontent.com/LuniZunie/WikiShield-App/refs/heads/main/src/wikishield/lang/${server}/welcomes.js`)
+            .then(res => res.text())
+            .catch(error => {
+                console.error(`[WikiShield] - Error loading welcomes for ${server}.`, error);
+                return "const welcomes = { };";
+            })
+        ]
+    ));
 
-    "Basic": {
-        title: "Basic",
-        template: "W-basic",
-        sign: false
-    },
-    "Non-Latin": {
-        title: "Non-Latin",
-        template: "Welcome-non-latin",
-        sign: true
-    },
-
-    "Vandalism fighter": {
-        title: "Vandalism fighter",
-        template: "Welcome-vandalism-fighter",
-        sign: true
-    },
-
-    "Personal": {
-        title: "Personal",
-        template: "Welcome-personal",
-        sign: true
-    },
-    "Cookie": {
-        title: "Cookie",
-        template: "Welcome cookie",
-        sign: true
-    },
-    "Kitten": {
-        title: "Kitten",
-        template: "Welcome kitten",
-        sign: false
-    },
-
-    "Graphical": {
-        title: "Graphical",
-        template: "W-graphical",
-        sign: false
-    },
-    "Screen": {
-        title: "Screen",
-        template: "W-screen",
-        sign: false
-    },
-
-    "Autobiography": {
-        title: "Autobiography",
-        template: "Welcome-auto",
-        sign: true
-    },
-    "COI": {
-        title: "COI",
-        template: "Welcome-COI",
-        sign: true
-    },
-};
-
-welcomes["Auto"].template = user => {
-    if (!welcomes["Non-Latin"].hide && /[^\u0000-\u007F]/.test(user.name))
-        return "Non-Latin";
-
-    return "Default";
-};
+    for (const [ server, code ] of serverWelcomes) {
+        const hijackedCode = `${code}\n\nreturn welcomes;`;
+        try {
+            welcomesLookup[server] = new Function(hijackedCode)();
+        } catch (error) {
+            console.error(`[WikiShield] - Error parsing welcomes for ${server}.`, error);
+        }
+    }
+}
