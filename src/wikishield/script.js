@@ -7,6 +7,8 @@ import "./elements/manager.js";
 
 import { isMobileUserAgent } from "./utilities/is-mobile.js";
 
+import { LoadWarnings, warningsLookup } from "./data/warnings.js";
+
 import { WikiShield } from "./core/wikishield.js";
 import { StorageManager } from "./data/storage/manager.js";
 
@@ -53,6 +55,9 @@ export async function run() {
             event.target.dispatchEvent(new Event("input"));
         }
     }, { passive: true });
+
+    await LoadWarnings([ "en.wikipedia.org" ]);
+    console.log(warningsLookup);
 
     electron.menuEnabler();
 
