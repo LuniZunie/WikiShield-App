@@ -12,7 +12,7 @@ import { Dialog } from "./dialog.js";
 import { EventManager } from "../core/event-manager.js";
 import { Settings } from "./settings.js";
 import { Queue } from "../core/queue.js";
-import { warnings, warningsLookup, warningTemplateColors, getWarningFromLookup } from "../data/warnings.js";
+import { warningsLookup, warningTemplateColors, getWarningFromLookup } from "../data/warnings.js";
 import { BuildPalette } from "../utilities/build-palette.js";
 
 import { SetupGestures } from "./mobile/gestures.js";

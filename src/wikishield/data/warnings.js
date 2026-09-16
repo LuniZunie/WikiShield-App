@@ -8,7 +8,7 @@ export const warningTemplateColors = {
 };
 
 export const warningsLookup = { };
-export function LoadWarnings(servers) {
+export async function LoadWarnings(servers) {
 	const serverWarnings = await Promise.all(servers.map(async server =>
 		[
 			server,
@@ -25,11 +25,13 @@ export function LoadWarnings(servers) {
 		const hijackedCode = `${code}\n\nreturn warnings;`;
 		try {
 			const warnings = new Function(hijackedCode)();
+
+			const serverLookup = warningsLookup[server] = { };
 			for (const [ type, category ] of Object.entries(warnings)) {
 				const len = category.warnings.length;
 				for (let i = 0; i < len; i++) {
 					const warning = category.warnings[i];
-					warningsLookup[warning.title] = warning;
+					serverLookup[warning.title] = warning;
 				}
 			}
 		} catch (error) {
