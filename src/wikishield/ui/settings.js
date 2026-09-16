@@ -863,7 +863,7 @@ export class Settings {
 		{
 			const $reporting = document.querySelector("#settings-auto-reporting-toggle");
 			$reporting.value = this.ws.store.settings.auto_report.enabled;
-			$reporting.addEventListener("change", e => {
+			$reporting.addEventListener("change", () => {
 				this.ws.store.settings.auto_report.enabled = $reporting.value;
 			});
 
