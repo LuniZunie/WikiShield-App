@@ -412,6 +412,8 @@ body {
         }
 
         & > .icon {
+            pointer-events: none;
+
             aspect-ratio: 1 / 1;
             width: 12.5vmin;
 
@@ -610,6 +612,8 @@ body {
                 }
 
                 & > .shield-icon {
+                    pointer-events: none;
+
                     width: 100px;
 
                     position: absolute;

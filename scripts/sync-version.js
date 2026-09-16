@@ -9,6 +9,7 @@ const packageLock = require(packageLockPath);
 
 const version = packageJson.version;
 packageLock.version = version;
+packageLock.packages[""].version = version;
 
 if (packageJson.config?.forge?.packagerConfig?.win32metadata) {
     packageJson.config.forge.packagerConfig.win32metadata.FileVersion = version;

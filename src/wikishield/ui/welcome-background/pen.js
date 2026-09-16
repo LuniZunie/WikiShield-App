@@ -138,16 +138,17 @@ class WelcomeBackground {
         this.#resize($paper.clientWidth, $paper.clientHeight);
 
         this.#performanceObserver = new PerformanceObserver(list => {
-            for (const entry of list.getEntries())
-                if (entry.duration > 10) {
-                    this.#performance = Math.max(Math.min(this.#performance - Math.sqrt((entry.duration - 10) / 1000), 1), 0);
-                    this.#setDotAmount(Dot.target(this.#observerCache.width, this.#observerCache.height) * this.#performance);
-                }
+            for (const entry of list.getEntries()) {
+                this.#performance = Math.max(Math.min(this.#performance - Math.sqrt(entry.duration / 1000), 1), 0);
+                this.#setDotAmount(Dot.target(this.#observerCache.width, this.#observerCache.height) * this.#performance);
+            }
         });
 
         this.#performanceIncreaseInterval = setInterval(() => {
-            this.#performance = Math.max(Math.min(this.#performance + .01, 1), 0);
-            this.#setDotAmount(Dot.target(this.#observerCache.width, this.#observerCache.height) * this.#performance)
+            const target = Dot.target(this.#observerCache.width, this.#observerCache.height);
+
+            this.#performance = Math.max(Math.min(this.#performance + 1 / target, 1), 0);
+            this.#setDotAmount(target * this.#performance)
         }, 100);
         this.#performanceObserver.observe({ type: "longtask", buffered: true });
     }
@@ -208,7 +209,7 @@ class WelcomeBackground {
             const minTileY = Math.floor(Math.min(a.y, targetY) * invHeight);
             const maxTileY = Math.floor(Math.max(a.y, targetY) * invHeight);
 
-            for (let tileY = minTileY; tileY <= maxTileY; tileY++) {
+            for (let tileY = minTileY; tileY <= maxTileY; tileY++)
                 for (let tileX = minTileX; tileX <= maxTileX; tileX++) {
                     const tileLeft = tileX * width;
                     const tileTop = tileY * height;
@@ -241,7 +242,6 @@ class WelcomeBackground {
                         opacity,
                     ]);
                 }
-            }
         };
 
         const dots = this.#dots;
@@ -266,11 +266,9 @@ class WelcomeBackground {
 
                 const color = averageColor(a.color, b.color);
 
-                for (let offsetY = -1; offsetY <= 1; offsetY++) {
-                    for (let offsetX = -1; offsetX <= 1; offsetX++) {
+                for (let offsetY = -1; offsetY <= 1; offsetY++)
+                    for (let offsetX = -1; offsetX <= 1; offsetX++)
                         addWrappedConnection(a, b, offsetX, offsetY, color, baseDx, baseDy, baseDistSq);
-                    }
-                }
             }
         }
 
@@ -313,7 +311,7 @@ class WelcomeBackground {
 
 class Dot {
     static target(width, height) {
-        return Math.max(40, Math.min(250, Math.floor((width * height) / 7000)));
+        return Math.max(10, Math.floor((width * height) / 5000));
     }
 
     static colors = [

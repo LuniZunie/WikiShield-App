@@ -24,12 +24,14 @@ export async function run() {
 
     if (wikishield.isMobile)
         wikishield.arePopupsBlocked = true;
+    else if (wikishield.isElectron)
+        wikishield.arePopupsBlocked = false;
     else
         wikishield.arePopupsBlocked = (() => {
             let popup;
             try {
-                popup = window.open("about:blank", "_blank", "width=100,height=100,left=-100,top=-100");
-                if (!popup || popup.closed || typeof popup.closed === "undefined")
+                popup = window.open("https://ws.luni.me/popup", "_blank", "width=100,height=100,left=-100,top=-100");
+                if ((popup?.closed ?? false) === false)
                     return true;
 
                 popup.close();
