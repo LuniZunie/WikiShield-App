@@ -1,4 +1,11 @@
 {
     "wikishield_script_tag": true,
+
+    "small_wiki": false,
+
+    "vandalism_noticeboard": "Wikipedia:Administrator intervention against vandalism",
+    "username_noticeboard": "Wikipedia:Usernames for administrator attention",
+    "page_protection_noticeboard": "Wikipedia:Requests for page protection",
+
     "pending_changes": true
 }

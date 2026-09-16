@@ -1,4 +1,11 @@
 {
     "wikishield_script_tag": false,
-    "pending_changes": false
+
+    "small_wiki": false,
+
+    "vandalism_noticeboard": "Wikipedia:Vandalism in progress",
+    "username_noticeboard": null,
+    "page_protection_noticeboard": "Wikipedia:Administrators' noticeboard",
+
+    "pending_changes": false,
 }
