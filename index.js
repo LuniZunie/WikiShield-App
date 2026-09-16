@@ -1333,7 +1333,7 @@ async function CreateAPI(username = null, api = true) {
 
 // app setup
 app.whenReady().then(async () => {
-    await LoadConfig(__servers__.map(server => server.host));
+    await LoadConfig(__servers__.map(server => server.host).filter(host => Boolean(host)));
 
     try {
         const isUpdatedStart = process.argv.includes("--updated");

@@ -66,8 +66,5 @@ const welcomes = {
 };
 
 welcomes["Auto"].template = user => {
-    if (!welcomes["Non-Latin"].hide && /[^\u0000-\u007F]/.test(user.name))
-        return "Non-Latin";
-
     return "Default";
 };

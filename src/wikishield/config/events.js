@@ -1614,7 +1614,7 @@ export const events = {
                     DONT_CRASH_ANY_COMPUTERS_PLEASE.add(template);
                 }
 
-                const content = `{{subst:${template.template}}}${template.sign ? ` ~~~~` : ""}`;
+                const content = `{{subst:${template.template}${template.parameters ? `|${template.parameters(ws, item)}` : ""}}}${template.sign ? ` ~~~~` : ""}`;
                 return await ws.api.append(page, null, content, ws.api.summary(`Welcome to Wikipedia!`));
             })();
         },
