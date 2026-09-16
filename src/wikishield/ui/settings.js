@@ -868,7 +868,7 @@ export class Settings {
 			});
 
 			const $warnings = document.querySelector("#settings-auto-reporting-warnings-container");
-			Object.entries(warningsLookup["en.wikipedia.org"])
+			Object.entries(warningsLookup[ws.api.server])
 				.filter(([key, warning]) => warning.reportable)
 				.sort((a, b) => a[1].title.localeCompare(b[1].title))
 				.forEach(([key, warning]) => {

@@ -255,8 +255,8 @@ export const events = {
                 title: "Warning template",
 
                 type: "choice",
-                options: Object.keys(warningsLookup["en.wikipedia.org"]),
-                default: Object.keys(warningsLookup["en.wikipedia.org"])[0],
+                options: Object.keys(warningsLookup[ws.api.server]),
+                default: Object.keys(warningsLookup[ws.api.server])[0],
             }
         ],
 
@@ -272,14 +272,14 @@ export const events = {
             if (Queue.groups[type] !== "edit")
                 return { valid: false, reason: "Edit can only be reverted when an edit is selected." };
 
-            const warning = warningsLookup["en.wikipedia.org"][params.warning];
+            const warning = warningsLookup[ws.api.server][params.warning];
             if (!("summary" in warning))
                 return { valid: false, reason: "Selected warning template does not support reverting." };
 
             return { valid: true };
         },
         script: async (ws, item, params) => {
-            const warning = warningsLookup["en.wikipedia.org"][params.warning];
+            const warning = warningsLookup[ws.api.server][params.warning];
 
             await ws.gui.settings.waitForClose();
             if (
@@ -455,8 +455,8 @@ export const events = {
                 title: "Warning template",
 
                 type: "choice",
-                options: Object.keys(warningsLookup["en.wikipedia.org"]),
-                default: Object.keys(warningsLookup["en.wikipedia.org"])[0],
+                options: Object.keys(warningsLookup[ws.api.server]),
+                default: Object.keys(warningsLookup[ws.api.server])[0],
             }
         ],
 
@@ -467,7 +467,7 @@ export const events = {
             return { valid: true };
         },
         script: async (ws, item, params) => {
-            const warning = warningsLookup["en.wikipedia.org"][params.warning];
+            const warning = warningsLookup[ws.api.server][params.warning];
 
             await ws.gui.settings.waitForClose();
             if (
@@ -618,8 +618,8 @@ export const events = {
                 title: "Warning template",
 
                 type: "choice",
-                options: Object.keys(warningsLookup["en.wikipedia.org"]),
-                default: Object.keys(warningsLookup["en.wikipedia.org"])[0],
+                options: Object.keys(warningsLookup[ws.api.server]),
+                default: Object.keys(warningsLookup[ws.api.server])[0],
             },
             {
                 dependencies: [ "warning" ],
@@ -631,7 +631,7 @@ export const events = {
                 options: (dependencies) => {
                     return [
                         "auto",
-                        ...warningsLookup["en.wikipedia.org"][dependencies.warning].templates
+                        ...warningsLookup[ws.api.server][dependencies.warning].templates
                             .filter(template => template.generic === undefined)
                             .map(template => template.name)
                     ];
@@ -645,7 +645,7 @@ export const events = {
         valid: (ws, item, params) => {
             if (!item)
                 return { valid: false, reason: "No item selected." };
-            else if (params.level !== "auto" && gwarningsLookup["en.wikipedia.org"][params.warning]?.templates[params.level] === null)
+            else if (params.level !== "auto" && gwarningsLookup[ws.api.server][params.warning]?.templates[params.level] === null)
                 return { valid: false, reason: "Selected warning template does not support automatic level selection." };
             return { valid: true };
         },
@@ -671,7 +671,7 @@ export const events = {
             )
                 return { valid: false, reason: "Warning cancelled by user." };
 
-            const warning = warningsLookup["en.wikipedia.org"][params.warning];
+            const warning = warningsLookup[ws.api.server][params.warning];
 
             const talk = `User talk:${item.user.name}`;
             const monthSection = ws.util.monthSectionName();
@@ -1574,8 +1574,8 @@ export const events = {
                 title: "Template",
 
                 type: "choice",
-                options: Object.keys(welcomesLookup["en.wikipedia.org"]),
-                default: Object.keys(welcomesLookup["en.wikipedia.org"])[0],
+                options: Object.keys(welcomesLookup[ws.api.server]),
+                default: Object.keys(welcomesLookup[ws.api.server])[0],
             }
         ],
 
@@ -1593,13 +1593,13 @@ export const events = {
                 if ((await ws.api.pagesExist([ page ]))[page] !== undefined)
                     return { valid: false, reason: "User cannot be welcomed because their talk page is not empty." };
 
-                let template = welcomesLookup["en.wikipedia.org"][params.template];
+                let template = welcomesLookup[ws.api.server][params.template];
                 if (!template)
                     return { valid: false, reason: "Selected welcome template does not exist." };
 
                 const DONT_CRASH_ANY_COMPUTERS_PLEASE = new Set([ template ]);
                 while (typeof template?.template === "function") {
-                    template = welcomesLookup["en.wikipedia.org"][template.template(ws, item)];
+                    template = welcomesLookup[ws.api.server][template.template(ws, item)];
                     if (DONT_CRASH_ANY_COMPUTERS_PLEASE.has(template))
                         return (void ws.gui.dialog.toast(
                             "REPORT TO DEVELOPER",

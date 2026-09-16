@@ -4163,7 +4163,7 @@ export class GUI {
 
 		const executeWithWarn = async (warningTitle, level) => {
 			const autoReporting = this.ws.store.settings.auto_report;
-			const warning = warningsLookup["en.wikipedia.org"][warningTitle];
+			const warning = warningsLookup[ws.api.server][warningTitle];
 
 			await this.ws.execute({
 				actions: [
@@ -4209,7 +4209,7 @@ export class GUI {
 		};
 
 		const executeNoWarn = async warningTitle => {
-			const warning = warningsLookup["en.wikipedia.org"][warningTitle];
+			const warning = warningsLookup[ws.api.server][warningTitle];
 			await this.ws.execute({
 				actions: [
 					{
@@ -4246,7 +4246,7 @@ export class GUI {
 			$container.className = "favorites-container";
 			$favorites.appendChild($container);
 
-			const allWarnings = Object.values(warningsLookup["en.wikipedia.org"]).filter(w => w.queueType.includes(group) && (!item || typeof w.show !== "function" || w.show(item)));
+			const allWarnings = Object.values(warningsLookup[ws.api.server]).filter(w => w.queueType.includes(group) && (!item || typeof w.show !== "function" || w.show(item)));
 			for (const favorite of this.ws.store.favorite[type]) {
 				const warning = allWarnings.find(w => w.title === favorite);
 				if (warning) {
@@ -4263,7 +4263,7 @@ export class GUI {
 		}
 
 		let allMade = 0;
-		for (const [ , category ] of Object.entries(warningsTree["en.wikipedia.org"])) {
+		for (const [ , category ] of Object.entries(warningsTree[ws.api.server])) {
 			let categoryMade = 0;
 			const categoryWarnings = [ ];
 
