@@ -21,7 +21,7 @@ class NowikiWrapperPlugin {
 
                         compilation.updateAsset(
                             assetName,
-                            new webpack.sources.ConcatSource('// Code is available at https://github.com/LuniZunie/WikiShield-App\n/*<nowiki>*/', asset.source, '/*</nowiki>*/')
+                            new webpack.sources.ConcatSource('/*\nCode is available at https://github.com/LuniZunie/WikiShield-App\n\n--------------------\nFOR INTERFACE ADMINS\n--------------------\n\nWikiShield can be disabled via [[User:LuniZunie/JSON/Killswitch.json]]\n\t> Set WikiShield.disabled to true\n*/\n\n/*<nowiki>*/', asset.source, '/*</nowiki>*/')
                         );
                     }
                 }
