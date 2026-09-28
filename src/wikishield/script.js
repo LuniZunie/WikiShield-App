@@ -58,12 +58,13 @@ export async function run() {
         }
     }, { passive: true });
 
-    await Promise.all([ LoadConfig, LoadWarnings, LoadWelcomes ].map(fn => fn([ "en.wikipedia.org" ])));
+    await Promise.all([ LoadConfig, LoadWarnings, LoadWelcomes ].map(fn => fn([ "en.wikipedia.org", "simple.wikipedia.org" ])));
 
     electron.menuEnabler();
 
     electron.mwapiLoaded(async (server, username, dev) => {
-        if (StorageManager.okay(null, electron)) {
+        try {
+        if (StorageManager.okay(server, null, electron)) {
             document.querySelector("#rollback-needed .request-link").href = await fetch("https://www.wikidata.org/w/api.php?action=wbgetentities&ids=Q7765871&props=sitelinks/urls&format=json&origin=*")
                 .then(res => res.json())
                 .then(data => Object.values(data.entities.Q7765871.sitelinks).find(sitelink => sitelink.url.startsWith(`https://${server}/wiki/`))?.url || null)
@@ -148,6 +149,9 @@ export async function run() {
             else
                 window.location.reload();
         }
+    } catch (err) {
+        console.error(err);
+    }
     });
     electron.mwapiLoader().catch(err => {
         alert(`An error occurred while loading the WikiShield API:\n\n${err.stack || err}`);

@@ -947,7 +947,7 @@ Version.v3 = class V3 extends Version {
         };
     }
 
-    static validate() {
+    static validate(server) {
         const root = this.loadedData;
         this.restrictObject(root, );
 
@@ -1463,7 +1463,7 @@ Version.v3 = class V3 extends Version {
                             action.actions = [ ];
                         }
 
-                        const references = sortDependencies(conditions[condition.name].parameters?.() ?? [ ]);
+                        const references = sortDependencies(conditions[condition.name].parameters?.({ api: { server } }) ?? [ ]);
 
                         const validIds = new Set();
                         for (const reference of references) {
@@ -1529,7 +1529,7 @@ Version.v3 = class V3 extends Version {
                             action.params = { };
                         }
 
-                        const references = sortDependencies(events[action.name].parameters?.() ?? [ ]);
+                        const references = sortDependencies(events[action.name].parameters?.({ api: { server } }) ?? [ ]);
 
                         const validIds = new Set();
                         for (const reference of references) {

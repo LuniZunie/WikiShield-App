@@ -89,9 +89,9 @@ export class WikiShield {
 
 		this.server = server;
 
-		this.storage = new StorageManager();
+		this.storage = new StorageManager(server);
 
-		this.defaultStorage = new StorageManager();
+		this.defaultStorage = new StorageManager(server);
 		this.defaultStorage.load();
 
 		this.util = new Utility(this);
