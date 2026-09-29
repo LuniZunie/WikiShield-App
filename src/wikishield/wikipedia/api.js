@@ -44,6 +44,10 @@ if (wikishield.isElectron) {
             this.#account = username;
         }
 
+        get server() {
+            return this.#server;
+        }
+
         build(opts = { }) {
             return {
                 "assertuser": this.#account,

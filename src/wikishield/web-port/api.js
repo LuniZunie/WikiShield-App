@@ -444,7 +444,10 @@ export class MediaWikiAPI {
         usernames = MediaWikiAPI.paramify(usernames);
         try {
             const promises = await Promise.allSettled(MediaWikiAPI.chunk(usernames, 500).map(async chunk => {
-                return await this.post({ action: "query", list: "users", usprop: "editcount", ususers: MediaWikiAPI.join(chunk) }, bypass, serverOverride);
+                const joined = MediaWikiAPI.join(chunk);
+                if (!joined)
+                    return { status: "fufilled", value: { } };
+                return await this.post({ action: "query", list: "users", usprop: "editcount", ususers: joined }, bypass, serverOverride);
             }));
 
             const users = { };
@@ -462,7 +465,10 @@ export class MediaWikiAPI {
         usernames = MediaWikiAPI.paramify(usernames);
         try {
             const promises = await Promise.allSettled(MediaWikiAPI.chunk(usernames, 500).map(async chunk => {
-                return await this.post({ action: "query", list: "blocks", bkusers: MediaWikiAPI.join(chunk), bkprop: "id|user|by|reason|expiry|flags" }, bypass, serverOverride);
+                const joined = MediaWikiAPI.join(chunk);
+                if (!joined)
+                    return { status: "fufilled", value: { } };
+                return await this.post({ action: "query", list: "blocks", bkusers: joined, bkprop: "id|user|by|reason|expiry|flags" }, bypass, serverOverride);
             }));
 
             const users = { };
@@ -841,7 +847,7 @@ export class MediaWikiAPI {
                 this.areUsersBlocked(usernames, bypass, serverOverride).then(data => {
                     usernames.forEach((name, i) => result[i].user.blocked = data[name] || null);
                 }),
-                this.pagesExist(usernames.map(name => `User talk:${name}`), bypass, serverOverride).then(data => {
+                this.pagesExist(usernames.map(name => `User talk:${name ?? ""}`), bypass, serverOverride).then(data => {
                     usernames.forEach((name, i) => result[i].user.talk = data[`User talk:${name}`]);
                 })
             )

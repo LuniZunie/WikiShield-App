@@ -796,11 +796,7 @@ export class Settings {
 							$name.textContent = model.name;
 							$top.appendChild($name);
 
-							/*
-								LOL i just found this comment in the old code, and i still can't be bothered to fix it
-								here's the comment if anyone is actually reading this:
-								// i don't feel like figuring out the css to truly center the model name, so just add an invisible element to take up space
-							*/
+							// Don't feel like figuring out the css to truly center the model name, so just add an invisible element to take up space
 							const $psuedo = document.createElement("span");
 							$psuedo.className = "psuedo-indicator fa fa-circle";
 							$top.appendChild($psuedo);
@@ -868,7 +864,7 @@ export class Settings {
 			});
 
 			const $warnings = document.querySelector("#settings-auto-reporting-warnings-container");
-			Object.entries(warningsLookup[ws.api.server])
+			Object.entries(warningsLookup[this.ws.api.server])
 				.filter(([key, warning]) => warning.reportable)
 				.sort((a, b) => a[1].title.localeCompare(b[1].title))
 				.forEach(([key, warning]) => {

@@ -17,7 +17,8 @@ export class StorageManager {
         ]);
     }
 
-    constructor() {
+    constructor(ws) {
+        this.ws = ws;
         this.reset(new Logger());
     }
 

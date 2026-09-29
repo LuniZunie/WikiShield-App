@@ -1250,12 +1250,11 @@ Version.v1 = class V1 extends Version {
                             }
                         }
 
-                        for (const paramKey of Object.keys(action.params)) {
+                        for (const paramKey of Object.keys(action.params))
                             if (!validIds.has(paramKey)) {
                                 this.loadedLogger.warn(`Removing invalid parameter [ ${paramKey} ] at path [ ${[ ...path, index, "params" ].join(" -> ")} ] from stored data.`);
                                 delete action.params[paramKey];
                             }
-                        }
                     }
 
                     return true;

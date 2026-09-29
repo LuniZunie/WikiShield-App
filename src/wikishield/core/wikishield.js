@@ -153,9 +153,8 @@ export class WikiShield {
                 try {
                     listener.callback();
                 } catch { } finally {
-                    if (listener.options?.once === true) {
+                    if (listener.options?.once === true)
                         this.#events[event] = this.#events[event].filter(l => l !== listener);
-                    }
                 }
 
         return this;

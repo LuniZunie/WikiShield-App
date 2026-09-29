@@ -255,8 +255,8 @@ export const events = {
                 title: "Warning template",
 
                 type: "choice",
-                options: Object.keys(warningsLookup[ws.api.server]),
-                default: Object.keys(warningsLookup[ws.api.server])[0],
+                options: Object.keys(warningsLookup["en.wikipedia.org"]),
+                default: Object.keys(warningsLookup["en.wikipedia.org"])[0],
             }
         ],
 
@@ -455,8 +455,8 @@ export const events = {
                 title: "Warning template",
 
                 type: "choice",
-                options: Object.keys(warningsLookup[ws.api.server]),
-                default: Object.keys(warningsLookup[ws.api.server])[0],
+                options: Object.keys(warningsLookup["en.wikipedia.org"]),
+                default: Object.keys(warningsLookup["en.wikipedia.org"])[0],
             }
         ],
 
@@ -618,8 +618,8 @@ export const events = {
                 title: "Warning template",
 
                 type: "choice",
-                options: Object.keys(warningsLookup[ws.api.server]),
-                default: Object.keys(warningsLookup[ws.api.server])[0],
+                options: Object.keys(warningsLookup["en.wikipedia.org"]),
+                default: Object.keys(warningsLookup["en.wikipedia.org"])[0],
             },
             {
                 dependencies: [ "warning" ],
@@ -631,7 +631,7 @@ export const events = {
                 options: (dependencies) => {
                     return [
                         "auto",
-                        ...warningsLookup[ws.api.server][dependencies.warning].templates
+                        ...warningsLookup["en.wikipedia.org"][dependencies.warning].templates
                             .filter(template => template.generic === undefined)
                             .map(template => template.name)
                     ];
@@ -645,7 +645,7 @@ export const events = {
         valid: (ws, item, params) => {
             if (!item)
                 return { valid: false, reason: "No item selected." };
-            else if (params.level !== "auto" && gwarningsLookup[ws.api.server][params.warning]?.templates[params.level] === null)
+            else if (params.level !== "auto" && warningsLookup[ws.api.server][params.warning]?.templates[params.level] === null)
                 return { valid: false, reason: "Selected warning template does not support automatic level selection." };
             return { valid: true };
         },
@@ -1574,8 +1574,8 @@ export const events = {
                 title: "Template",
 
                 type: "choice",
-                options: Object.keys(welcomesLookup[ws.api.server]),
-                default: Object.keys(welcomesLookup[ws.api.server])[0],
+                options: Object.keys(welcomesLookup["en.wikipedia.org"]),
+                default: Object.keys(welcomesLookup["en.wikipedia.org"])[0],
             }
         ],
 

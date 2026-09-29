@@ -135,259 +135,8 @@ export class GUI {
 		this.ws.audio.playSound([ "startup" ], controller.signal, false, () => resolve());
 		await promise;
 
-		let animationFrame;
-		const startupPerformance = this.ws.store.settings.performance.startup;
-
-		const test = new WelcomeBackground(document.getElementById("dots-canvas"));
-		test.animate();
-
-		if (startupPerformance !== "always_off" && false) {
-			const $paper = document.getElementById("dots-canvas");
-			const pen = $paper.getContext("2d");
-
-			const DPR = Math.min(devicePixelRatio || 1, 2);
-			class Dot {
-				static dots = [ ];
-				static target = 0;
-
-				static colors = [
-					'102, 126, 234',  // Blue
-					'240, 147, 251',  // Pink
-					'118, 75, 162',   // Purple
-					'217, 70, 239'    // Magenta
-				];
-
-				radius = 2;
-				constructor() {
-					this.x = Math.random() * $paper.width;
-					this.y = Math.random() * $paper.height;
-
-					this.vx = (Math.random() - .5) * .5;
-					this.vy = (Math.random() - .5) * .5;
-
-					this.color = Dot.colors[Math.random() * Dot.colors.length | 0];
-					this.fill = `rgba(${this.color}, .8)`;
-					this.shadow = `rgba(${this.color}, .8)`;
-				}
-
-				update() {
-					this.x += this.vx;
-					this.y += this.vy;
-
-					if (this.x < 0)
-						this.x = $paper.width;
-					else if (this.x > $paper.width)
-						this.x = 0;
-
-					if (this.y < 0)
-						this.y = $paper.height;
-					else if (this.y > $paper.height)
-						this.y = 0;
-				}
-
-				draw() {
-					pen.beginPath();
-
-					pen.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-
-					pen.fillStyle = this.fill;
-					pen.fill();
-				}
-			}
-
-			let resizeRAF = null;
-			const resizeCanvas = () => {
-				if (resizeRAF)
-					return;
-				resizeRAF = requestAnimationFrame(() => {
-					resizeRAF = null;
-					const oldWidth = $paper.width;
-					const oldHeight = $paper.height;
-
-					$paper.width = Math.floor(innerWidth * DPR);
-					$paper.height = Math.floor(innerHeight * DPR);
-					$paper.style.width = `${innerWidth}px`;
-					$paper.style.height = `${innerHeight}px`;
-
-					pen.setTransform(1, 0, 0, 1, 0, 0);
-					pen.scale(DPR, DPR);
-
-					const scaleX = $paper.width / (oldWidth || $paper.width);
-					const scaleY = $paper.height / (oldHeight || $paper.height);
-
-					Dot.dots.forEach(dot => {
-						dot.x *= scaleX;
-						dot.y *= scaleY;
-					});
-
-					Dot.target = Math.floor((innerWidth * innerHeight) / 7000);
-					Dot.target = Math.max(40, Math.min(250, Dot.target));
-
-					if (Dot.target > Dot.dots.length)
-						for (let i = Dot.dots.length; i < Dot.target; i++)
-							Dot.dots.push(new Dot());
-					else if (Dot.target < Dot.dots.length)
-						Dot.dots.length = Dot.target;
-				});
-			};
-			resizeCanvas();
-			window.addEventListener("resize", resizeCanvas);
-
-			const GRID_SIZE = 160;
-
-			const LOW_FPS_THRESHOLD = 30;
-			const LOW_FPS_DURATION_MS = 500;
-
-			let lowFPSStart = null;
-			let lastTimestamp = performance.now();
-			const lastDeltaTimes = new Array(15).fill(1000 / 60);
-
-			const animate = () => {
-				{
-					const now = performance.now();
-
-					const deltaTime = now - lastTimestamp;
-					lastTimestamp = now;
-
-					lastDeltaTimes.shift();
-					lastDeltaTimes.push(deltaTime);
-
-					const noOutliers = [ ...lastDeltaTimes ].sort((a, b) => a - b).slice(2, -2);
-
-					const averageDeltaTime = noOutliers.reduce((a, b) => a + b, 0) / noOutliers.length;
-					const FPS = 1000 / averageDeltaTime;
-
-					if (startupPerformance === "adaptive") {
-						if (FPS < LOW_FPS_THRESHOLD) {
-							if (lowFPSStart === null)
-								lowFPSStart = now;
-
-							if (now - lowFPSStart >= LOW_FPS_DURATION_MS) {
-								if (animationFrame)
-									cancelAnimationFrame(animationFrame);
-								animationFrame = null;
-
-								pen.clearRect(0, 0, $paper.width, $paper.height);
-
-								return;
-							}
-						} else
-							lowFPSStart = null;
-
-						if (FPS < 45 && Dot.dots.length > 60) {
-							Dot.dots.length = Math.max(60, Math.floor(Dot.dots.length * .9));
-							Dot.target = Dot.dots.length;
-						}
-					}
-				}
-
-				pen.clearRect(0, 0, $paper.width, $paper.height);
-
-				Dot.dots.forEach(dot => {
-					dot.update();
-					dot.draw();
-				});
-
-				const cols = Math.ceil(innerWidth / GRID_SIZE);
-				const rows = Math.ceil(innerHeight / GRID_SIZE);
-				const grid = new Array(cols * rows);
-				for (let i = 0; i < grid.length; i++)
-					grid[i] = [ ];
-
-				Dot.dots.forEach((d, index) => {
-					const cx = Math.max(0, Math.min(cols - 1, Math.floor(d.x / GRID_SIZE)));
-					const cy = Math.max(0, Math.min(rows - 1, Math.floor(d.y / GRID_SIZE)));
-					grid[cy * cols + cx].push(index);
-				});
-
-				const linkRange = 150;
-				const halfW = innerWidth / 2;
-				const halfH = innerHeight / 2;
-				const drawWrappedLine = (x1, y1, x2, y2, strokeStyle) => {
-					const xShifts = [ 0 ];
-					if (Math.max(x1, x2) > innerWidth)
-						xShifts.push(-innerWidth);
-					if (Math.min(x1, x2) < 0)
-						xShifts.push(innerWidth);
-
-					const yShifts = [ 0 ];
-					if (Math.max(y1, y2) > innerHeight)
-						yShifts.push(-innerHeight);
-					if (Math.min(y1, y2) < 0)
-						yShifts.push(innerHeight);
-
-					pen.lineWidth = 1;
-					pen.strokeStyle = strokeStyle;
-
-					for (const shiftX of xShifts)
-						for (const shiftY of yShifts) {
-							pen.beginPath();
-							pen.moveTo(x1 + shiftX, y1 + shiftY);
-							pen.lineTo(x2 + shiftX, y2 + shiftY);
-							pen.stroke();
-						}
-				};
-				for (let cy = 0; cy < rows; cy++) {
-					for (let cx = 0; cx < cols; cx++) {
-						const cellIdx = cy * cols + cx;
-						const indices = grid[cellIdx];
-						if (indices.length === 0)
-							continue;
-
-						for (let nyOff = -1; nyOff <= 1; nyOff++) {
-							const ny = (cy + nyOff + rows) % rows;
-							for (let nxOff = -1; nxOff <= 1; nxOff++) {
-								const nx = (cx + nxOff + cols) % cols;
-								const nIdx = ny * cols + nx;
-								const neighbors = grid[nIdx];
-								if (neighbors.length === 0)
-									continue;
-
-								for (let ii = 0; ii < indices.length; ii++) {
-									const a = Dot.dots[indices[ii]];
-									for (let jj = 0; jj < neighbors.length; jj++) {
-										const bi = neighbors[jj];
-										if (bi <= indices[ii])
-											continue;
-										const b = Dot.dots[bi];
-
-										let dx = a.x - b.x;
-										let dy = a.y - b.y;
-
-										if (dx > halfW)
-											dx -= innerWidth;
-										if (dx < -halfW)
-											dx += innerWidth;
-
-										if (dy > halfH)
-											dy -= innerHeight;
-										if (dy < -halfH)
-											dy += innerHeight;
-
-										const dist2 = dx * dx + dy * dy;
-										if (dist2 < linkRange * linkRange) {
-											const distance = Math.sqrt(dist2);
-											const opacity = (1 - distance / linkRange) * .4;
-
-											const aSplit = a.color.split(',');
-											const bSplit = b.color.split(',');
-											const avgR = (parseInt(aSplit[0]) + parseInt(bSplit[0])) / 2;
-											const avgG = (parseInt(aSplit[1]) + parseInt(bSplit[1])) / 2;
-											const avgB = (parseInt(aSplit[2]) + parseInt(bSplit[2])) / 2;
-											drawWrappedLine(a.x, a.y, a.x - dx, a.y - dy, `rgba(${avgR}, ${avgG}, ${avgB}, ${opacity})`);
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-
-				animationFrame = requestAnimationFrame(animate);
-			};
-
-			animate();
-		}
+		const welcomeBackground = new WelcomeBackground(document.getElementById("dots-canvas"), this.ws.store.settings.performance.startup);
+		welcomeBackground.animate();
 
 		if (this.ws.rights.rollback || this.ws.api.username === "LuniZunie") {
 			document.querySelector("#rollback-needed").classList.add("hidden");
@@ -403,10 +152,7 @@ export class GUI {
 			controller.abort();
 			this.ws.audio.playSound([ "ui", "click" ]);
 
-			if (animationFrame)
-				cancelAnimationFrame(animationFrame);
-
-			test.terminate();
+			welcomeBackground.terminate();
 
 			this.ws.start();
 		});
@@ -4163,7 +3909,7 @@ export class GUI {
 
 		const executeWithWarn = async (warningTitle, level) => {
 			const autoReporting = this.ws.store.settings.auto_report;
-			const warning = warningsLookup[ws.api.server][warningTitle];
+			const warning = warningsLookup[this.ws.api.server][warningTitle];
 
 			await this.ws.execute({
 				actions: [
@@ -4209,7 +3955,7 @@ export class GUI {
 		};
 
 		const executeNoWarn = async warningTitle => {
-			const warning = warningsLookup[ws.api.server][warningTitle];
+			const warning = warningsLookup[this.ws.api.server][warningTitle];
 			await this.ws.execute({
 				actions: [
 					{
@@ -4246,7 +3992,7 @@ export class GUI {
 			$container.className = "favorites-container";
 			$favorites.appendChild($container);
 
-			const allWarnings = Object.values(warningsLookup[ws.api.server]).filter(w => w.queueType.includes(group) && (!item || typeof w.show !== "function" || w.show(item)));
+			const allWarnings = Object.values(warningsLookup[this.ws.api.server]).filter(w => w.queueType.includes(group) && (!item || typeof w.show !== "function" || w.show(item)));
 			for (const favorite of this.ws.store.favorite[type]) {
 				const warning = allWarnings.find(w => w.title === favorite);
 				if (warning) {
@@ -4263,7 +4009,7 @@ export class GUI {
 		}
 
 		let allMade = 0;
-		for (const [ , category ] of Object.entries(warningsTree[ws.api.server])) {
+		for (const [ , category ] of Object.entries(warningsTree[this.ws.api.server])) {
 			let categoryMade = 0;
 			const categoryWarnings = [ ];
 
