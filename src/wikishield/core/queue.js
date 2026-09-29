@@ -51,6 +51,47 @@ export class Queue {
 			]
 		}));
 
+		this.queues.recent.hold = [ {
+			"type": "edit",
+			"ns": 0,
+			"title": "List of Wikipedias",
+			"pageid": 6050087,
+			"revid": 1377452608,
+			"old_revid": 1377428562,
+			"rcid": 2074169671,
+			"user": "Бобер-Стопдило",
+			"userid": 54830101,
+			"bot": false,
+			"new": false,
+			"minor": false,
+			"oldlen": 267545,
+			"newlen": 267745,
+			"timestamp": "2026-09-29T13:13:47Z",
+			"comment": "",
+			"parsedcomment": "",
+			"redirect": false,
+			"patrolled": false,
+			"unpatrolled": false,
+			"autopatrolled": false,
+			"tags": [
+				"wikieditor"
+			],
+			"sha1": "18360ccb17a7122375e798aa3a6cd4584eb1581e",
+			"oresscores": {
+				"damaging": {
+					"true": 0.021,
+					"false": 0.979
+				},
+				"goodfaith": {
+					"true": 0.992,
+					"false": 0.008000000000000007
+				},
+				"articlequality": {
+					"Stub": 0.375
+				}
+			}
+		} ];
+
 		this.cache = {
 			simple: new Memory({ size: 1000 }),
 			full: new Memory({ size: 250 })
@@ -125,19 +166,20 @@ export class Queue {
 				if (maxTimestamp)
 					this.queues[type].last.timestamp = this.ws.util.utcString(new Date(maxTimestamp));
 
+				const apiUsername = this.ws.api.username;
 				switch (Queue.groups[type]) {
 					case "edit": {
-						const fn = item => item.revid > lastId;
+						const fn = item => item.revid > lastId && item.user !== apiUsername;
 						if (type === "recent")
-							q = q.filter(item => fn(item) && !whitelist.pages.has(item.title));
+							q = q.filter(item => fn(item) && !whitelist.pages.has(item.title) && item.user !== apiUsername);
 						else
 							q = q.filter(fn);
 					} break;
 					case "abuselog": {
-						q = q.filter(item => item.id > lastId);
+						q = q.filter(item => item.id > lastId && item.user !== apiUsername);
 					} break;
 					case "logevent": {
-						q = q.filter(item => item.logid > lastId);
+						q = q.filter(item => item.logid > lastId && item.title.replace(/^(User|User talk):/, "") !== apiUsername);
 					} break;
 				}
 

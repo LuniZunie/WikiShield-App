@@ -1241,7 +1241,7 @@ export class Settings {
 					});
 
 					const dependencyMap = new Map();
-					for (const param of sortDependencies(conditions[condition.name].parameters?.() || [ ])) {
+					for (const param of sortDependencies(conditions[condition.name].parameters?.(this.ws) || [ ])) {
 						const $param = document.createElement("div");
 						$param.className = "condition-parameter";
 						$item.querySelector(".params").appendChild($param);
@@ -1400,7 +1400,7 @@ export class Settings {
 					`;
 
 					const dependencyMap = new Map();
-					for (const param of sortDependencies(event.parameters?.() || [ ])) {
+					for (const param of sortDependencies(event.parameters?.(this.ws) || [ ])) {
 						const $param = document.createElement("div");
 						$param.className = "action-parameter";
 						$param.innerHTML = `<div class="parameter-title">${param.title}</div>`;

@@ -30,6 +30,10 @@ if (wikishield.isElectron) {
         #server = null;
         #account = null;
 
+        get server() {
+            return this.#server;
+        }
+
         get username() {
             return this.#account;
         }

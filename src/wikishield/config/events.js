@@ -283,22 +283,22 @@ export const events = {
 
             await ws.gui.settings.waitForClose();
             if (
-                (item.user.name === ws.api.username && await ws.gui.dialog.confirm(
+                (item.user.name === ws.api.username && !(await ws.gui.dialog.confirm(
                     "Reverting yourself",
                     `You are about to revert your own edit. Are you sure you want to proceed?`
-                ) === false) ||
-                (ws.store.whitelist.users.has(item.user.name) && await ws.gui.dialog.confirm(
+                ))) ||
+                (ws.store.whitelist.users.has(item.user.name) && !(await ws.gui.dialog.confirm(
                     "User is whitelisted",
                     `The user <a href="https://${ws.server}/wiki/User:${encodeURIComponent(item.user.name)}" target="_blank">${item.user.name}</a> is whitelisted. Are you sure you want to revert their edit?`
-                ) === false) ||
-                (ws.store.whitelist.pages.has(item.page.title) && await ws.gui.dialog.confirm(
+                ))) ||
+                (ws.store.whitelist.pages.has(item.page.title) && !(await ws.gui.dialog.confirm(
                     "Page is whitelisted",
                     `The page <a href="https://${ws.server}/wiki/${encodeURIComponent(item.page.title)}" target="_blank">${item.page.title}</a> is whitelisted. Are you sure you want to revert the edit on it?`
-                ) === false) ||
-                (item.tags?.some(tag => ws.store.whitelist.tags.has(tag)) && await ws.gui.dialog.confirm(
+                ))) ||
+                (item.tags?.some(tag => ws.store.whitelist.tags.has(tag)) && !(await ws.gui.dialog.confirm(
                     "Edit is whitelisted",
                     `This edit has one or more whitelisted tags. Are you sure you want to revert it?`
-                ) === false)
+                )))
             )
                 return { valid: false, reason: "Revert cancelled by user." };
 
@@ -471,22 +471,22 @@ export const events = {
 
             await ws.gui.settings.waitForClose();
             if (
-                (item.user.name === ws.api.username && await ws.gui.dialog.confirm(
+                (item.user.name === ws.api.username && !(await ws.gui.dialog.confirm(
                     "Warning yourself",
                     `You are about to warn yourself. Are you sure you want to proceed?`
-                ) === false) ||
-                (ws.store.whitelist.users.has(item.user.name) && await ws.gui.dialog.confirm(
+                ))) ||
+                (ws.store.whitelist.users.has(item.user.name) && !(await ws.gui.dialog.confirm(
                     "User is whitelisted",
                     `The user <a href="https://${ws.server}/wiki/User:${encodeURIComponent(item.user.name)}" target="_blank">${item.user.name}</a> is whitelisted. Are you sure you want to warn them?`
-                ) === false) ||
-                (ws.store.whitelist.pages.has(item.page.title) && await ws.gui.dialog.confirm(
+                ))) ||
+                (ws.store.whitelist.pages.has(item.page.title) && !(await ws.gui.dialog.confirm(
                     "Page is whitelisted",
                     `The page <a href="https://${ws.server}/wiki/${encodeURIComponent(item.page.title)}" target="_blank">${item.page.title}</a> is whitelisted. Are you sure you want to warn the user about the edit on it?`
-                ) === false) ||
-                (item.tags?.some(tag => ws.store.whitelist.tags.has(tag)) && await ws.gui.dialog.confirm(
+                ))) ||
+                (item.tags?.some(tag => ws.store.whitelist.tags.has(tag)) && !(await ws.gui.dialog.confirm(
                     "Edit is whitelisted",
                     `This edit has one or more whitelisted tags. Are you sure you want to warn the user about it?`
-                ) === false)
+                )))
             )
                 return { valid: false, reason: "Warn cancelled by user." };
 
@@ -652,22 +652,22 @@ export const events = {
         script: async (ws, item, params) => {
             await ws.gui.settings.waitForClose();
             if (
-                (item.user.name === ws.api.username && await ws.gui.dialog.confirm(
+                (item.user.name === ws.api.username && !(await ws.gui.dialog.confirm(
                     "Warning yourself",
                     `You are about to warn yourself. Are you sure you want to proceed?`
-                ) === false) ||
-                (ws.store.whitelist.users.has(item.user.name) && await ws.gui.dialog.confirm(
+                ))) ||
+                (ws.store.whitelist.users.has(item.user.name) && !(await ws.gui.dialog.confirm(
                     "User is whitelisted",
                     `The user <a href="https://${ws.server}/wiki/User:${encodeURIComponent(item.user.name)}" target="_blank">${item.user.name}</a> is whitelisted. Are you sure you want to warn them?`
-                ) === false) ||
-                (ws.store.whitelist.pages.has(item.page.title) && await ws.gui.dialog.confirm(
+                ))) ||
+                (ws.store.whitelist.pages.has(item.page.title) && !(await ws.gui.dialog.confirm(
                     "Page is whitelisted",
                     `The page <a href="https://${ws.server}/wiki/${encodeURIComponent(item.page.title)}" target="_blank">${item.page.title}</a> is whitelisted. Are you sure you want to warn the user about the edit on it?`
-                ) === false) ||
-                (item.tags?.some(tag => ws.store.whitelist.tags.has(tag)) && await ws.gui.dialog.confirm(
+                ))) ||
+                (item.tags?.some(tag => ws.store.whitelist.tags.has(tag)) && !(await ws.gui.dialog.confirm(
                     "Edit is whitelisted",
                     `This edit has one or more whitelisted tags. Are you sure you want to warn the user about it?`
-                ) === false)
+                )))
             )
                 return { valid: false, reason: "Warning cancelled by user." };
 
@@ -797,22 +797,22 @@ export const events = {
         script: async (ws, item, params) => {
             await ws.gui.settings.waitForClose();
             if (
-                (item.user.name === ws.api.username && await ws.gui.dialog.confirm(
+                (item.user.name === ws.api.username && !(await ws.gui.dialog.confirm(
                     "Rollbacking own edit",
                     `You are about to revert your own edit. Are you sure you want to proceed?`
-                ) === false) ||
-                (ws.store.whitelist.users.has(item.user.name) && await ws.gui.dialog.confirm(
+                ))) ||
+                (ws.store.whitelist.users.has(item.user.name) && !(await ws.gui.dialog.confirm(
                     "User is whitelisted",
                     `The user <a href="https://${ws.server}/wiki/User:${encodeURIComponent(item.user.name)}" target="_blank">${item.user.name}</a> is whitelisted. Are you sure you want to rollback their edit?`
-                ) === false) ||
-                (ws.store.whitelist.pages.has(item.page.title) && await ws.gui.dialog.confirm(
+                ))) ||
+                (ws.store.whitelist.pages.has(item.page.title) && !(await ws.gui.dialog.confirm(
                     "Page is whitelisted",
                     `The page <a href="https://${ws.server}/wiki/${encodeURIComponent(item.page.title)}" target="_blank">${item.page.title}</a> is whitelisted. Are you sure you want to rollback the edit on it?`
-                ) === false) ||
-                (item.tags?.some(tag => ws.store.whitelist.tags.has(tag)) && await ws.gui.dialog.confirm(
+                ))) ||
+                (item.tags?.some(tag => ws.store.whitelist.tags.has(tag)) && !(await ws.gui.dialog.confirm(
                     "Edit is whitelisted",
                     `This edit has one or more whitelisted tags. Are you sure you want to rollback it?`
-                ) === false)
+                )))
             )
                 return { valid: false, reason: "Rollback cancelled by user." };
 
@@ -878,22 +878,22 @@ export const events = {
         script: async (ws, item, params) => {
             await ws.gui.settings.waitForClose();
             if (
-                (item.user.name === ws.api.username && await ws.gui.dialog.confirm(
+                (item.user.name === ws.api.username && !(await ws.gui.dialog.confirm(
                     "Rollbacking own edit",
                     `You are about to revert your own edit. Are you sure you want to proceed?`
-                ) === false) ||
-                (ws.store.whitelist.users.has(item.user.name) && await ws.gui.dialog.confirm(
+                ))) ||
+                (ws.store.whitelist.users.has(item.user.name) && !(await ws.gui.dialog.confirm(
                     "User is whitelisted",
                     `The user <a href="https://${ws.server}/wiki/User:${encodeURIComponent(item.user.name)}" target="_blank">${item.user.name}</a> is whitelisted. Are you sure you want to rollback their edit?`
-                ) === false) ||
-                (ws.store.whitelist.pages.has(item.page.title) && await ws.gui.dialog.confirm(
+                ))) ||
+                (ws.store.whitelist.pages.has(item.page.title) && !(await ws.gui.dialog.confirm(
                     "Page is whitelisted",
                     `The page <a href="https://${ws.server}/wiki/${encodeURIComponent(item.page.title)}" target="_blank">${item.page.title}</a> is whitelisted. Are you sure you want to rollback the edit on it?`
-                ) === false) ||
-                (item.tags?.some(tag => ws.store.whitelist.tags.has(tag)) && await ws.gui.dialog.confirm(
+                ))) ||
+                (item.tags?.some(tag => ws.store.whitelist.tags.has(tag)) && !(await ws.gui.dialog.confirm(
                     "Edit is whitelisted",
                     `This edit has one or more whitelisted tags. Are you sure you want to rollback it?`
-                ) === false)
+                )))
             )
                 return { valid: false, reason: "Rollback cancelled by user." };
 
@@ -961,22 +961,22 @@ export const events = {
         script: async (ws, item, params) => {
             await ws.gui.settings.waitForClose();
             if (
-                (item.user.name === ws.api.username && await ws.gui.dialog.confirm(
+                (item.user.name === ws.api.username && !(await ws.gui.dialog.confirm(
                     "Undoing own edit",
                     `You are about to undo your own edit. Are you sure you want to proceed?`
-                ) === false) ||
-                (ws.store.whitelist.users.has(item.user.name) && await ws.gui.dialog.confirm(
+                ))) ||
+                (ws.store.whitelist.users.has(item.user.name) && !(await ws.gui.dialog.confirm(
                     "User is whitelisted",
                     `The user <a href="https://${ws.server}/wiki/User:${encodeURIComponent(item.user.name)}" target="_blank">${item.user.name}</a> is whitelisted. Are you sure you want to undo their edit?`
-                ) === false) ||
-                (ws.store.whitelist.pages.has(item.page.title) && await ws.gui.dialog.confirm(
+                ))) ||
+                (ws.store.whitelist.pages.has(item.page.title) && !(await ws.gui.dialog.confirm(
                     "Page is whitelisted",
                     `The page <a href="https://${ws.server}/wiki/${encodeURIComponent(item.page.title)}" target="_blank">${item.page.title}</a> is whitelisted. Are you sure you want to undo the edit on it?`
-                ) === false) ||
-                (item.tags?.some(tag => ws.store.whitelist.tags.has(tag)) && await ws.gui.dialog.confirm(
+                ))) ||
+                (item.tags?.some(tag => ws.store.whitelist.tags.has(tag)) && !(await ws.gui.dialog.confirm(
                     "Edit is whitelisted",
                     `This edit has one or more whitelisted tags. Are you sure you want to undo it?`
-                ) === false)
+                )))
             )
                 return { valid: false, reason: "Undo cancelled by user." };
 
@@ -1131,10 +1131,10 @@ export const events = {
                 return { valid: false, reason: "You cannot report yourself, silly!" };
 
             await ws.gui.settings.waitForClose();
-            if (ws.store.whitelist.users.has(item.user.name) && await ws.gui.dialog.confirm(
+            if (ws.store.whitelist.users.has(item.user.name) && !(await ws.gui.dialog.confirm(
                 "User is whitelisted",
                 `The user <a href="https://${ws.server}/wiki/User:${encodeURIComponent(item.user.name)}" target="_blank">${item.user.name}</a> is whitelisted. Are you sure you want to report them?`
-            ) === false)
+            )))
                 return { valid: false, reason: "User report cancelled by user." };
 
             if (await ws.api.areUsersBlocked([ item.user.name ])[item.user.name])
@@ -1201,10 +1201,10 @@ export const events = {
                 return { valid: false, reason: "You cannot report yourself, silly!" };
 
             await ws.gui.settings.waitForClose();
-            if (ws.store.whitelist.users.has(item.user.name) && await ws.gui.dialog.confirm(
+            if (ws.store.whitelist.users.has(item.user.name) && !(await ws.gui.dialog.confirm(
                 "User is whitelisted",
                 `The user <a href="https://${ws.server}/wiki/User:${encodeURIComponent(item.user.name)}" target="_blank">${item.user.name}</a> is whitelisted. Are you sure you want to report them?`
-            ) === false)
+            )))
                 return { valid: false, reason: "User report cancelled by user." };
 
             if (await ws.api.areUsersBlocked([ item.user.name ])[item.user.name])
@@ -1296,10 +1296,10 @@ export const events = {
         },
         script: async (ws, item, params) => { // what in the skibidi is this structured spaghetti code
             await ws.gui.settings.waitForClose();
-            if (ws.store.whitelist.pages.has(item.page.title) && await ws.gui.dialog.confirm(
+            if (ws.store.whitelist.pages.has(item.page.title) && !(await ws.gui.dialog.confirm(
                 "Page is whitelisted",
                 `The page <a href="https://${ws.server}/wiki/${encodeURIComponent(item.page.title)}" target="_blank">${item.page.title}</a> is whitelisted. Are you sure you want to request protection for it?`
-            ) === false)
+            )))
                 return { valid: false, reason: "Page protection request cancelled by user." };
 
             const reason = params.reason === "Generic" ? params.summary : `${params.reason} &ndash; ${params.summary}`;
@@ -1358,10 +1358,10 @@ export const events = {
                 return { valid: false, reason: "You cannot request a global block for yourself, silly!" };
 
             await ws.gui.settings.waitForClose();
-            if (ws.store.whitelist.users.has(item.user.name) && await ws.gui.dialog.confirm(
+            if (ws.store.whitelist.users.has(item.user.name) && !(await ws.gui.dialog.confirm(
                 "User is whitelisted",
                 `The user <a href="https://${ws.server}/wiki/User:${encodeURIComponent(item.user.name)}" target="_blank">${item.user.name}</a> is whitelisted. Are you sure you want to request a global block for them?`
-            ) === false)
+            )))
                 return { valid: false, reason: "Global block request cancelled by user." };
 
             if (await ws.api.isUserGloballyLocked(item.user.name))
@@ -1466,10 +1466,10 @@ export const events = {
                 return { valid: false, reason: "You cannot request a global lock for yourself, silly!" };
 
             await ws.gui.settings.waitForClose();
-            if (ws.store.whitelist.users.has(item.user.name) && await ws.gui.dialog.confirm(
+            if (ws.store.whitelist.users.has(item.user.name) && !(await ws.gui.dialog.confirm(
                 "User is whitelisted",
                 `The user <a href="https://${ws.server}/wiki/User:${encodeURIComponent(item.user.name)}" target="_blank">${item.user.name}</a> is whitelisted. Are you sure you want to request a global lock for them?`
-            ) === false)
+            )))
                 return { valid: false, reason: "Global lock request cancelled by user." };
 
             if (await ws.api.isUserGloballyLocked(item.user.name))

@@ -17,8 +17,8 @@ export class StorageManager {
         ]);
     }
 
-    constructor(ws) {
-        this.ws = ws;
+    constructor(server) {
+        this.server = server;
         this.reset(new Logger());
     }
 
@@ -27,7 +27,7 @@ export class StorageManager {
         this.data = StorageManager.version.default;
 
         StorageManager.version.init(logger, this.data);
-        StorageManager.version.validate();
+        StorageManager.version.validate(this.server);
         StorageManager.version.construct();
 
         return this.data;
@@ -73,7 +73,7 @@ export class StorageManager {
             logger.log(`Initializing storage at version ${version}.`, true);
             StorageManager.version.init(logger, data);
             logger.log(`Validating storage at version ${version}.`, true);
-            StorageManager.version.validate();
+            StorageManager.version.validate(this.server);
             logger.log(`Constructing storage at version ${version}.`, true);
             data = StorageManager.version.construct();
 
@@ -129,8 +129,8 @@ export class StorageManager {
             logger?.[type]?.(`${prefix} ${log.message}`);
         }
     }
-    static okay(data, logger = console) {
-        data ??= new StorageManager().load(StorageManager.versions.get(0).default);
+    static okay(server, data, logger = console) {
+        data ??= new StorageManager(server).load(StorageManager.versions.get(0).default);
 
         const okay = !(data.logs?.some?.(log => !log.expected) ?? true);
         if (okay)
