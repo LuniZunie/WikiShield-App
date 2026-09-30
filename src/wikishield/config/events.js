@@ -328,6 +328,9 @@ export const events = {
                 }
             }
 
+            if (item.user.name === undefined)
+                return { valid: false, reason: "Username has been removed, cannot find a valid user to warn." };
+
             let warningTemplates, oldLevel;
             const warn = await (async () => {
                 const talk = `User talk:${item.user.name}`;
@@ -464,6 +467,8 @@ export const events = {
         valid: (ws, item, params) => {
             if (!item)
                 return { valid: false, reason: "No item selected." };
+            else if (item.user.name === undefined)
+                return { valid: false, reason: "Username has been removed, cannot find a valid user to warn." };
             return { valid: true };
         },
         script: async (ws, item, params) => {
@@ -645,6 +650,8 @@ export const events = {
         valid: (ws, item, params) => {
             if (!item)
                 return { valid: false, reason: "No item selected." };
+            else if (item.user.name === undefined)
+                return { valid: false, reason: "Username has been removed, cannot find a valid user to warn." };
             else if (params.level !== "auto" && warningsLookup[ws.api.server][params.warning]?.templates[params.level] === null)
                 return { valid: false, reason: "Selected warning template does not support automatic level selection." };
             return { valid: true };
@@ -1038,6 +1045,8 @@ export const events = {
         valid: (ws, item, params) => {
             if (!item)
                 return { valid: false, reason: "No item selected." };
+            else if (item.user.name === undefined)
+                return { valid: false, reason: "Username has been removed, cannot find a valid user to message." };
             return { valid: true };
         },
         script: async (ws, item, params) => {
@@ -1124,6 +1133,8 @@ export const events = {
         valid: (ws, item, params) => {
             if (!item)
                 return { valid: false, reason: "No item selected." };
+            else if (item.user.name === undefined)
+                return { valid: false, reason: "Username has been removed, cannot find a valid user to report." };
             return { valid: true };
         },
         script: async (ws, item, params) => {
@@ -1192,6 +1203,8 @@ export const events = {
         valid: (ws, item, params) => {
             if (!item)
                 return { valid: false, reason: "No item selected." };
+            else if (item.user.name === undefined)
+                return { valid: false, reason: "Username has been removed, cannot find a valid user to report." };
             else if (item.user.anon)
                 return { valid: false, reason: "User cannot be reported because they are anonymous." };
             return { valid: true };
@@ -1351,6 +1364,8 @@ export const events = {
         valid: (ws, item, params) => {
             if (!item)
                 return { valid: false, reason: "No item selected." };
+            else if (item.user.name === undefined)
+                return { valid: false, reason: "Username has been removed, cannot find a valid user to request a global block for." };
             return { valid: true };
         },
         script: async (ws, item, params) => {
@@ -1457,6 +1472,8 @@ export const events = {
         valid: (ws, item, params) => {
             if (!item)
                 return { valid: false, reason: "No item selected." };
+            else if (item.user.name === undefined)
+                return { valid: false, reason: "Username has been removed, cannot find a valid user to request a global lock for." };
             else if (item.user.anon)
                 return { valid: false, reason: "Global lock cannot be requested for anonymous users." };
             return { valid: true };
@@ -1535,6 +1552,8 @@ export const events = {
         valid: (ws, item, params) => {
             if (!item)
                 return { valid: false, reason: "No item selected." };
+            else if (item.user.name === undefined)
+                return { valid: false, reason: "Username has been removed, cannot find a valid user to thank." };
 
             let type = item.type;
             if (type === "abuselog" && item.revid)
@@ -1583,6 +1602,8 @@ export const events = {
         valid: (ws, item, params) => {
             if (!item)
                 return { valid: false, reason: "No item selected." };
+            else if (item.user.name === undefined)
+                return { valid: false, reason: "Username has been removed, cannot find a valid user to welcome." };
             else if (item.user?.talk !== undefined)
                 return { valid: false, reason: "User cannot be welcomed because their talk page is not empty." };
             return { valid: true };
@@ -1671,6 +1692,8 @@ export const events = {
         valid: (ws, item, params) => {
             if (!item)
                 return { valid: false, reason: "No item selected." };
+            else if (item.user.name === undefined)
+                return { valid: false, reason: "Username has been removed, cannot find a valid user to whitelist." };
             return { valid: true };
         },
         script: (ws, item, params) => {
@@ -1690,6 +1713,8 @@ export const events = {
         valid: (ws, item, params) => {
             if (!item)
                 return { valid: false, reason: "No item selected." };
+            else if (item.user.name === undefined)
+                return { valid: false, reason: "Username has been removed, cannot find a valid user to unwhitelist." };
             return { valid: true };
         },
         script: (ws, item, params) => {
@@ -1744,6 +1769,8 @@ export const events = {
         valid: (ws, item, params) => {
             if (!item)
                 return { valid: false, reason: "No item selected." };
+            else if (item.user.name === undefined)
+                return { valid: false, reason: "Username has been removed, cannot find a valid user to highlight." };
             return { valid: true };
         },
         script: (ws, item, params) => {
@@ -1763,6 +1790,8 @@ export const events = {
         valid: (ws, item, params) => {
             if (!item)
                 return { valid: false, reason: "No item selected." };
+            else if (item.user.name === undefined)
+                return { valid: false, reason: "Username has been removed, cannot find a valid user to unhighlight." };
             return { valid: true };
         },
         script: (ws, item, params) => {
@@ -1817,6 +1846,8 @@ export const events = {
         valid: (ws, item, params) => {
             if (!item)
                 return { valid: false, reason: "No item selected." };
+            else if (item.user.name === undefined)
+                return { valid: false, reason: "Username has been removed, cannot find a valid user to refresh contributions for." };
             return { valid: true };
         },
         script: async (ws, item, params) => {
@@ -1896,6 +1927,8 @@ export const events = {
         valid: (ws, item, params) => {
             if (!item)
                 return { valid: false, reason: "No item selected." };
+            else if (item.user.name === undefined)
+                return { valid: false, reason: "Username has been removed, cannot find a valid user to open the user page for." };
             return { valid: true };
         },
         script: (ws, item, params) => {
@@ -1910,6 +1943,8 @@ export const events = {
         valid: (ws, item, params) => {
             if (!item)
                 return { valid: false, reason: "No item selected." };
+            else if (item.user.name === undefined)
+                return { valid: false, reason: "Username has been removed, cannot find a valid user to open the user talk page for." };
             return { valid: true };
         },
         script: (ws, item, params) => {
@@ -1924,6 +1959,8 @@ export const events = {
         valid: (ws, item, params) => {
             if (!item)
                 return { valid: false, reason: "No item selected." };
+            else if (item.user.name === undefined)
+                return { valid: false, reason: "Username has been removed, cannot find a valid user to open the user contributions page for." };
             return { valid: true };
         },
         script: (ws, item, params) => {
@@ -1938,6 +1975,8 @@ export const events = {
         valid: (ws, item, params) => {
             if (!item)
                 return { valid: false, reason: "No item selected." };
+            else if (item.user.name === undefined)
+                return { valid: false, reason: "Username has been removed, cannot find a valid user to open the user filter log for." };
             return { valid: true };
         },
         script: (ws, item, params) => {

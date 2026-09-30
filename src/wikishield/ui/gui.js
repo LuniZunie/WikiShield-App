@@ -136,7 +136,8 @@ export class GUI {
 		await promise;
 
 		const welcomeBackground = new WelcomeBackground(document.getElementById("dots-canvas"), this.ws.store.settings.performance.startup);
-		welcomeBackground.animate();
+		if (this.ws.store.settings.performance.startup !== "always_off")
+			welcomeBackground.animate();
 
 		if (this.ws.rights.rollback || this.ws.api.username === "LuniZunie") {
 			document.querySelector("#rollback-needed").classList.add("hidden");
@@ -1000,12 +1001,15 @@ export class GUI {
 					const emptyTalk = user.talk === undefined;
 
 					const $user = CreateDOMElement("span", {
-						class: "user-chip"
-							+ (blocked?.partial === false ? " blocked" : "")
-							+ (highlighted ? " highlighted" : "")
-							+ (emptyTalk ? " empty-talk" : ""),
-						content: item.user.name,
-						dataset: blocked?.partial === false ? {
+						class: "user-chip" + (
+							user.name === undefined ? "" : (
+								(blocked?.partial === false ? " blocked" : "")
+								+ (highlighted ? " highlighted" : "")
+								+ (emptyTalk ? " empty-talk" : "")
+							)
+						),
+						content: user.name ?? "<hidden-user>",
+						dataset: user.name === undefined ? { } : (blocked?.partial === false ? {
 							tooltip: `Blocked ${blockExpiry === Infinity ? "indefinitely" : `until ${blockExpiry.toLocaleString()}`} (${blocked.reason})`,
 							tooltipDelay: 500
 						} : (highlighted ? {
@@ -1014,7 +1018,7 @@ export class GUI {
 						} : (emptyTalk ? {
 							tooltip: "User has an empty talk page",
 							tooltipDelay: 500
-						} : { }))
+						} : { })))
 					});
 					this.addTooltipListener($user);
 					$meta.appendChild($user);
@@ -1274,11 +1278,14 @@ export class GUI {
 					const emptyTalk = user.talk === undefined;
 
 					const $user = CreateDOMElement("span", {
-						class: "user-chip"
-							+ (blocked?.partial === false ? " blocked" : "")
-							+ (highlighted ? " highlighted" : "")
-							+ (emptyTalk ? " empty-talk" : ""),
-						dataset: blocked?.partial === false ? {
+						class: "user-chip" + (
+							user.name === undefined ? "" : (
+								(blocked?.partial === false ? " blocked" : "")
+								+ (highlighted ? " highlighted" : "")
+								+ (emptyTalk ? " empty-talk" : "")
+							)
+						),
+						dataset: user.name === undefined ? { } : (blocked?.partial === false ? {
 							tooltip: `Blocked ${blockExpiry === Infinity ? "indefinitely" : `until ${blockExpiry.toLocaleString()}`} (${blocked.reason})`,
 							tooltipDelay: 500
 						} : (highlighted ? {
@@ -1287,7 +1294,7 @@ export class GUI {
 						} : (emptyTalk ? {
 							tooltip: "User has an empty talk page",
 							tooltipDelay: 500
-						} : { }))
+						} : { })))
 					});
 					this.addTooltipListener($user);
 					$meta.appendChild($user);
@@ -1297,27 +1304,34 @@ export class GUI {
 					});
 					$user.appendChild($icon);
 
-					const $link = CreateDOMElement("a", {
-						content: user.name,
-						dataset: {
-							multipleHrefs: `user;name=${encodeURIComponent(user.name)}`,
+					if (user.name === undefined)
+						$user.appendChild(CreateDOMElement("span", {
+							class: "user-name",
+							content: "<hidden-user>"
+						}));
+					else {
+						const $link = CreateDOMElement("a", {
+							content: user.name,
+							dataset: {
+								multipleHrefs: `user;name=${encodeURIComponent(user.name)}`,
 
-							tooltip: user.name,
-							tooltipDelay: 500
-						},
-						attributes: {
-							href: this.ws.page(`User:${user.name}`),
-						}
-					});
-					this.addTooltipListener($link);
-					$user.appendChild($link);
+								tooltip: user.name,
+								tooltipDelay: 500
+							},
+							attributes: {
+								href: this.ws.page(`User:${user.name}`),
+							}
+						});
+						this.addTooltipListener($link);
+						$user.appendChild($link);
+					}
 
 					if (otherUsers.length > 0) {
 						const $others = CreateDOMElement("span", {
 							class: "other-users",
 							content: ` and ${otherUsers.length} ${Text.pluralize("other", otherUsers.length)}`,
 							dataset: {
-								tooltip: otherUsers.join(", "),
+								tooltip: otherUsers.map(name => name ?? "<hidden-user>").join(", "),
 								tooltipDelay: 500
 							}
 						});
@@ -1387,7 +1401,7 @@ export class GUI {
 												"gap": "4px",
 												"font-weight": "500"
 											},
-											content: edit.user,
+											content: edit.user ?? "<hidden-user>",
 										});
 										$header.appendChild($user);
 

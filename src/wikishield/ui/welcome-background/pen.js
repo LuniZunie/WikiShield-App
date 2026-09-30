@@ -55,7 +55,7 @@ class WelcomeBackground {
     #$paper;
     #pen;
 
-    #performance = 1;
+    #performance = +electron.localStorage.get("WikiShield:WelcomeBackgroundPerformance") || 1;
     #performanceIncreaseInterval;
     #performanceSetting;
     #performanceObserver;
@@ -140,6 +140,7 @@ class WelcomeBackground {
         this.#performanceObserver = new PerformanceObserver(list => {
             for (const entry of list.getEntries()) {
                 this.#performance = Math.max(Math.min(this.#performance - Math.sqrt(entry.duration / 1000), 1), 0);
+                electron.localStorage.set("WikiShield:WelcomeBackgroundPerformance", this.#performance);
                 this.#setDotAmount(Dot.target(this.#observerCache.width, this.#observerCache.height) * this.#performance);
             }
         });
@@ -148,6 +149,7 @@ class WelcomeBackground {
             const target = Dot.target(this.#observerCache.width, this.#observerCache.height);
 
             this.#performance = Math.max(Math.min(this.#performance + 1 / target, 1), 0);
+            electron.localStorage.set("WikiShield:WelcomeBackgroundPerformance", this.#performance);
             this.#setDotAmount(target * this.#performance)
         }, 100);
         this.#performanceObserver.observe({ type: "longtask", buffered: true });

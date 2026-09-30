@@ -51,8 +51,6 @@ export class Queue {
 			]
 		}));
 
-		this.queues.recent.hold = [ ];
-
 		this.cache = {
 			simple: new Memory({ size: 1000 }),
 			full: new Memory({ size: 250 })

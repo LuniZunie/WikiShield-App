@@ -67,12 +67,16 @@ if (wikishield.isElectron) {
         }
 
         user(username) {
+            if (username === undefined)
+                return "<hidden-user>";
             return `[[Special:Contribs/${username}|${username}]] ([[User talk:${username}|talk]])`;
         }
         revision(revid) {
             return `[[Special:Diff/${revid}|${revid}]]`;
         }
         centralAuthUser(username) {
+            if (username === undefined)
+                return "<hidden-user>";
             return `[[Special:CentralAuth/${username}|${username}]]`;
         }
 
