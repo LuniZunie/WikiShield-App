@@ -58,7 +58,7 @@ export async function run() {
         }
     }, { passive: true });
 
-    await Promise.all([ LoadConfig, LoadWarnings, LoadWelcomes ].map(fn => fn([ "en.wikipedia.org", "simple.wikipedia.org" ])));
+    await Promise.all([ LoadConfig, LoadWarnings, LoadWelcomes ].map(fn => fn([ "en.wikipedia.org" ])));
 
     electron.menuEnabler();
 

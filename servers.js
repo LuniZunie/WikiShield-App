@@ -5,7 +5,7 @@ const __servers__ = [
         host: "en.wikipedia.org",
         language_code: "en"
     },
-    { name: "seperator" },
+    /* { name: "seperator" },
     {
         name: "Simple",
 
@@ -18,7 +18,7 @@ const __servers__ = [
 
         host: "test2.wikipedia.org",
         language_code: "en"
-    }
+    } */
 ];
 
 module.exports = __servers__;
