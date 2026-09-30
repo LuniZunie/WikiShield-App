@@ -359,7 +359,7 @@ export class WikiShield {
 
 			const shortcut = buildShortcut(event);
 			for (const script of this.store.control_scripts)
-				if (script.keys.every(key => key === shortcut)) {
+				if (script.keys.some(key => key === shortcut)) {
 					event.preventDefault();
 					this.execute(script);
 				}
