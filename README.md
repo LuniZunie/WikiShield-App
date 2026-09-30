@@ -2,37 +2,37 @@
 
 ### Windows
 Download the installer directly from the [GitHub Release](https://github.com/LuniZunie/WikiShield-App/releases/latest):
-- **Download**: `WikiShield-2.1.6-Setup.exe`
+- **Download**: `WikiShield-2.1.7-Setup.exe`
 - Run the installer and follow the on-screen instructions
 - The app will automatically register for updates
 
 ### macOS
 Download the appropriate installer from the [GitHub Release](https://github.com/LuniZunie/WikiShield-App/releases/latest):
-- **Intel Macs**: `WikiShield-2.1.6.dmg`
+- **Intel Macs**: `WikiShield-2.1.7.dmg`
   - Double-click the .dmg file
   - Drag WikiShield to Applications folder
 
-- **Apple Silicon (M1/M2/M3)**: `WikiShield-2.1.6-arm64.dmg`
+- **Apple Silicon (M1/M2/M3)**: `WikiShield-2.1.7-arm64.dmg`
   - Double-click the .dmg file
   - Drag WikiShield to Applications folder
 
 **Alternative**: If you prefer a zip archive:
-- **Intel**: `WikiShield-2.1.6-mac.zip`
-- **Apple Silicon**: `WikiShield-2.1.6-arm64-mac.zip`
+- **Intel**: `WikiShield-2.1.7-mac.zip`
+- **Apple Silicon**: `WikiShield-2.1.7-arm64-mac.zip`
 
 ### Linux
 Download the appropriate installer for your distribution from the [GitHub Release](https://github.com/LuniZunie/WikiShield-App/releases/latest):
 
-- **Universal (All Distributions)**: `WikiShield-2.1.6.AppImage`
-  - `chmod +x WikiShield-2.1.6.AppImage`
-  - `./WikiShield-2.1.6.AppImage`
+- **Universal (All Distributions)**: `WikiShield-2.1.7.AppImage`
+  - `chmod +x WikiShield-2.1.7.AppImage`
+  - `./WikiShield-2.1.7.AppImage`
 
-- **Debian/Ubuntu/Linux Mint**: `WikiShield_2.1.6_amd64.deb`
-  - `sudo apt install ./WikiShield_2.1.6_amd64.deb`
+- **Debian/Ubuntu/Linux Mint**: `WikiShield_2.1.7_amd64.deb`
+  - `sudo apt install ./WikiShield_2.1.7_amd64.deb`
 
-- **Fedora/RHEL/CentOS**: `WikiShield-2.1.6.x86_64.rpm`
-  - `sudo dnf install WikiShield-2.1.6.x86_64.rpm`
-  - Or `sudo yum install WikiShield-2.1.6.x86_64.rpm` (older systems)
+- **Fedora/RHEL/CentOS**: `WikiShield-2.1.7.x86_64.rpm`
+  - `sudo dnf install WikiShield-2.1.7.x86_64.rpm`
+  - Or `sudo yum install WikiShield-2.1.7.x86_64.rpm` (older systems)
 
 ---
 
