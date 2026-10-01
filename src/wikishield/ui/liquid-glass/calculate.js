@@ -153,14 +153,16 @@ function addLiquidGlassEffect($el, { height, width, radius, depth = 2, strength 
 
     function update() {
         requestAnimationFrame(() => {
-            $el.style.backdropFilter = `blur(${blur / 2}px) url('${getDisplacementFilter({
+            const filter = `blur(${blur / 2}px) url('${getDisplacementFilter({
                 height: height ?? $el.clientHeight,
                 width: width ?? $el.clientWidth,
                 radius: radius ?? getBorderRadius($el),
                 depth,
                 strength,
                 chromaticAberration,
-            })}') blur(${blur}px) brightness(${brightness}) saturate(1.5)`
+            })}') blur(${blur}px) brightness(${brightness}) saturate(1.5)`;
+            $el.style.setProperty("backdrop-filter", filter);
+            $el.style.setProperty("-webkit-backdrop-filter", filter);
         });
     }
 
