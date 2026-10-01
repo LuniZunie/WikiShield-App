@@ -32,15 +32,19 @@ export async function run() {
         wikishield.arePopupsBlocked = false;
     else
         wikishield.arePopupsBlocked = (() => {
+            return true;
             let popup;
             try {
                 popup = window.open("https://ws.luni.me/popup", "_blank", "width=100,height=100,left=-100,top=-100");
-                if ((popup?.closed ?? false) === false)
+                if ((popup?.closed ?? false) === false) {
+                    popup?.close?.();
                     return true;
+                }
 
                 popup.close();
                 return false;
             } catch (e) {
+                popup?.close?.();
                 return true;
             }
         })();
