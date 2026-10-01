@@ -162,7 +162,7 @@ function addLiquidGlassEffect($el, { height, width, radius, depth = 2, strength 
                 chromaticAberration,
             })}') blur(${blur}px) brightness(${brightness}) saturate(1.5)`;
             $el.style.setProperty("backdrop-filter", filter);
-            $el.style.setProperty("-webkit-backdrop-filter", filter);
+            $el.style.setProperty("-webkit-backdrop-filter", `blur(${blur}px) brightness(${brightness}) saturate(1.5)`);
         });
     }
 

@@ -41,6 +41,7 @@ export async function run() {
                 popup.close();
                 return false;
             } catch (e) {
+                popup?.close?.();
                 return true;
             }
         })();
