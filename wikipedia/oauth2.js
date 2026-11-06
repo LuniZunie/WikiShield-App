@@ -7,6 +7,98 @@ const { app, BrowserWindow, screen, nativeImage } = require("electron/main");
 const Logger = require("electron-log");
 
 class Server {
+    static get PENDING_AUTH_PATH() {
+        return path.join(app.getPath("userData"), "oauth-pending.json");
+    }
+
+    static savePendingAuth(auth) {
+        fs.writeFileSync(Server.PENDING_AUTH_PATH, JSON.stringify(auth), { mode: 0o600 });
+        fs.chmodSync(Server.PENDING_AUTH_PATH, 0o600);
+    }
+
+    static getPendingAuth() {
+        try {
+            return JSON.parse(fs.readFileSync(Server.PENDING_AUTH_PATH, "utf8"));
+        } catch (err) {
+            if (err.code !== "ENOENT")
+                Logger.error("Failed to read pending OAuth authorization:", err);
+            return null;
+        }
+    }
+
+    static clearPendingAuth() {
+        try {
+            fs.unlinkSync(Server.PENDING_AUTH_PATH);
+        } catch (err) {
+            if (err.code !== "ENOENT")
+                Logger.error("Failed to clear pending OAuth authorization:", err);
+        }
+    }
+
+    static parseCallback(url, state) {
+        const parsed = new URL(url);
+        if (parsed.protocol !== "wikishield:" || parsed.hostname !== "callback")
+            throw new Error("Invalid authorization callback URL");
+
+        const secure = parsed.searchParams.get("state");
+        if (!secure || secure !== state)
+            throw new Error("Potential CSRF attack");
+
+        const code = parsed.searchParams.get("code");
+        if (!code)
+            throw new Error("User denied authorization");
+
+        return code;
+    }
+
+    static async exchangeCode(code, verifier) {
+        const body = new URLSearchParams({
+            grant_type: "authorization_code",
+            client_id: MediaWikiOAuth2.CLIENT,
+            code,
+            redirect_uri: "https://ws.luni.me/callback",
+            code_verifier: verifier
+        });
+
+        const tokenResponse = await fetch("https://meta.wikimedia.org/w/rest.php/oauth2/access_token", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: body.toString()
+        });
+        if (!tokenResponse.ok)
+            throw new Error(`Token request failed with status ${tokenResponse.status}`);
+
+        const tokenData = await tokenResponse.json();
+        if (!tokenData.access_token || !tokenData.refresh_token)
+            throw new Error("Missing access token or refresh token in response");
+
+        return {
+            accessToken: tokenData.access_token,
+            refreshToken: tokenData.refresh_token,
+            expires: new Date(Date.now() + tokenData.expires_in * 1000)
+        };
+    }
+
+    static async completePendingCallback(url) {
+        const pending = Server.getPendingAuth();
+        if (!pending || !pending.state || !pending.verifier || !pending.createdAt) {
+            Server.clearPendingAuth();
+            throw new Error("No pending authorization was found for this callback");
+        }
+
+        if (Date.now() - pending.createdAt > Server.TIMEOUT) {
+            Server.clearPendingAuth();
+            throw new Error("Authorization timed out");
+        }
+
+        const code = Server.parseCallback(url, pending.state);
+        try {
+            return await Server.exchangeCode(code, pending.verifier);
+        } finally {
+            Server.clearPendingAuth();
+        }
+    }
+
     static generatePKCE() {
         const base64url = str => str.toString("base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 
@@ -21,60 +113,66 @@ class Server {
     static start(glob, abortSignal) {
         const state = crypto.randomBytes(16).toString("hex");
         const { verifier, challenge } = Server.generatePKCE();
+        Server.savePendingAuth({ state, verifier, createdAt: Date.now() });
 
         let authWindow = null;
         return new Promise((resolve, reject) => {
             let handled = false;
-            app.on("open-url", (event, url) => {
-                const parsed = new URL(url); // callback to wikishield://callback
-                if (parsed.protocol !== "wikishield:")
+            let timeout;
+            const cleanup = () => {
+                clearTimeout(timeout);
+                app.removeListener("open-url", onOpenUrl);
+                abortSignal?.removeEventListener("abort", onAbort);
+            };
+            const fail = err => {
+                if (handled)
                     return;
-                else if (parsed.hostname !== "callback")
+                handled = true;
+                cleanup();
+                Server.clearPendingAuth();
+                reject(err);
+            };
+            const onOpenUrl = (event, url) => {
+                let parsed;
+                try {
+                    parsed = new URL(url);
+                } catch (err) {
+                    return;
+                }
+                if (parsed.protocol !== "wikishield:" || parsed.hostname !== "callback")
                     return;
 
                 event.preventDefault();
                 if (handled)
-                    return reject(new Error("Already handled"));
+                    return;
 
-                const code = parsed.searchParams.get("code");
-                if (!code)
-                    return reject(new Error("User denied authorization"));
-
-                const secure = parsed.searchParams.get("state");
-                if (!secure)
-                    return reject(new Error("Potential CSRF attack"));
-                else if (secure !== state)
-                    return reject(new Error("Potential CSRF attack"));
+                let code;
+                try {
+                    code = Server.parseCallback(url, state);
+                } catch (err) {
+                    return fail(err);
+                }
 
                 handled = true;
+                cleanup();
                 authWindow?.close?.();
-
-                const body = new URLSearchParams({
-                    grant_type: "authorization_code",
-                    client_id: MediaWikiOAuth2.CLIENT,
-                    code,
-                    redirect_uri: `https://ws.luni.me/callback`,
-                    code_verifier: verifier
-                });
-
-                fetch("https://meta.wikimedia.org/w/rest.php/oauth2/access_token", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                    body: body.toString()
-                }).then(async tokenResponse => {
-                    if (!tokenResponse.ok)
-                        throw new Error(`Token request failed with status ${tokenResponse.status}`);
-
-                    const tokenData = await tokenResponse.json();
-                    if (!tokenData.access_token || !tokenData.refresh_token)
-                        throw new Error("Missing access token or refresh token in response");
-
-                    resolve({ accessToken: tokenData.access_token, refreshToken: tokenData.refresh_token, expires: new Date(Date.now() + tokenData.expires_in * 1000) });
-                }).catch(err => {
+                Server.exchangeCode(code, verifier).then(resolve).catch(err => {
                     Logger.error("Error handling OAuth2 callback:", err);
                     reject(err);
-                });
-            });
+                }).finally(Server.clearPendingAuth);
+            };
+            const onAbort = () => {
+                fail(new Error("Authorization aborted"));
+                authWindow?.close?.();
+            };
+
+            try {
+                app.on("open-url", onOpenUrl);
+            } catch (err) {
+                Server.clearPendingAuth();
+                reject(err);
+                return;
+            }
 
             const params = new URLSearchParams({
                 response_type: "code",
@@ -111,27 +209,17 @@ class Server {
             authWindow.setMenuBarVisibility(false);
             authWindow.loadURL(`https://meta.wikimedia.org/w/rest.php/oauth2/authorize?${params.toString()}`);
             authWindow.on("closed", () => {
-                if (!handled) {
-                    handled = true;
-                    reject(new Error("Authorization window was closed by user"));
-                }
+                fail(new Error("Authorization window was closed by user"));
             });
 
-            setTimeout(() => {
-                if (!handled) {
-                    handled = true;
-                    authWindow?.close?.();
-                    reject(new Error("Authorization timed out"));
-                }
+            timeout = setTimeout(() => {
+                fail(new Error("Authorization timed out"));
+                authWindow?.close?.();
             }, Server.TIMEOUT);
 
-            abortSignal?.addEventListener("abort", () => {
-                if (!handled) {
-                    handled = true;
-                    authWindow?.close?.();
-                    reject(new Error("Authorization aborted"));
-                }
-            });
+            abortSignal?.addEventListener("abort", onAbort, { once: true });
+            if (abortSignal?.aborted)
+                onAbort();
         });
     }
 }
@@ -173,6 +261,10 @@ class MediaWikiOAuth2 {
     static get CLIENT() { return "381204bcce0506b309d1974167e399ac"; }
     // it actually does not matter that this is public, see https://phabricator.wikimedia.org/T323855, since the client is not confidential, we can ship the secret
     static get SECRET() { return "7b188b6e0d0d326e9aa668ef9630409ec4f3981d"; }
+
+    static async completeAuthorizationCallback(url) {
+        return await Server.completePendingCallback(url);
+    }
 
     constructor(userAgent) {
         this.userAgent = userAgent;

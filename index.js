@@ -22,6 +22,15 @@ const { LoadConfig } = require("./configs.js");
 
 const DiscordRPC = require("discord-rpc");
 
+let startupProtocolUrl = process.argv.find(arg => arg.startsWith("wikishield://")) ?? null;
+let startupInitializationComplete = false;
+app.on("open-url", (event, url) => {
+    if (!startupInitializationComplete) {
+        event.preventDefault();
+        startupProtocolUrl = url;
+    }
+});
+
 // constants
 const __dev__ = process.env.NODE_ENV === "development" || process.env.ELECTRON_ENV === "development" || !app.isPackaged;
 const __servers__ = require("./servers.js");
@@ -1346,6 +1355,38 @@ app.whenReady().then(async () => {
 
         glob.accounts = Security.decryptAccounts(store.get("accounts", { }));
         glob.account = glob.accounts[store.get("account", null)] ?? null;
+
+        if (startupProtocolUrl) {
+            const callbackUrl = startupProtocolUrl;
+            startupProtocolUrl = null;
+
+            try {
+                const data = await MediaWikiOAuth2.completeAuthorizationCallback(callbackUrl);
+                const oauth = new MediaWikiOAuth2(__userAgent__);
+                oauth.set(data.accessToken, data.refreshToken, data.expires);
+
+                const username = await MediaWikiAPI.getUsername(oauth, glob.server);
+                glob.accounts[username] = {
+                    username,
+                    accessToken: data.accessToken,
+                    refreshToken: data.refreshToken,
+                    expires: data.expires.toISOString(),
+                    valid: true,
+                    lastUsed: new Date().toISOString(),
+                    version: MediaWikiOAuth2.CLIENT
+                };
+
+                glob.account = glob.accounts[username];
+                if (glob.rememberAccounts) {
+                    store.set("account", username);
+                    store.set("accounts", Security.encryptAccounts(glob.accounts));
+                }
+            } catch (err) {
+                Logger.error(`Failed to finish OAuth authorization from startup callback: ${err.stack || err}`);
+                dialog.showErrorBox("Authorization failed", err?.message ?? "An unknown error occurred while finishing authorization.");
+            }
+        }
+        startupInitializationComplete = true;
 
         const hasUpdateFile = fs.existsSync(path.join(process.resourcesPath, "app-update.yml"));
         if (!__dev__ && app.isPackaged && hasUpdateFile) {

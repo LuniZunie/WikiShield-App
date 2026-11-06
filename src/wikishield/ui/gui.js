@@ -60,7 +60,7 @@ export class GUI {
 					brightness: parseFloat($el.dataset.liquidGlassBrightness) || .7,
 				});
 
-			document.body.querySelectorAll(".liquid-glass").forEach($el => addLiquidGlassEffectWrapper($el));
+			document.body.querySelectorAll(`.liquid-glass${this.ws.mobile ? "" : ", .liquid-glass-non-mobile"}`).forEach($el => addLiquidGlassEffectWrapper($el));
 
 			const observer = new MutationObserver(function(mutationsList, observer) {
 				for (const mutation of mutationsList)
@@ -691,7 +691,7 @@ export class GUI {
 		this.events.button(document.querySelector("#user-open-user-page"), "open-user-page");
 		this.events.button(document.querySelector("#user-open-user-talk"), "open-user-talk");
 		this.events.button(document.querySelector("#user-view-contribs"), "open-user-contributions");
-		this.events.button(document.querySelector("#user-view-filter-log"), "open-filter-log");
+		this.events.button(document.querySelector("#user-view-filter-log"), "open-user-filter-log");
 		this.events.button(document.querySelector("#user-whitelist"), "whitelist-user");
 		this.events.button(document.querySelector("#user-unwhitelist"), "unwhitelist-user");
 		this.events.button(document.querySelector("#user-highlight"), "highlight-user");

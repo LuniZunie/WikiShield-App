@@ -139,7 +139,7 @@ function getDisplacementFilter({ height, width, radius, depth, strength, chromat
 }
 
 function addLiquidGlassEffect($el, { height, width, radius, depth = 2, strength = 100, chromaticAberration = 0, blur = 2, brightness = .7 }) {
-    $el.classList.remove("liquid-glass");
+    $el.classList.remove("liquid-glass", "liquid-glass-non-mobile");
 
     const getBorderRadius = $el => {
         const cs = getComputedStyle($el);

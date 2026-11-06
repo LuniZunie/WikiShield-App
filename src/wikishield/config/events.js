@@ -364,12 +364,12 @@ export const events = {
 
                 let summary = "Message about ";
                 if (Queue.groups[item.type] === "edit") // kinda redundant but whatever
-                    summary += `[[Special:Diff/${item.id}|your edit]] on [[${item.page.title}]]`;
+                    summary += `[[Special:Diff/${item.id}|your edit]] on [[:${item.page.title}]]`;
                 else if (item.type === "abuselog") {
                     if (item.revid)
-                        summary += `[[Special:Diff/${item.revid}|your edit]] on [[${item.page.title}]]`;
+                        summary += `[[Special:Diff/${item.revid}|your edit]] on [[:${item.page.title}]]`;
                     else
-                        summary += `[[Special:AbuseLog/${item.id}|your contribution]] on [[${item.page.title}]]`;
+                        summary += `[[Special:AbuseLog/${item.id}|your contribution]] on [[:${item.page.title}]]`;
                 } else
                     summary += `[[${item.page.title}]]`;
 
@@ -422,7 +422,7 @@ export const events = {
             if (oldLevel === "4" || oldLevel === "4im")
                 if (warning.reportable && ws.store.settings.auto_report.enabled && ws.store.settings.auto_report.for.has(params.warning)) {
                     const report = await (async () => {
-                        if (await ws.api.areUsersBlocked([ item.user.name ])[item.user.name])
+                        if ((await ws.api.areUsersBlocked([ item.user.name ]))[item.user.name])
                             return { valid: false, reason: "User cannot be reported because they are blocked." };
 
                         const attempts = warningTemplates.some(template => template.toLowerCase() === "uw-attempt");
@@ -528,12 +528,12 @@ export const events = {
 
                 let summary = "Message about ";
                 if (Queue.groups[item.type] === "edit") // kinda redundant but whatever
-                    summary += `[[Special:Diff/${item.id}|your edit]] on [[${item.page.title}]]`;
+                    summary += `[[Special:Diff/${item.id}|your edit]] on [[:${item.page.title}]]`;
                 else if (item.type === "abuselog") {
                     if (item.revid)
-                        summary += `[[Special:Diff/${item.revid}|your edit]] on [[${item.page.title}]]`;
+                        summary += `[[Special:Diff/${item.revid}|your edit]] on [[:${item.page.title}]]`;
                     else
-                        summary += `[[Special:AbuseLog/${item.id}|your contribution]] on [[${item.page.title}]]`;
+                        summary += `[[Special:AbuseLog/${item.id}|your contribution]] on [[:${item.page.title}]]`;
                 } else
                     summary += `[[${item.page.title}]]`;
 
@@ -586,7 +586,7 @@ export const events = {
             if (oldLevel === "4" || oldLevel === "4im")
                 if (warning.reportable && ws.store.settings.auto_report.enabled && ws.store.settings.auto_report.for.has(params.warning)) {
                     const report = await (async () => {
-                        if (await ws.api.areUsersBlocked([ item.user.name ])[item.user.name])
+                        if ((await ws.api.areUsersBlocked([ item.user.name ]))[item.user.name])
                             return { valid: false, reason: "User cannot be reported because they are blocked." };
 
                         const attempts = warningTemplates.some(template => template.toLowerCase() === "uw-attempt");
@@ -713,12 +713,12 @@ export const events = {
 
             let summary = "Message about ";
             if (Queue.groups[item.type] === "edit")
-                summary += `[[Special:Diff/${item.id}|your edit]] on [[${item.page.title}]]`;
+                summary += `[[Special:Diff/${item.id}|your edit]] on [[:${item.page.title}]]`;
             else if (item.type === "abuselog") {
                 if (item.revid)
-                    summary += `[[Special:Diff/${item.revid}|your edit]] on [[${item.page.title}]]`;
+                    summary += `[[Special:Diff/${item.revid}|your edit]] on [[:${item.page.title}]]`;
                 else
-                    summary += `[[Special:AbuseLog/${item.id}|your contribution]] on [[${item.page.title}]]`;
+                    summary += `[[Special:AbuseLog/${item.id}|your contribution]] on [[:${item.page.title}]]`;
             } else
                 summary += `[[${item.page.title}]]`;
 
@@ -988,7 +988,8 @@ export const events = {
                 return { valid: false, reason: "Undo cancelled by user." };
 
             const user = params.hide_username === "Yes" ? "" : ` by ${ws.api.user(item.user.name)}`;
-            return await ws.api.undoEdit(item.page.title, item.id, ws.api.summary(`Undid revision ${ws.api.revision(item.id)}${user}`, params.summary));
+            const revisionId = item.type === "abuselog" ? item.revid : item.id;
+            return await ws.api.undoEdit(item.page.title, revisionId, ws.api.summary(`Undid revision ${ws.api.revision(revisionId)}${user}`, params.summary));
         },
     },
     "restore-edit": {
@@ -1018,7 +1019,8 @@ export const events = {
             return { valid: true };
         },
         script: async (ws, item, params) => {
-            return await ws.api.restoreEdit(item.page.title, item.id, ws.api.summary(`Restored revision ${ws.api.revision(item.id)} by ${ws.api.user(item.user.name)}`, params.summary));
+            const revisionId = item.type === "abuselog" ? item.revid : item.id;
+            return await ws.api.restoreEdit(item.page.title, revisionId, ws.api.summary(`Restored revision ${ws.api.revision(revisionId)} by ${ws.api.user(item.user.name)}`, params.summary));
         }
     },
 
@@ -1148,7 +1150,7 @@ export const events = {
             )))
                 return { valid: false, reason: "User report cancelled by user." };
 
-            if (await ws.api.areUsersBlocked([ item.user.name ])[item.user.name])
+            if ((await ws.api.areUsersBlocked([ item.user.name ]))[item.user.name])
                 return { valid: false, reason: "User cannot be reported because they are blocked." };
 
             let attemptText = " ";
@@ -1220,7 +1222,7 @@ export const events = {
             )))
                 return { valid: false, reason: "User report cancelled by user." };
 
-            if (await ws.api.areUsersBlocked([ item.user.name ])[item.user.name])
+            if ((await ws.api.areUsersBlocked([ item.user.name ]))[item.user.name])
                 return { valid: false, reason: "User cannot be reported because they are blocked." };
 
             const username = params.reason === "Offensive username" ? "offensive username" : ws.api.user(item.user.name);
@@ -1564,10 +1566,11 @@ export const events = {
             return { valid: true };
         },
         script: async (ws, item, params) => {
-            const summary = ws.api.summary(`Thank you for [[Special:Diff/${item.id}|your edit]] on [[${item.page.title}]]`);
+            const revisionId = item.type === "abuselog" ? item.revid : item.id;
+            const summary = ws.api.summary(`Thank you for [[Special:Diff/${revisionId}|your edit]] on [[:${item.page.title}]]`);
             const page = `User talk:${item.user.name}`;
             if (item.user.temp) {
-                const result = await ws.api.thankRevision(item.id);
+                const result = await ws.api.thankRevision(revisionId);
                 if (result.valid || ws.store.settings.talk_page_thanks_for_temporary_users.enabled) {
                     if ((await ws.api.pagesExist(page))[page] === undefined) // if talk page doesn't exist, we can use the welcome, thanks template =)
                         await ws.api.editSection(page, "new", "Thank you!", "{{subst:Thanks-autosign}}", summary);
@@ -1577,7 +1580,7 @@ export const events = {
             } else if (item.user.ip)
                 return await ws.api.editSection(page, "new", "Thank you!", "{{subst:Thanks-autosign}}", summary);
             else
-                return await ws.api.thankRevision(item.id);
+                return await ws.api.thankRevision(revisionId);
         },
         successful: (ws, item, params) => {
             ws.store.statistics.edits_reviewed.thanked++;
@@ -1852,7 +1855,7 @@ export const events = {
         },
         script: async (ws, item, params) => {
             try {
-                document.querySelector("#refresh-page-history").classList.add("refreshing");
+                document.querySelector("#refresh-user-contributions").classList.add("refreshing");
 
                 const user = (await ws.api.parseUsers([ item.user.name ]))[0].user;
 
