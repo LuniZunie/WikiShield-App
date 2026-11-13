@@ -1,0 +1,36 @@
+{
+  "name": "WikiShield",
+  "version": "2.1.9",
+  "description": "WikiShield is an anti-vandalism tool for Wikipedia.",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LuniZunie/WikiShield-App.git"
+  },
+  "publish": {
+    "provider": "github",
+    "owner": "LuniZunie",
+    "repo": "WikiShield-App"
+  },
+  "scripts": {
+    "test": "node --env-file=.public.env server.js --mode=dev",
+    "start": "node --env-file=.public.env server.js --mode=prod"
+  },
+  "keywords": [
+    "Electron",
+    "WikiShield",
+    "Wikipedia",
+    "MediaWiki",
+    "Anti-Vandalism",
+    "ORES"
+  ],
+  "author": "WikiShield Team",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "cross-env": "^10.1.0",
+    "express": "^5.3.0",
+    "http": "^0.0.1-security"
+  }
+}
