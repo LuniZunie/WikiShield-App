@@ -109,7 +109,7 @@ export class GUI {
 				if (event.key === shhhhh.code[shhhhh.index]) {
 					if (++shhhhh.index === shhhhh.code.length) {
 						shhhhh.index = 0;
-						this.ws.open("https://ws.luni.me/konami-easter-egg", "force");
+						this.ws.open("https://ws.toolforge.org/konami-easter-egg", "force");
 					}
 
 					return;

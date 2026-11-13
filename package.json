@@ -26,7 +26,9 @@
     "publish:mac": "electron-builder --mac --publish always",
     "publish:linux": "electron-builder --linux --publish always",
     "build-web:dev": "webpack serve --mode development",
-    "build-web:readable": "cross-env READABLE=true webpack --mode production"
+    "build-web:readable": "cross-env READABLE=true webpack --mode production",
+    "toolforge": "node --env-file=toolforge/.public.env toolforge/server.js --mode=prod",
+    "toolforge:dev": "node --env-file=toolforge/.public.env toolforge/server.js --mode=dev"
   },
   "keywords": [
     "Electron",
@@ -58,12 +60,15 @@
     "@babel/preset-env": "^7.29.7",
     "@octokit/rest": "^22.0.1",
     "babel-loader": "^10.1.1",
+    "cors": "^2.8.6",
     "cross-env": "^10.1.0",
     "discord-rpc": "^4.0.1",
     "electron-log": "^5.4.3",
     "electron-squirrel-startup": "^1.0.1",
     "electron-store": "^8.2.0",
     "electron-updater": "^6.6.2",
+    "express": "^5.3.0",
+    "http": "^0.0.1-security",
     "node-fetch": "^2.7.0",
     "webpack": "^5.107.2"
   },

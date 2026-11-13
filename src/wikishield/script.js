@@ -35,7 +35,7 @@ export async function run() {
             return true;
             let popup;
             try {
-                popup = window.open("https://ws.luni.me/popup", "_blank", "width=100,height=100,left=-100,top=-100");
+                popup = window.open("https://ws.toolforge.org/popup", "_blank", "width=100,height=100,left=-100,top=-100");
                 if ((popup?.closed ?? false) === false) {
                     popup?.close?.();
                     return true;

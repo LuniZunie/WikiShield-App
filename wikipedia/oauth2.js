@@ -56,7 +56,7 @@ class Server {
             grant_type: "authorization_code",
             client_id: MediaWikiOAuth2.CLIENT,
             code,
-            redirect_uri: "https://ws.luni.me/callback",
+            redirect_uri: "https://ws.toolforge.org/oauth",
             code_verifier: verifier
         });
 
@@ -177,7 +177,7 @@ class Server {
             const params = new URLSearchParams({
                 response_type: "code",
                 client_id: MediaWikiOAuth2.CLIENT,
-                redirect_uri: `https://ws.luni.me/callback`,
+                redirect_uri: `https://ws.toolforge.org/oauth`,
                 state: state,
                 code_challenge: challenge,
                 code_challenge_method: "S256"
@@ -258,9 +258,9 @@ class Throttle {
 }
 
 class MediaWikiOAuth2 {
-    static get CLIENT() { return "381204bcce0506b309d1974167e399ac"; }
+    static get CLIENT() { return "e7fb2202e068e7ea6cc94530a0b4c626"; }
     // it actually does not matter that this is public, see https://phabricator.wikimedia.org/T323855, since the client is not confidential, we can ship the secret
-    static get SECRET() { return "7b188b6e0d0d326e9aa668ef9630409ec4f3981d"; }
+    static get SECRET() { return "8a47e8dfee1818c1ce61c74e76dd61a06d2ac824"; }
 
     static async completeAuthorizationCallback(url) {
         return await Server.completePendingCallback(url);

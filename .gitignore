@@ -17,6 +17,9 @@ yarn-error.log*
 
 # Environment variables
 *.env
+!*.dev.env
+!*.prod.env
+!*.public.env
 
 # Certificates
 *.pfx
