@@ -226,16 +226,15 @@ export class Queue {
 					continue;
 				}
 
+				const highlight = this.ws.store.highlight;
+				const hasHighlight = item => highlight.users.has(item.user) ||
+												highlight.pages.has(item.title) ||
+												item.tags?.some(tag => highlight.tags.has(tag));
+				q = q.filter(item => !whitelist.users.has(item.user) && !item.tags?.some(tag => whitelist.tags.has(tag)) && (!this.bypass.has(item.user) || hasHighlight(item)));
+
 				switch (Queue.groups[type]) {
 					case "edit": {
 						this.queues[type].last.id = q.reduce((max, item) => Math.max(max, item.revid), 0);
-
-						const highlight = this.ws.store.highlight;
-						const hasHighlight = item => highlight.users.has(item.user) ||
-													 highlight.pages.has(item.title) ||
-													 item.tags?.some(tag => highlight.tags.has(tag));
-
-						q = q.filter(item => !whitelist.users.has(item.user) && !item.tags?.some(tag => whitelist.tags.has(tag)) && (!this.bypass.has(item.user) || hasHighlight(item)));
 
 						// parallel
 						const oresCache = { };
@@ -311,14 +310,14 @@ export class Queue {
 						const set = new Set();
 						const filtered = [ ];
 						q.forEach(item => {
-							if (set.has(item.logid))
-								return;
-							set.add(item.logid);
+								if (set.has(item.logid))
+									return;
+								set.add(item.logid);
 
-							if (item.logid > max)
-								max = item.logid;
-							filtered.push(item);
-						});
+								if (item.logid > max)
+									max = item.logid;
+								filtered.push(item);
+							});
 
 						this.queues[type].last.id = max;
 
