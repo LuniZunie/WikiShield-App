@@ -97,9 +97,9 @@ class DurationInput extends HTMLElement {
             months: 'M',
             weeks: 'W',
             days: 'D',
-            hours: 'H',
-            minutes: 'M',
-            seconds: 'S',
+            hours: 'h',
+            minutes: 'm',
+            seconds: 's',
         };
 
         for (const [unit, value] of Object.entries(this.duration)) {
@@ -108,7 +108,7 @@ class DurationInput extends HTMLElement {
             }
         }
 
-        return durationStr || '0S';
+        return durationStr || '0s';
     }
 
     set value(durationStr) {

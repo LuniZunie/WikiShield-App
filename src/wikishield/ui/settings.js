@@ -1896,7 +1896,7 @@ export class Settings {
 				}
 			};
 
-			const sorted = [ ...this.ws.store.whitelist[`${type}s`] ].sort((a, b) => b[1][1] - a[1][1]);
+			const sorted = [ ...this.ws.store.whitelist[`${type}s`].entries() ].sort((a, b) => b[1][1] - a[1][1]);
 			for (const [ value, time ] of sorted) {
 				const $item = document.createElement("div");
 
@@ -1993,7 +1993,7 @@ export class Settings {
 				}
 			};
 
-			const sorted = [ ...this.ws.store.highlight[`${type}s`] ].sort((a, b) => b[1][1] - a[1][1]);
+			const sorted = [ ...this.ws.store.highlight[`${type}s`].entries() ].sort((a, b) => b[1][1] - a[1][1]);
 
 			for (const [ value, time ] of sorted) {
 				const $item = document.createElement("div");
